@@ -79,6 +79,7 @@ body {
 }
 
 .marker-label {
+  display: none;
   margin-top: 0.5rem;
   font-size: 0.75rem;
   white-space: nowrap;
@@ -99,6 +100,8 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.marker:hover .marker-label,
+.marker.active .marker-label,
 .marker:hover .marker-description,
 .marker.active .marker-description {
   display: block;
