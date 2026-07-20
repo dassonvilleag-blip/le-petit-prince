@@ -1,0 +1,111 @@
+:root {
+  --bg: #fbf9f6;
+  --track-bg: #ffffff;
+  --line: #d8d2c9;
+  --text: #33302c;
+  --accent-cosmos: #a7c7e7;
+  --accent-earth: #b7d7a8;
+  --accent-life: #f6cbb7;
+  --accent-human: #e8b4d8;
+  font-size: 16px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#indicator {
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+#timeline-viewport {
+  height: 100vh;
+  width: 100vw;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: auto;
+}
+
+#timeline-track {
+  position: relative;
+  height: 100%;
+  width: 6000px;
+}
+
+#timeline-track::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--line);
+}
+
+.marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.marker-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent-earth);
+  border: 2px solid var(--track-bg);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.marker-label {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  max-width: 8rem;
+  text-align: center;
+}
+
+.marker-description {
+  display: none;
+  position: absolute;
+  top: 2.2rem;
+  width: 14rem;
+  font-size: 0.7rem;
+  text-align: center;
+  background: var(--track-bg);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.marker:hover .marker-description,
+.marker.active .marker-description {
+  display: block;
+}
+
+@media (max-width: 640px) {
+  #timeline-track { width: 3000px; }
+  .marker-label { font-size: 0.65rem; max-width: 5rem; }
+  #indicator { font-size: 0.85rem; padding: 0.3rem 0.7rem; }
+}
