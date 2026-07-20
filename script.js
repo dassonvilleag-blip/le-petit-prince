@@ -15,8 +15,19 @@ function renderMarkers() {
     el.innerHTML = `
       <div class="marker-dot"></div>
       <div class="marker-label">${repere.label}</div>
-      <div class="marker-description">${repere.description}</div>
+      <div class="marker-description">
+        <div class="marker-text">${repere.description}</div>
+      </div>
     `;
+    if (repere.image) {
+      const description = el.querySelector('.marker-description');
+      const img = document.createElement('img');
+      img.className = 'marker-image';
+      img.src = repere.image;
+      img.alt = repere.label;
+      img.addEventListener('error', () => img.remove());
+      description.prepend(img);
+    }
     el.addEventListener('click', () => el.classList.toggle('active'));
     track.appendChild(el);
   }
