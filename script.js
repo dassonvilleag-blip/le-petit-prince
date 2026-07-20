@@ -1,36 +1,52 @@
 import { REPERES } from './data.js';
+import { ILLUSTRATIONS } from './illustrations.js';
 import { yearsAgoToPosition, positionToYearsAgo, MAX_YEARS_AGO } from './mapping.js';
 
 const track = document.getElementById('timeline-track');
 const viewport = document.getElementById('timeline-viewport');
-const indicator = document.getElementById('indicator');
+const spotlight = document.getElementById('spotlight');
+const spotlightImage = document.getElementById('spotlight-image');
+const spotlightTime = document.getElementById('spotlight-time');
+const spotlightLabel = document.getElementById('spotlight-label');
+const spotlightDescription = document.getElementById('spotlight-description');
+
+let markerEls = [];
+
+// La ligne ne s'étend pas sur toute la largeur utilisable du scroll : le centre du
+// viewport est toujours en retrait d'une demi-largeur de viewport par rapport aux
+// bords de la piste. Sans cette marge, "Aujourd'hui" et "Big Bang" ne seraient
+// jamais atteignables comme repère le plus proche du centre, même en scrollant à fond.
+function usableWidth() {
+  return track.scrollWidth - viewport.clientWidth;
+}
+
+function positionToPx(position) {
+  return viewport.clientWidth / 2 + position * usableWidth();
+}
+
+function centerToPosition() {
+  const usable = usableWidth();
+  if (usable <= 0) return 0;
+  const centerPx = viewport.scrollLeft + viewport.clientWidth / 2;
+  return Math.min(1, Math.max(0, (centerPx - viewport.clientWidth / 2) / usable));
+}
 
 function renderMarkers() {
   track.innerHTML = '';
-  for (const repere of REPERES) {
-    const position = yearsAgoToPosition(repere.yearsAgo);
+  markerEls = REPERES.map((repere) => {
     const el = document.createElement('div');
     el.className = 'marker';
-    el.style.left = `${position * 100}%`;
-    el.innerHTML = `
-      <div class="marker-dot"></div>
-      <div class="marker-label">${repere.label}</div>
-      <div class="marker-description">
-        <div class="marker-text">${repere.description}</div>
-      </div>
-    `;
-    if (repere.image) {
-      const description = el.querySelector('.marker-description');
-      const img = document.createElement('img');
-      img.className = 'marker-image';
-      img.src = repere.image;
-      img.alt = repere.label;
-      img.addEventListener('error', () => img.remove());
-      description.prepend(img);
-    }
-    el.addEventListener('click', () => el.classList.toggle('active'));
+    el.innerHTML = `<div class="marker-dot"></div>`;
     track.appendChild(el);
-  }
+    return el;
+  });
+}
+
+function layoutMarkers() {
+  markerEls.forEach((el, i) => {
+    const position = yearsAgoToPosition(REPERES[i].yearsAgo);
+    el.style.left = `${positionToPx(position)}px`;
+  });
 }
 
 function formatYearsAgo(yearsAgo) {
@@ -45,11 +61,38 @@ function formatYearsAgo(yearsAgo) {
   return `il y a ${rounded} an${yearsAgo >= 2 ? 's' : ''}`;
 }
 
-function updateIndicator() {
-  const maxScroll = track.scrollWidth - viewport.clientWidth;
-  const scrollPercent = maxScroll > 0 ? viewport.scrollLeft / maxScroll : 0;
-  const yearsAgo = positionToYearsAgo(scrollPercent, MAX_YEARS_AGO);
-  indicator.textContent = formatYearsAgo(yearsAgo);
+function nearestRepereIndex(position) {
+  let bestIndex = 0;
+  let bestDistance = Infinity;
+  REPERES.forEach((repere, index) => {
+    const distance = Math.abs(yearsAgoToPosition(repere.yearsAgo) - position);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  });
+  return bestIndex;
+}
+
+function updateSpotlight() {
+  const position = centerToPosition();
+  const yearsAgo = positionToYearsAgo(position, MAX_YEARS_AGO);
+  spotlightTime.textContent = formatYearsAgo(yearsAgo);
+
+  const index = nearestRepereIndex(position);
+  const repere = REPERES[index];
+
+  spotlight.className = `category-${repere.category}`;
+  spotlightImage.innerHTML = `<svg viewBox="0 0 100 100">${ILLUSTRATIONS[repere.slug] || ''}</svg>`;
+  spotlightLabel.textContent = repere.label;
+  spotlightDescription.textContent = repere.description;
+
+  markerEls.forEach((el, i) => el.classList.toggle('active', i === index));
+}
+
+function refreshLayout() {
+  layoutMarkers();
+  updateSpotlight();
 }
 
 viewport.addEventListener('wheel', (event) => {
@@ -58,8 +101,8 @@ viewport.addEventListener('wheel', (event) => {
   viewport.scrollLeft += event.deltaY;
 }, { passive: false });
 
-viewport.addEventListener('scroll', updateIndicator);
-window.addEventListener('resize', updateIndicator);
+viewport.addEventListener('scroll', updateSpotlight);
+window.addEventListener('resize', refreshLayout);
 
 renderMarkers();
-updateIndicator();
+refreshLayout();
