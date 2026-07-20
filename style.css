@@ -1,7 +1,6 @@
 :root {
   --bg: #fbf9f6;
-  --track-bg: #ffffff;
-  --line: #d8d2c9;
+  --card-bg: #ffffff;
   --text: #33302c;
   --accent-cosmos: #a7c7e7;
   --accent-earth: #b7d7a8;
@@ -14,125 +13,80 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
   background: var(--bg);
   color: var(--text);
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  overflow: hidden;
-  height: 100vh;
 }
 
-#spotlight {
-  position: fixed;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 10;
-  width: 15rem;
-  background: var(--track-bg);
+main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+}
+
+h1 {
+  font-size: 2.2rem;
+  margin: 0;
+}
+
+.tagline {
+  margin: 0.5rem 0 2.5rem;
+  opacity: 0.7;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1.25rem;
+}
+
+.card {
+  display: block;
+  background: var(--card-bg);
   border-radius: 1rem;
-  padding: 1rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  transition: background 0.3s ease;
+  padding: 1.5rem;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-#spotlight.category-cosmos { background: color-mix(in srgb, var(--accent-cosmos) 25%, var(--track-bg)); }
-#spotlight.category-earth  { background: color-mix(in srgb, var(--accent-earth) 25%, var(--track-bg)); }
-#spotlight.category-life   { background: color-mix(in srgb, var(--accent-life) 25%, var(--track-bg)); }
-#spotlight.category-human  { background: color-mix(in srgb, var(--accent-human) 25%, var(--track-bg)); }
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
 
-#spotlight-image {
-  width: 100%;
-  aspect-ratio: 1 / 1;
+.card-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 1rem;
 }
 
-#spotlight-image svg {
-  width: 80%;
-  height: 80%;
+.card.category-cosmos .card-icon { background: var(--accent-cosmos); }
+.card.category-earth .card-icon  { background: var(--accent-earth); }
+.card.category-life .card-icon   { background: var(--accent-life); }
+.card.category-human .card-icon  { background: var(--accent-human); }
+
+.card-icon svg {
+  width: 55%;
+  height: 55%;
 }
 
-#spotlight-image svg [fill]:not([fill="none"]) { fill: var(--text); }
-#spotlight-image svg [stroke] { stroke: var(--text); }
+.card-icon svg [fill]:not([fill="none"]) { fill: var(--text); }
 
-#spotlight-time {
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  opacity: 0.7;
-  margin-top: 0.5rem;
-}
-
-#spotlight-label {
-  font-size: 1.05rem;
+.card-title {
   font-weight: 700;
-  margin-top: 0.15rem;
+  font-size: 1.05rem;
+  margin-bottom: 0.35rem;
 }
 
-#spotlight-description {
-  font-size: 0.8rem;
-  margin-top: 0.4rem;
+.card-description {
+  font-size: 0.85rem;
+  opacity: 0.75;
   line-height: 1.4;
-}
-
-#timeline-viewport {
-  height: 100vh;
-  width: 100vw;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-behavior: auto;
-}
-
-#timeline-track {
-  position: relative;
-  height: 100%;
-  width: 6000px;
-}
-
-#timeline-track::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--line);
-}
-
-.marker {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.marker-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--accent-earth);
-  border: 2px solid var(--track-bg);
-  box-shadow: 0 0 0 1px var(--line);
-  transition: transform 0.15s ease;
-}
-
-.marker.active .marker-dot {
-  transform: scale(1.6);
-  background: var(--text);
-}
-
-@media (max-width: 640px) {
-  #timeline-track { width: 3000px; }
-  #spotlight {
-    top: auto;
-    bottom: 1rem;
-    right: 1rem;
-    left: 1rem;
-    width: auto;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  #spotlight-image { width: 4rem; aspect-ratio: 1 / 1; flex-shrink: 0; }
-  #spotlight-time, #spotlight-label, #spotlight-description { margin-top: 0; }
-  #spotlight-description { display: none; }
 }
