@@ -1,0 +1,238 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --paper: #fbf6ea;
+  --paper-card: #fffdf6;
+  --ink: #3b3a36;
+  --ink-soft: #7a766c;
+  --crayon-red: #e07a5f;
+  --cat-cosmos: #8e7cc3;
+  --cat-earth: #5f8bd0;
+  --cat-life: #81b29a;
+  --cat-human: #e07a5f;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  font-family: "Patrick Hand", "Comic Sans MS", cursive;
+  color: var(--ink);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Le fond du papier se teinte selon l'ère survolée */
+body {
+  background: var(--paper);
+  transition: background 0.8s ease;
+}
+
+body[data-category="cosmos"] { background: #f1edf8; }
+body[data-category="earth"] { background: #ecf2f7; }
+body[data-category="life"] { background: #eff5ec; }
+body[data-category="human"] { background: var(--paper); }
+
+.back-link {
+  position: fixed;
+  z-index: 10;
+  top: 16px;
+  left: 18px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 1.1rem;
+  padding: 4px 14px;
+  background: var(--paper-card);
+  border: 2px solid var(--ink);
+  border-radius: 150px 12px 140px 10px / 10px 140px 12px 150px;
+  box-shadow: 3px 3px 0 rgba(59, 58, 54, 0.14);
+  transform: rotate(-1.2deg);
+}
+
+.back-link:hover {
+  transform: rotate(0deg);
+}
+
+.frise-header {
+  position: fixed;
+  top: 18px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+}
+
+.frise-header h1 {
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: clamp(1.8rem, 4.5vw, 2.6rem);
+  font-weight: 700;
+  transform: rotate(-1deg);
+  text-decoration: underline wavy var(--crayon-red) 2.5px;
+  text-underline-offset: 8px;
+}
+
+.frise-header p {
+  margin-top: 12px;
+  color: var(--ink-soft);
+  font-size: 1.05rem;
+}
+
+/* ---- Carte spotlight ---- */
+
+#spotlight {
+  position: fixed;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -62%);
+  width: min(400px, calc(100vw - 48px));
+  text-align: center;
+  background: var(--paper-card);
+  border: 2.5px solid var(--ink);
+  border-radius: 26px 22px 28px 20px / 22px 26px 20px 28px;
+  box-shadow: 5px 6px 0 rgba(59, 58, 54, 0.14);
+  padding: 22px 26px 24px;
+  pointer-events: none;
+}
+
+#spotlight.pop {
+  animation: pop 0.35s ease;
+}
+
+@keyframes pop {
+  0% { transform: translate(-50%, -62%) scale(0.96) rotate(-0.6deg); }
+  60% { transform: translate(-50%, -62%) scale(1.02) rotate(0.3deg); }
+  100% { transform: translate(-50%, -62%) scale(1) rotate(0deg); }
+}
+
+#spotlight-image {
+  font-size: 3.8rem;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+#spotlight-time {
+  font-family: "Caveat", "Patrick Hand", cursive;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--crayon-red);
+}
+
+.category-cosmos #spotlight-time { color: var(--cat-cosmos); }
+.category-earth #spotlight-time { color: var(--cat-earth); }
+.category-life #spotlight-time { color: var(--cat-life); }
+.category-human #spotlight-time { color: var(--cat-human); }
+
+#spotlight-label {
+  margin-top: 2px;
+  font-size: 1.5rem;
+  line-height: 1.15;
+}
+
+#spotlight-description {
+  margin-top: 6px;
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+/* ---- Frise ---- */
+
+#timeline-viewport {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34vh;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+#timeline-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+#timeline-track {
+  position: relative;
+  height: 100%;
+}
+
+/* la ligne du temps, en pointillés de crayon */
+#timeline-track::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 2.5px dashed var(--ink);
+  opacity: 0.65;
+}
+
+/* l'aiguille fixe au centre : le « présent » du regard */
+.center-needle {
+  position: fixed;
+  z-index: 4;
+  left: 50%;
+  bottom: calc(17vh - 34px);
+  height: 68px;
+  border-left: 2px dashed rgba(59, 58, 54, 0.5);
+  pointer-events: none;
+}
+
+.marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 14px;
+  cursor: pointer;
+}
+
+.marker-dot {
+  width: 13px;
+  height: 13px;
+  border: 2.5px solid var(--ink);
+  border-radius: 60% 45% 55% 50% / 50% 55% 45% 60%;
+  background: var(--paper-card);
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+
+.marker-cosmos .marker-dot { background: var(--cat-cosmos); }
+.marker-earth .marker-dot { background: var(--cat-earth); }
+.marker-life .marker-dot { background: var(--cat-life); }
+.marker-human .marker-dot { background: var(--cat-human); }
+
+.marker:hover .marker-dot {
+  transform: scale(1.35);
+}
+
+.marker.active .marker-dot {
+  transform: scale(1.7);
+  box-shadow: 0 0 0 5px rgba(59, 58, 54, 0.12);
+}
+
+.tick {
+  position: absolute;
+  top: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.tick-line {
+  width: 0;
+  height: 16px;
+  margin: 0 auto;
+  border-left: 2px solid rgba(59, 58, 54, 0.45);
+}
+
+.tick-label {
+  margin-top: 5px;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  transform: rotate(-4deg);
+}

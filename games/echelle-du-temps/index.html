@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Une échelle de temps</title>
+    <meta name="description" content="Remonte le temps du présent jusqu'au Big Bang, sur une seule ligne." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏳</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Patrick+Hand&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/echelle-du-temps/frise.css" />
+  </head>
+  <body data-category="human">
+    <a class="back-link" href="/">← le petit prince</a>
+
+    <header class="frise-header">
+      <h1>Une échelle de temps</h1>
+      <p>Scrolle pour remonter jusqu'au Big Bang.</p>
+    </header>
+
+    <div id="spotlight" aria-live="polite">
+      <div id="spotlight-image"></div>
+      <div id="spotlight-time"></div>
+      <div id="spotlight-label"></div>
+      <div id="spotlight-description"></div>
+    </div>
+
+    <div class="center-needle" aria-hidden="true"></div>
+
+    <main id="timeline-viewport">
+      <div id="timeline-track"></div>
+    </main>
+
+    <noscript>Active JavaScript pour voir la frise interactive.</noscript>
+    <script type="module" src="/src/games/echelle-du-temps/main.ts"></script>
+  </body>
+</html>

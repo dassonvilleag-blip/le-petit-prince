@@ -1,24 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Le Petit Prince</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <main>
-    <h1>Le Petit Prince</h1>
-    <p class="tagline">Une petite collection d'expériences interactives.</p>
-    <div class="grid">
-      <a class="card category-cosmos" href="echelle-de-temps/">
-        <div class="card-icon">
-          <svg viewBox="0 0 100 100"><path d="M50 6 L58 40 L92 50 L58 60 L50 94 L42 60 L8 50 L42 40 Z"/></svg>
-        </div>
-        <div class="card-title">Échelle de temps</div>
-        <div class="card-description">Du Big Bang à aujourd'hui, en un seul geste de scroll.</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>le petit prince</title>
+    <meta name="description" content="Des expériences interactives inspirées du Petit Prince." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪐</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Patrick+Hand&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/home.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <h1 class="logo">le petit <span class="logo-dot">prince</span></h1>
+      <p class="tagline">« On ne voit bien qu'avec le cœur. » — des petites expériences interactives entre les étoiles.</p>
+    </header>
+
+    <main class="grid">
+      <a class="tile" href="/games/petites-orbites/">
+        <span class="badge">NOUVEAU</span>
+        <img class="tile-art" src="/tiles/orbites.webp" alt="" />
+        <h2 class="tile-name">Petites Orbites</h2>
       </a>
-    </div>
-  </main>
-</body>
+
+      <a class="tile" href="/games/echelle-du-temps/">
+        <img class="tile-art" src="/tiles/echelle.webp" alt="" />
+        <h2 class="tile-name">Une échelle de temps</h2>
+      </a>
+
+      <div class="tile tile-incoming">
+        <div class="tile-art" aria-hidden="true">+</div>
+        <h2 class="tile-name">incoming…</h2>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>Fait avec ☕, une rose 🌹 et beaucoup trop de gravité.</p>
+    </footer>
+  </body>
 </html>

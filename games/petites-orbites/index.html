@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Petites Orbites</title>
+    <meta name="description" content="Lance des planètes autour d'un soleil et construis un système qui survit." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☀️</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Patrick+Hand&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/petites-orbites/game.css" />
+  </head>
+  <body>
+    <canvas id="space"></canvas>
+
+    <a class="back-link" href="/">← le petit prince</a>
+
+    <div class="hud">
+      <div class="hud-line"><span id="hud-planets">0</span> planète(s)</div>
+      <div class="hud-line">stabilité : <span id="hud-time">0,0 s</span></div>
+      <div class="hud-line hud-record">record : <span id="hud-record">0,0 s</span></div>
+    </div>
+
+    <div class="hint" id="hint">
+      <h1>Petites Orbites</h1>
+      <p>Glisse n'importe où pour lancer une planète autour du soleil.<br />
+      Construis un système solaire qui tient le plus longtemps possible —<br />
+      l'astéroïde B-612 compte sur toi.</p>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script type="module" src="/src/games/petites-orbites/main.ts"></script>
+  </body>
+</html>
