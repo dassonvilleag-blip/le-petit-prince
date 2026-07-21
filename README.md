@@ -15,7 +15,7 @@ Packs isométriques gratuits (CC0 / CC-BY) à récupérer pour le rendu du proch
 
 - [Kenney - Isometric Miniature Dungeon](https://kenney.nl/assets/isometric-miniature-dungeon) (CC0, priorité)
 - [Kenney - Isometric Blocks](https://kenney.nl/assets/isometric-blocks) (CC0, complément)
-- [jpcu - Isometric Kitchen Sprites](https://jpcu.itch.io/isometric-kitchen-sprites) (CC-BY 4.0, credit requis)
+- [Kenney - Space Kit](https://kenney.nl/assets/space-kit) (CC0, props spatiaux : consoles, tuyaux, éléments de vaisseau)
 
 ## Stack
 
