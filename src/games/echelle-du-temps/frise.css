@@ -5,11 +5,12 @@
 }
 
 :root {
-  --paper: #fbf6ea;
-  --paper-card: #fffdf6;
-  --ink: #3b3a36;
-  --ink-soft: #7a766c;
-  --crayon-red: #e07a5f;
+  --paper: #f6efdd;
+  --paper-card: #fffdf4;
+  --ink: #17171b;
+  --ink-soft: #6d675c;
+  --crayon-red: #ff5c8a;
+  --yellow: #ffc93c;
   --cat-cosmos: #8e7cc3;
   --cat-earth: #5f8bd0;
   --cat-life: #81b29a;
@@ -20,7 +21,7 @@ html,
 body {
   height: 100%;
   overflow: hidden;
-  font-family: "Patrick Hand", "Comic Sans MS", cursive;
+  font-family: "VT323", "Courier New", monospace;
   color: var(--ink);
   -webkit-user-select: none;
   user-select: none;
@@ -47,10 +48,10 @@ body[data-category="human"] { background: var(--paper); }
   font-size: 1.1rem;
   padding: 4px 14px;
   background: var(--paper-card);
-  border: 2px solid var(--ink);
-  border-radius: 150px 12px 140px 10px / 10px 140px 12px 150px;
-  box-shadow: 3px 3px 0 rgba(59, 58, 54, 0.14);
-  transform: rotate(-1.2deg);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: none;
 }
 
 .back-link:hover {
@@ -67,12 +68,10 @@ body[data-category="human"] { background: var(--paper); }
 }
 
 .frise-header h1 {
-  font-family: "Caveat", "Patrick Hand", cursive;
+  font-family: "Pixelify Sans", "VT323", monospace;
   font-size: clamp(1.8rem, 4.5vw, 2.6rem);
   font-weight: 700;
-  transform: rotate(-1deg);
-  text-decoration: underline wavy var(--crayon-red) 2.5px;
-  text-underline-offset: 8px;
+  text-shadow: 3px 3px 0 var(--yellow);
 }
 
 .frise-header p {
@@ -92,9 +91,9 @@ body[data-category="human"] { background: var(--paper); }
   width: min(400px, calc(100vw - 48px));
   text-align: center;
   background: var(--paper-card);
-  border: 2.5px solid var(--ink);
-  border-radius: 26px 22px 28px 20px / 22px 26px 20px 28px;
-  box-shadow: 5px 6px 0 rgba(59, 58, 54, 0.14);
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 6px 6px 0 var(--ink);
   padding: 22px 26px 24px;
   pointer-events: none;
 }
@@ -116,7 +115,7 @@ body[data-category="human"] { background: var(--paper); }
 }
 
 #spotlight-time {
-  font-family: "Caveat", "Patrick Hand", cursive;
+  font-family: "Pixelify Sans", "VT323", monospace;
   font-size: 1.7rem;
   font-weight: 700;
   color: var(--crayon-red);
@@ -180,7 +179,7 @@ body[data-category="human"] { background: var(--paper); }
   left: 50%;
   bottom: calc(17vh - 34px);
   height: 68px;
-  border-left: 2px dashed rgba(59, 58, 54, 0.5);
+  border-left: 2px dashed rgba(23, 23, 27, 0.5);
   pointer-events: none;
 }
 
@@ -195,8 +194,9 @@ body[data-category="human"] { background: var(--paper); }
 .marker-dot {
   width: 13px;
   height: 13px;
-  border: 2.5px solid var(--ink);
-  border-radius: 60% 45% 55% 50% / 50% 55% 45% 60%;
+  border: 3px solid var(--ink);
+  border-radius: 2px;
+  transform: rotate(45deg);
   background: var(--paper-card);
   transition: transform 0.25s ease, background 0.25s ease;
 }
@@ -207,12 +207,12 @@ body[data-category="human"] { background: var(--paper); }
 .marker-human .marker-dot { background: var(--cat-human); }
 
 .marker:hover .marker-dot {
-  transform: scale(1.35);
+  transform: rotate(45deg) scale(1.35);
 }
 
 .marker.active .marker-dot {
-  transform: scale(1.7);
-  box-shadow: 0 0 0 5px rgba(59, 58, 54, 0.12);
+  transform: rotate(45deg) scale(1.7);
+  box-shadow: 0 0 0 4px rgba(23, 23, 27, 0.15);
 }
 
 .tick {
@@ -226,7 +226,7 @@ body[data-category="human"] { background: var(--paper); }
   width: 0;
   height: 16px;
   margin: 0 auto;
-  border-left: 2px solid rgba(59, 58, 54, 0.45);
+  border-left: 2px solid rgba(23, 23, 27, 0.45);
 }
 
 .tick-label {
@@ -234,5 +234,74 @@ body[data-category="human"] { background: var(--paper); }
   font-size: 0.95rem;
   color: var(--ink-soft);
   white-space: nowrap;
-  transform: rotate(-4deg);
+}
+
+/* ---- Happenings ---- */
+
+.toast {
+  position: fixed;
+  z-index: 20;
+  bottom: calc(34vh + 18px);
+  left: 50%;
+  transform: translate(-50%, 16px);
+  max-width: min(560px, calc(100vw - 40px));
+  text-align: center;
+  background: var(--ink);
+  color: var(--paper-card);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 rgba(23, 23, 27, 0.3);
+  padding: 8px 20px;
+  font-size: 1.15rem;
+  line-height: 1.35;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.shooting-star {
+  position: fixed;
+  z-index: 6;
+  font-size: 1.7rem;
+  color: var(--yellow);
+  text-shadow: 2px 2px 0 rgba(23, 23, 27, 0.25);
+  pointer-events: none;
+  animation: shoot 1.7s linear forwards;
+}
+
+@keyframes shoot {
+  from { transform: translate(0, 0) rotate(-10deg); opacity: 1; }
+  to { transform: translate(-62vw, 24vh) rotate(-10deg); opacity: 0; }
+}
+
+.vortex-btn {
+  position: fixed;
+  z-index: 20;
+  right: 20px;
+  bottom: calc(34vh + 16px);
+  font-family: inherit;
+  font-size: 1.15rem;
+  padding: 8px 16px;
+  background: #6c63ff;
+  color: #fffdf4;
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--ink);
+  animation: vortex-in 0.3s ease;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.vortex-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--crayon-red);
+}
+
+@keyframes vortex-in {
+  from { transform: scale(0.6) rotate(-6deg); opacity: 0; }
+  to { transform: scale(1) rotate(0deg); opacity: 1; }
 }
