@@ -199,5 +199,67 @@ window.addEventListener("keydown", (event: KeyboardEvent) => {
 viewport.addEventListener("scroll", updateSpotlight);
 window.addEventListener("resize", refreshLayout);
 
+// ---- Happenings ----
+
+const toastEl = document.getElementById("toast")!;
+let toastTimer = 0;
+
+function toast(message: string, duration = 2600): void {
+  toastEl.textContent = message;
+  toastEl.classList.add("show");
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => toastEl.classList.remove("show"), duration);
+}
+
+const FACTS = [
+  "Cléopâtre a vécu plus près de nous que de la construction des pyramides.",
+  "Les requins existaient avant les arbres.",
+  "Quand les pyramides sortaient de terre, il restait des mammouths en Sibérie.",
+  "Le T-Rex vivait plus près de nous que du Stégosaure.",
+  "L'oxygène de l'air est au départ un « déchet » produit par des bactéries.",
+  "La Lune s'éloigne de la Terre de 3,8 cm par an.",
+  "Toute l'histoire humaine tient dans les derniers 0,002 % de celle de la Terre.",
+  "Les dinosaures ont régné 80 fois plus longtemps que l'humanité n'existe.",
+];
+
+function shootingStar(): void {
+  const star = document.createElement("span");
+  star.className = "shooting-star";
+  star.textContent = "✦";
+  star.style.left = `${55 + Math.random() * 40}vw`;
+  star.style.top = `${5 + Math.random() * 20}vh`;
+  document.body.appendChild(star);
+  star.addEventListener("animationend", () => star.remove());
+}
+
+function showVortex(): void {
+  if (document.querySelector(".vortex-btn")) return;
+  const btn = document.createElement("button");
+  btn.className = "vortex-btn";
+  btn.type = "button";
+  btn.textContent = "🌀 Vortex temporel !";
+  const expire = window.setTimeout(() => btn.remove(), 8000);
+  btn.addEventListener("click", () => {
+    window.clearTimeout(expire);
+    btn.remove();
+    let index = Math.floor(Math.random() * REPERES.length);
+    if (index === currentIndex) index = (index + 7) % REPERES.length;
+    scrollToPosition(yearsAgoToPosition(REPERES[index].yearsAgo));
+    toast(`Téléporté : ${REPERES[index].label} 🌀`);
+  });
+  document.body.appendChild(btn);
+}
+
+function scheduleHappening(): void {
+  window.setTimeout(() => {
+    const roll = Math.random();
+    if (roll < 0.4) toast(`Le savais-tu ? ${FACTS[Math.floor(Math.random() * FACTS.length)]}`, 6500);
+    else if (roll < 0.7) shootingStar();
+    else showVortex();
+    scheduleHappening();
+  }, 20_000 + Math.random() * 18_000);
+}
+
 renderMarkers();
 refreshLayout();
+scheduleHappening();
