@@ -9,6 +9,14 @@ interactives inspirées de l'univers du Petit Prince.
   Glisse pour lancer des planètes autour du soleil et construis un système
   solaire qui survit le plus longtemps possible.
 
+## Assets en cours (branche `feature/panne-au-decollage`)
+
+Packs isométriques gratuits (CC0 / CC-BY) à récupérer pour le rendu du prochain jeu :
+
+- [Kenney - Isometric Miniature Dungeon](https://kenney.nl/assets/isometric-miniature-dungeon) (CC0, priorité)
+- [Kenney - Isometric Blocks](https://kenney.nl/assets/isometric-blocks) (CC0, complément)
+- [jpcu - Isometric Kitchen Sprites](https://jpcu.itch.io/isometric-kitchen-sprites) (CC-BY 4.0, credit requis)
+
 ## Stack
 
 - [Vite](https://vite.dev) + TypeScript
