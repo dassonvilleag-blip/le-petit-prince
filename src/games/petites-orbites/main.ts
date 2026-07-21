@@ -10,7 +10,6 @@ interface Planet {
   radius: number;
   gm: number; // G * masse, en px³/s²
   color: string;
-  seed: number;
   trail: { x: number; y: number }[];
 }
 
@@ -23,15 +22,16 @@ interface Particle {
   color: string;
 }
 
-const INK = "#3b3a36";
-const PAPER = "#fbf6ea";
-const CRAYONS = ["#e07a5f", "#81b29a", "#5f8bd0", "#c98bb9", "#6a994e", "#bc4749", "#e6a23c", "#8e7cc3"];
+const INK = "#0d0f22";
+const SPACE = "#171a33";
+const CRAYONS = ["#ff5c8a", "#1fc7a8", "#6c63ff", "#ffc93c", "#ff8c42", "#4cc9f0", "#b5e48c", "#f72585"];
 
 const GM_SUN = 4_000_000; // px³/s² — orbite circulaire à 250 px ≈ 126 px/s
 const SLING_K = 1.4; // px de drag → px/s de vitesse
 const SUBSTEPS = 4;
 const TRAIL_MAX = 80;
 const RECORD_KEY = "petites-orbites-record";
+const MILESTONES = [10, 30, 60, 120];
 
 const canvas = document.getElementById("space") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
@@ -57,6 +57,18 @@ let lastMilestone = 0;
 let launched = false;
 
 let drag: { sx: number; sy: number; cx: number; cy: number } | null = null;
+
+// Happenings : de temps en temps, l'espace fait des siennes.
+interface Comet {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  trail: { x: number; y: number }[];
+}
+let comet: Comet | null = null;
+let flare = 0; // secondes restantes d'éruption solaire
+let nextEvent = 12 + Math.random() * 15;
 
 function resize(): void {
   const dpr = window.devicePixelRatio || 1;
@@ -126,8 +138,81 @@ function burst(x: number, y: number, color: string, count: number): void {
 }
 
 function loseStability(): void {
-  stability = 0;
+  // Perdre une planète coûte la moitié du chrono ; tout perdre remet à zéro.
+  stability = planets.length > 0 ? stability / 2 : 0;
   lastMilestone = 0;
+  for (const m of MILESTONES) if (stability >= m) lastMilestone = m;
+}
+
+function spawnComet(): void {
+  const fromLeft = Math.random() < 0.5;
+  const x = fromLeft ? -60 : W + 60;
+  const y = Math.random() * H;
+  const tx = W * (0.3 + Math.random() * 0.4);
+  const ty = H * (0.3 + Math.random() * 0.4);
+  const d = Math.hypot(tx - x, ty - y) || 1;
+  const speed = 260 + Math.random() * 120;
+  comet = { x, y, vx: ((tx - x) / d) * speed, vy: ((ty - y) / d) * speed, trail: [] };
+  toast("Une comète traverse le système ☄️");
+}
+
+function updateHappenings(dt: number): void {
+  if (planets.length > 0) nextEvent -= dt;
+  if (nextEvent <= 0) {
+    nextEvent = 20 + Math.random() * 20;
+    const roll = Math.random();
+    if (roll < 0.45) {
+      spawnComet();
+    } else if (roll < 0.75) {
+      flare = 1.2;
+      toast("Éruption solaire ! Accroche-toi 🌋");
+      for (const p of planets) {
+        const dx = p.x - sunX;
+        const dy = p.y - sunY;
+        const d = Math.hypot(dx, dy) || 1;
+        const kick = Math.min(140, 42_000 / d);
+        p.vx += (dx / d) * kick;
+        p.vy += (dy / d) * kick;
+      }
+    } else {
+      toast("Pluie d'étoiles filantes ✨");
+      for (let i = 0; i < 7; i++) {
+        particles.push({
+          x: Math.random() * W,
+          y: Math.random() * H * 0.5,
+          vx: 260 + Math.random() * 160,
+          vy: 130 + Math.random() * 80,
+          life: 0.9 + Math.random() * 0.7,
+          color: "#ffffff",
+        });
+      }
+    }
+  }
+  if (flare > 0) flare -= dt;
+
+  if (comet) {
+    comet.x += comet.vx * dt;
+    comet.y += comet.vy * dt;
+    comet.trail.push({ x: comet.x, y: comet.y });
+    if (comet.trail.length > 26) comet.trail.shift();
+    for (let i = planets.length - 1; i >= 0; i--) {
+      const p = planets[i];
+      if (Math.hypot(p.x - comet.x, p.y - comet.y) < p.radius + 6) {
+        burst(p.x, p.y, "#4cc9f0", 30);
+        planets.splice(i, 1);
+        toast("Une comète a percuté une planète ☄️");
+        loseStability();
+        comet = null;
+        break;
+      }
+    }
+    if (comet) {
+      const dSun = Math.hypot(comet.x - sunX, comet.y - sunY);
+      const out = comet.x < -100 || comet.x > W + 100 || comet.y < -100 || comet.y > H + 100;
+      if (dSun < sunR) burst(comet.x, comet.y, "#4cc9f0", 20);
+      if (dSun < sunR || out) comet = null;
+    }
+  }
 }
 
 function step(dt: number): void {
@@ -141,6 +226,8 @@ function step(dt: number): void {
       p.y += p.vy * h;
     }
   }
+
+  updateHappenings(dt);
 
   const escapeR = Math.max(W, H) * 1.5;
   for (let i = planets.length - 1; i >= 0; i--) {
@@ -207,7 +294,7 @@ function step(dt: number): void {
       record = stability;
       localStorage.setItem(RECORD_KEY, String(record));
     }
-    for (const milestone of [10, 30, 60, 120]) {
+    for (const milestone of MILESTONES) {
       if (stability >= milestone && lastMilestone < milestone) {
         lastMilestone = milestone;
         toast(
@@ -241,59 +328,29 @@ function previewPath(sx: number, sy: number, vx: number, vy: number): { x: numbe
   return pts;
 }
 
-// « Bouillonnement » : le tremblé des traits change quelques fois par seconde,
-// comme un dessin animé redessiné image par image.
-let wobble = 0;
-
-function jitter(seed: number, i: number): number {
-  const s = Math.sin(seed * 127.1 + i * 311.7) * 43758.5453;
-  return s - Math.floor(s);
-}
-
-function sketchCircle(
-  x: number,
-  y: number,
-  r: number,
-  stroke: string,
-  fill: string | null,
-  seed: number,
-): void {
-  const n = Math.max(10, Math.floor(r * 0.9));
-  for (let pass = 0; pass < 2; pass++) {
-    ctx.beginPath();
-    for (let i = 0; i <= n; i++) {
-      const a = (i / n) * Math.PI * 2;
-      const j = (jitter(seed + pass * 7 + wobble, i % n) - 0.5) * Math.max(1.6, r * 0.14);
-      const rr = r + j;
-      const px = x + Math.cos(a) * rr;
-      const py = y + Math.sin(a) * rr;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    if (pass === 0 && fill) {
-      ctx.globalAlpha = 0.5;
-      ctx.fillStyle = fill;
-      ctx.fill();
-    }
-    ctx.globalAlpha = pass === 0 ? 0.9 : 0.4;
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = pass === 0 ? 1.8 : 1;
-    ctx.stroke();
+// Rendu flat rétro : aplats vifs cerclés d'un trait sombre bien net.
+function flatCircle(x: number, y: number, r: number, stroke: string, fill: string | null): void {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  if (fill) {
+    ctx.fillStyle = fill;
+    ctx.fill();
   }
-  ctx.globalAlpha = 1;
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
 }
 
 function draw(): void {
-  ctx.fillStyle = PAPER;
+  ctx.fillStyle = SPACE;
   ctx.fillRect(0, 0, W, H);
 
-  ctx.strokeStyle = INK;
+  ctx.strokeStyle = "#ffffff";
   ctx.lineCap = "round";
   for (const s of stars) {
-    ctx.globalAlpha = s.a;
+    ctx.globalAlpha = s.a * 2;
     if (s.cross) {
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(s.x - s.r, s.y);
       ctx.lineTo(s.x + s.r, s.y);
@@ -301,10 +358,8 @@ function draw(): void {
       ctx.lineTo(s.x, s.y + s.r);
       ctx.stroke();
     } else {
-      ctx.fillStyle = INK;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r * 0.4, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(s.x - 1, s.y - 1, 2.5, 2.5);
     }
   }
   ctx.globalAlpha = 1;
@@ -324,24 +379,59 @@ function draw(): void {
     }
   }
 
-  // Soleil crayonné avec ses rayons
-  sketchCircle(sunX, sunY, sunR, "#c9932e", "#f4cf6d", 42);
-  ctx.strokeStyle = "#c9932e";
-  ctx.lineWidth = 1.6;
-  ctx.globalAlpha = 0.8;
+  // Comète de passage
+  if (comet) {
+    if (comet.trail.length > 1) {
+      ctx.strokeStyle = "#4cc9f0";
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(comet.trail[0].x, comet.trail[0].y);
+      for (const t of comet.trail) ctx.lineTo(t.x, t.y);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    flatCircle(comet.x, comet.y, 6, INK, "#bdf3ff");
+  }
+
+  // Soleil flat à rayons épais (gonfle pendant une éruption)
+  const sr = sunR * (1 + Math.max(0, flare) * 0.3);
+  ctx.strokeStyle = "#ffc93c";
+  ctx.lineWidth = 4;
   for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2 + jitter(wobble, i) * 0.2;
-    const r1 = sunR * (1.25 + jitter(wobble + 3, i) * 0.15);
-    const r2 = sunR * (1.55 + jitter(wobble + 9, i) * 0.3);
+    const a = (i / 12) * Math.PI * 2;
+    const r2 = sr * (i % 2 === 0 ? 1.8 : 1.5);
     ctx.beginPath();
-    ctx.moveTo(sunX + Math.cos(a) * r1, sunY + Math.sin(a) * r1);
+    ctx.moveTo(sunX + Math.cos(a) * sr * 1.22, sunY + Math.sin(a) * sr * 1.22);
     ctx.lineTo(sunX + Math.cos(a) * r2, sunY + Math.sin(a) * r2);
     ctx.stroke();
   }
-  ctx.globalAlpha = 1;
+  flatCircle(sunX, sunY, sr, INK, flare > 0 ? "#ff8c42" : "#ffc93c");
 
   for (const p of planets) {
-    sketchCircle(p.x, p.y, p.radius, INK, p.color, p.seed);
+    flatCircle(p.x, p.y, p.radius, INK, p.color);
+  }
+
+  // Planètes hors écran : une flèche au bord pour ne pas les perdre de vue
+  for (const p of planets) {
+    if (p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H) continue;
+    const ex = Math.min(W - 16, Math.max(16, p.x));
+    const ey = Math.min(H - 16, Math.max(16, p.y));
+    const a = Math.atan2(p.y - ey, p.x - ex);
+    ctx.save();
+    ctx.translate(ex, ey);
+    ctx.rotate(a);
+    ctx.beginPath();
+    ctx.moveTo(9, 0);
+    ctx.lineTo(-5, -7);
+    ctx.lineTo(-5, 7);
+    ctx.closePath();
+    ctx.fillStyle = p.color;
+    ctx.fill();
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
   }
 
   for (const pa of particles) {
@@ -356,7 +446,7 @@ function draw(): void {
   if (drag) {
     const vx = (drag.sx - drag.cx) * SLING_K;
     const vy = (drag.sy - drag.cy) * SLING_K;
-    ctx.strokeStyle = "rgba(59, 58, 54, 0.5)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 6]);
     ctx.beginPath();
@@ -365,14 +455,14 @@ function draw(): void {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.fillStyle = "rgba(59, 58, 54, 0.45)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
     for (const pt of previewPath(drag.sx, drag.sy, vx, vy)) {
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 1.6, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, 1.8, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    sketchCircle(drag.sx, drag.sy, 6, INK, null, 7);
+    flatCircle(drag.sx, drag.sy, 6, "#ffffff", null);
   }
 }
 
@@ -406,7 +496,6 @@ canvas.addEventListener("pointerup", (e) => {
     radius: 4.5 + Math.random() * 4.5,
     gm: 0,
     color: CRAYONS[Math.floor(Math.random() * CRAYONS.length)],
-    seed: Math.floor(Math.random() * 1000),
     trail: [],
   });
   const p = planets[planets.length - 1];
@@ -429,10 +518,11 @@ let last = performance.now();
 function frame(now: number): void {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  wobble = Math.floor(now / 150);
   step(dt);
   draw();
   updateHud();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+export {};

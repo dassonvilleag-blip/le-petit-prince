@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Le juke-box cassé</title>
+    <meta name="description" content="Compose une boucle chiptune 8-bit et partage-la par simple lien." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/juke-box/jukebox.css" />
+  </head>
+  <body>
+    <a class="back-link" href="/">← le petit prince</a>
+
+    <main class="machine">
+      <h1>Le juke-box <span>cassé</span></h1>
+
+      <div id="grid" class="grid"></div>
+
+      <div class="controls">
+        <button id="btn-play" type="button">▶ jouer</button>
+        <label>tempo <input id="tempo" type="range" min="80" max="200" step="5" value="120" /> <span id="tempo-val">120</span></label>
+        <label>son
+          <select id="wave">
+            <option value="square">carré</option>
+            <option value="triangle">triangle</option>
+            <option value="sawtooth">scie</option>
+          </select>
+        </label>
+        <button id="btn-random" type="button">🎲 hasard</button>
+        <button id="btn-clear" type="button">🧹 effacer</button>
+        <button id="btn-share" type="button">🔗 copier le lien</button>
+      </div>
+
+      <p class="tip">Coche des cases, appuie sur ▶ — ta mélodie vit dans l'URL, copie le lien pour l'envoyer.</p>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <script type="module" src="/src/games/juke-box/main.ts"></script>
+  </body>
+</html>

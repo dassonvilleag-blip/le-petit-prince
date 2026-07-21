@@ -15,19 +15,19 @@ html,
 body {
   height: 100%;
   overflow: hidden;
-  background: #171a33;
+  background: #aee3f5;
   font-family: "VT323", "Courier New", monospace;
-  color: var(--card);
+  color: var(--ink);
   -webkit-user-select: none;
   user-select: none;
 }
 
-#space {
+#fall {
   position: fixed;
   inset: 0;
   display: block;
   touch-action: none;
-  cursor: crosshair;
+  cursor: none;
 }
 
 .back-link {
@@ -43,7 +43,7 @@ body {
   background: var(--card);
   border: 3px solid var(--ink);
   border-radius: 8px;
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: 4px 4px 0 var(--ink);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
@@ -58,13 +58,12 @@ body {
   top: 16px;
   right: 18px;
   text-align: right;
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   line-height: 1.5;
-  color: var(--ink);
   background: var(--card);
   border: 3px solid var(--ink);
   border-radius: 8px;
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: 4px 4px 0 var(--ink);
   padding: 8px 14px;
   pointer-events: none;
 }
@@ -73,36 +72,40 @@ body {
   color: #d6336c;
 }
 
-.hint {
+.overlay {
   position: fixed;
+  z-index: 5;
   inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 12px;
+  gap: 14px;
   padding: 20px;
   pointer-events: none;
-  transition: opacity 0.6s ease;
+  transition: opacity 0.4s ease;
 }
 
-.hint h1 {
+.overlay.hidden {
+  opacity: 0;
+}
+
+.overlay h1 {
   font-family: "Pixelify Sans", "VT323", monospace;
   font-size: clamp(2.4rem, 7vw, 3.8rem);
   font-weight: 700;
-  color: var(--card);
-  text-shadow: 4px 4px 0 var(--pink);
+  text-shadow: 4px 4px 0 var(--yellow);
 }
 
-.hint p {
-  color: #b9c0f5;
-  font-size: 1.35rem;
+.overlay p {
+  font-size: 1.45rem;
   line-height: 1.55;
-}
-
-.hint.hidden {
-  opacity: 0;
+  background: rgba(255, 253, 244, 0.88);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 10px 20px;
 }
 
 .toast {
@@ -115,7 +118,7 @@ body {
   color: var(--ink);
   border: 3px solid var(--ink);
   border-radius: 8px;
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: 4px 4px 0 var(--ink);
   padding: 8px 20px;
   font-size: 1.25rem;
   opacity: 0;

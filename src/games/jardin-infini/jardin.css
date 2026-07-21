@@ -15,14 +15,14 @@ html,
 body {
   height: 100%;
   overflow: hidden;
-  background: #171a33;
+  background: #aee3f5;
   font-family: "VT323", "Courier New", monospace;
-  color: var(--card);
+  color: var(--ink);
   -webkit-user-select: none;
   user-select: none;
 }
 
-#space {
+#garden {
   position: fixed;
   inset: 0;
   display: block;
@@ -43,7 +43,7 @@ body {
   background: var(--card);
   border: 3px solid var(--ink);
   border-radius: 8px;
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: 4px 4px 0 var(--ink);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
@@ -57,20 +57,39 @@ body {
   z-index: 10;
   top: 16px;
   right: 18px;
-  text-align: right;
-  font-size: 1.25rem;
-  line-height: 1.5;
-  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.3rem;
   background: var(--card);
   border: 3px solid var(--ink);
   border-radius: 8px;
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: 4px 4px 0 var(--ink);
   padding: 8px 14px;
-  pointer-events: none;
 }
 
-.hud-record {
-  color: #d6336c;
+#btn-mow {
+  font-family: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 5px 10px;
+  background: var(--yellow);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+#btn-mow:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--pink);
+}
+
+#btn-mow:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
 }
 
 .hint {
@@ -79,26 +98,27 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: 18vh;
   text-align: center;
-  gap: 12px;
-  padding: 20px;
+  gap: 10px;
   pointer-events: none;
   transition: opacity 0.6s ease;
 }
 
 .hint h1 {
   font-family: "Pixelify Sans", "VT323", monospace;
-  font-size: clamp(2.4rem, 7vw, 3.8rem);
+  font-size: clamp(2.2rem, 6vw, 3.4rem);
   font-weight: 700;
-  color: var(--card);
-  text-shadow: 4px 4px 0 var(--pink);
+  text-shadow: 4px 4px 0 var(--yellow);
 }
 
 .hint p {
-  color: #b9c0f5;
-  font-size: 1.35rem;
-  line-height: 1.55;
+  font-size: 1.4rem;
+  line-height: 1.5;
+  background: rgba(255, 253, 244, 0.85);
+  padding: 8px 18px;
+  border-radius: 8px;
 }
 
 .hint.hidden {
@@ -108,16 +128,15 @@ body {
 .toast {
   position: fixed;
   z-index: 10;
-  bottom: 32px;
+  bottom: 30px;
   left: 50%;
   transform: translate(-50%, 16px);
-  background: var(--card);
-  color: var(--ink);
-  border: 3px solid var(--ink);
+  background: var(--ink);
+  color: var(--card);
   border-radius: 8px;
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: 4px 4px 0 rgba(23, 23, 27, 0.3);
   padding: 8px 20px;
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   opacity: 0;
   transition: opacity 0.25s ease, transform 0.25s ease;
   pointer-events: none;
