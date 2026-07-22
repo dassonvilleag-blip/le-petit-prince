@@ -150,6 +150,9 @@ let shipVY = 0;
 let shipA = 0;
 let hull = HULL_MAX;
 let invincibleUntil = 0;
+let levelDone = false; // verrou : « port » n'est envoyé qu'une fois par niveau
+let shake = 0;
+let lastScrape = 0;
 
 // faisceau (autorité : le gardien)
 let beamA = 0;
@@ -315,7 +318,11 @@ function wireChannel(channel: RTCDataChannel): void {
         toast("💥 Le navire a touché quelque chose !");
         break;
       case "port":
-        if (role === "gardien") nextLevel();
+        // verrou côté gardien aussi : ignore les doublons en début de niveau
+        if (role === "gardien" && !levelDone && now - levelStart > 2) {
+          levelDone = true;
+          nextLevel();
+        }
         break;
       case "sink":
         if (role === "gardien") {
@@ -440,6 +447,8 @@ function startLevel(seed: number, lvl: number, broadcast: boolean): void {
   shipVY = 0;
   hull = HULL_MAX;
   invincibleUntil = 0;
+  levelDone = false;
+  shake = 0;
   remoteShip.x = remoteShip.tx = world.start.x;
   remoteShip.y = remoteShip.ty = world.start.y;
   levelStart = now;
@@ -529,36 +538,54 @@ function step(dt: number): void {
     shipY = Math.max(20, Math.min(WORLD_H - 20, shipY + shipVY * dt));
     if (sp > 25) shipA = Math.atan2(shipVY, shipVX);
 
-    // collisions
-    if (now > invincibleUntil) {
+    // collisions : glissement/rebond physique, dégâts seulement en impact franc
+    {
       const mp = monsterPos(world, t);
-      const hazards: { x: number; y: number; r: number }[] = [...world.rocks];
-      if (mp) hazards.push({ x: mp.x, y: mp.y, r: 30 });
+      const hazards: { x: number; y: number; r: number; monster?: boolean }[] = [...world.rocks];
+      if (mp) hazards.push({ x: mp.x, y: mp.y, r: 26, monster: true });
       const lh = world.lighthouse;
-      hazards.push({ x: lh.x, y: lh.y, r: 42 });
+      hazards.push({ x: lh.x, y: lh.y, r: 40 });
       for (const hz of hazards) {
         const d = Math.hypot(shipX - hz.x, shipY - hz.y);
-        if (d < hz.r + 13) {
+        const minD = hz.r * 0.92 + 11; // hitbox légèrement pardonnante
+        if (d >= minD) continue;
+        const nx = (shipX - hz.x) / (d || 1);
+        const ny = (shipY - hz.y) / (d || 1);
+        // repose le bateau au contact, sans téléportation
+        shipX = hz.x + nx * minD;
+        shipY = hz.y + ny * minD;
+        // réflexion amortie de la composante normale : on glisse le long
+        const dot = shipVX * nx + shipVY * ny;
+        const impact = Math.max(0, -dot);
+        if (dot < 0) {
+          shipVX -= 1.5 * dot * nx;
+          shipVY -= 1.5 * dot * ny;
+          shipVX *= 0.6;
+          shipVY *= 0.6;
+        }
+        const harsh = impact > 95 || hz.monster === true;
+        if (harsh && now > invincibleUntil) {
           hull--;
-          invincibleUntil = now + 2.5;
-          const nx = (shipX - hz.x) / (d || 1);
-          const ny = (shipY - hz.y) / (d || 1);
-          shipX = hz.x + nx * (hz.r + 16);
-          shipY = hz.y + ny * (hz.r + 16);
-          shipVX = nx * 130;
-          shipVY = ny * 130;
+          invincibleUntil = now + 2;
+          shake = 9;
           send({ t: "hit", hull });
           toast(hull > 0 ? "💥 Aïe ! La coque a pris cher" : "🌊 Le navire sombre…");
           if (hull <= 0) {
             send({ t: "sink" });
             showOverlay("Naufrage 🌊", "Le gardien relance le niveau…", 2600);
           }
-          break;
+        } else if (impact > 35 && now - lastScrape > 1.2) {
+          // éraflure : feedback sans dégâts
+          lastScrape = now;
+          shake = 3.5;
+          toast("⚠️ Ça frotte…");
         }
+        break;
       }
     }
 
-    if (Math.hypot(shipX - world.port.x, shipY - world.port.y) < 55) {
+    if (!levelDone && Math.hypot(shipX - world.port.x, shipY - world.port.y) < 55) {
+      levelDone = true;
       send({ t: "port" });
       showOverlay("Port atteint ! 🚩", "Bien navigué. La suite arrive…", 2400);
     }
@@ -624,6 +651,11 @@ function draw(): void {
   ctx.fillStyle = "#0b1026";
   ctx.fillRect(0, 0, W, H);
   if (!world) return;
+  ctx.save();
+  if (shake > 0) {
+    shake = Math.max(0, shake - 0.35);
+    ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+  }
 
   const t = now - levelStart;
   const shipVisX = role === "navire" ? shipX : remoteShip.x;
@@ -785,6 +817,7 @@ function draw(): void {
     ctx.fillStyle = "#ffc93c";
     ctx.fill();
   }
+  ctx.restore();
 }
 
 function updateHud(): void {
