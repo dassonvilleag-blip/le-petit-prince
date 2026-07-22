@@ -928,6 +928,12 @@ window.addEventListener("keydown", (e) => {
   keys.add(e.code);
 });
 window.addEventListener("keyup", (e) => keys.delete(e.code));
+// pas de pause possible à deux, mais on purge les touches coincées au
+// changement d'onglet pour éviter que le navire file tout seul
+window.addEventListener("blur", () => keys.clear());
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) keys.clear();
+});
 
 document.getElementById("btn-host")!.addEventListener("click", () => void hostGame());
 document.getElementById("btn-join")!.addEventListener("click", () => joinGame());
