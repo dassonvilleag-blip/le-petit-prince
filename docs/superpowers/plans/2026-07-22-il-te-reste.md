@@ -427,7 +427,7 @@ Save this as `src/games/il-te-reste/style.css`.
 ```ts
 import { computeUnitValues, LIFE_EXPECTANCY_YEARS, type UnitValue } from "./units";
 
-const REVEAL_INTERVAL_MS = 1300;
+const REVEAL_INTERVAL_MS = 2500;
 
 const introEl = document.getElementById("intro")!;
 const revealEl = document.getElementById("reveal")!;
