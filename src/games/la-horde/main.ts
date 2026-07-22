@@ -89,11 +89,64 @@ function toast(message: string): void {
 
 // ---------- état ----------
 
-type State = "menu" | "play" | "choose" | "dead" | "won";
+type State = "menu" | "play" | "choose" | "dead";
 let state: State = "menu";
 
 let W = 0;
 let H = 0;
+
+// texture de sol générée (Higgsfield) ; repli sur l'aplat si absente
+const groundTex = new Image();
+let groundPattern: CanvasPattern | null = null;
+groundTex.onload = () => {
+  groundPattern = ctx.createPattern(groundTex, "repeat");
+};
+groundTex.src = "/textures/horde-sol.webp";
+
+// arène procédurale : des obstacles thématiques, une nouvelle carte par nuit
+interface Obstacle {
+  x: number;
+  y: number;
+  r: number;
+  emoji: string;
+}
+let obstacles: Obstacle[] = [];
+let night = 1;
+const THEMES = [
+  ["🪦", "🌲", "🗿"],
+  ["🌲", "🍄", "🪵"],
+  ["🏛️", "🗿", "⚱️"],
+  ["🧊", "⛄", "❄️"],
+];
+
+function genObstacles(): void {
+  obstacles = [];
+  const theme = THEMES[(night - 1) % THEMES.length];
+  const count = 9 + Math.floor(Math.random() * 5);
+  let guard = 0;
+  while (obstacles.length < count && guard++ < 300) {
+    const o = {
+      x: 60 + Math.random() * (W - 120),
+      y: 60 + Math.random() * (H - 120),
+      r: 18 + Math.random() * 10,
+      emoji: theme[Math.floor(Math.random() * theme.length)],
+    };
+    if (Math.hypot(o.x - W / 2, o.y - H / 2) < 150) continue; // zone de départ libre
+    if (obstacles.every((b) => Math.hypot(o.x - b.x, o.y - b.y) > o.r + b.r + 70)) obstacles.push(o);
+  }
+}
+
+function collideObstacles(x: number, y: number, r: number): [number, number] {
+  for (const o of obstacles) {
+    const d = Math.hypot(x - o.x, y - o.y);
+    const min = o.r + r;
+    if (d < min && d > 0) {
+      x = o.x + ((x - o.x) / d) * min;
+      y = o.y + ((y - o.y) / d) * min;
+    }
+  }
+  return [x, y];
+}
 
 interface Enemy {
   type: EnemyType;
@@ -283,13 +336,15 @@ function damagePlayer(amount: number): void {
   playerIframes = 0.7;
   shake = 7;
   floaters.push({ x: px, y: py - 24, txt: `-${Math.round(amount)}`, life: 0.9, color: "#ff5c8a" });
-  if (hp <= 0) endRun(false);
+  if (hp <= 0) endRun();
 }
 
 // ---------- déroulement ----------
 
 function startRun(): void {
   state = "play";
+  night = 1;
+  genObstacles();
   px = W / 2;
   py = H / 2;
   hp = 100;
@@ -315,22 +370,36 @@ function startRun(): void {
   hud.classList.remove("hidden");
 }
 
-function endRun(won: boolean): void {
-  state = won ? "won" : "dead";
-  const t = Math.floor(runT);
-  if (t > record) {
-    record = t;
+function fmtTotal(total: number): string {
+  const n = Math.floor(total / DAWN) + 1;
+  const rem = total % DAWN;
+  return `Nuit ${n} · ${String(Math.floor(rem / 60)).padStart(2, "0")}:${String(rem % 60).padStart(2, "0")}`;
+}
+
+function endRun(): void {
+  state = "dead";
+  const total = (night - 1) * DAWN + Math.floor(runT);
+  if (total > record) {
+    record = total;
     localStorage.setItem(RECORD_KEY, String(record));
   }
-  const mm = String(Math.floor(t / 60)).padStart(2, "0");
-  const ss = String(t % 60).padStart(2, "0");
-  overlayTitle.textContent = won ? "L'AUBE ☀️ Tu as survécu !" : "La horde t'a eu 💀";
+  overlayTitle.textContent = "La horde t'a eu 💀";
   overlayText.innerHTML =
-    `${won ? "10:00 de nuit complète." : `Tenu ${mm}:${ss}.`} niveau ${level} · ${kills} cauchemars vaincus` +
+    `Tenu jusqu'à ${fmtTotal(total)} — niveau ${level} · ${kills} cauchemars vaincus` +
     `${discoveredThisRun > 0 ? ` · ${discoveredThisRun} découverte${discoveredThisRun > 1 ? "s" : ""} 📖` : ""}` +
-    `<br />record : ${String(Math.floor(record / 60)).padStart(2, "0")}:${String(record % 60).padStart(2, "0")}` +
+    `<br />record : ${fmtTotal(record)}` +
     "<br />Clique pour retenter la nuit.";
   overlay.classList.remove("hidden");
+}
+
+function nextNight(): void {
+  night++;
+  runT = 0;
+  enemies = [];
+  genObstacles();
+  hp = Math.min(maxHp(), hp + 40);
+  shake = 6;
+  toast(`☀️ L'aube… non. 🌙 NUIT ${night} — ils reviennent plus forts !`);
 }
 
 interface Choice {
@@ -427,8 +496,8 @@ function spawnEnemy(): void {
   const m = 40;
   const x = side === 0 ? -m : side === 1 ? W + m : Math.random() * W;
   const y = side === 2 ? -m : side === 3 ? H + m : Math.random() * H;
-  // les cauchemars durcissent au fil de la nuit
-  const hpScale = 1 + runT / 240;
+  // les cauchemars durcissent au fil de la nuit, et à chaque nuit suivante
+  const hpScale = (1 + runT / 240) * (1 + (night - 1) * 0.55);
   enemies.push({ type, x, y, hp: type.hp * hpScale, phase: Math.random() * Math.PI * 2, dashT: 0, iframes: {} });
 }
 
@@ -537,7 +606,7 @@ function step(dt: number): void {
   runT += dt;
   if (playerIframes > 0) playerIframes -= dt;
   if (runT >= DAWN) {
-    endRun(true);
+    nextNight();
     return;
   }
 
@@ -562,12 +631,13 @@ function step(dt: number): void {
   }
   px = Math.max(16, Math.min(W - 16, px));
   py = Math.max(16, Math.min(H - 16, py));
+  [px, py] = collideObstacles(px, py, 13);
 
-  // ---- apparitions ----
+  // ---- apparitions : chaque nuit densifie la horde ----
   spawnIn -= dt;
   if (spawnIn <= 0) {
-    spawnIn = Math.max(0.22, 1.1 - runT / 700);
-    const batch = 1 + Math.floor(runT / 150);
+    spawnIn = Math.max(0.18, 1.1 - runT / 700 - (night - 1) * 0.12);
+    const batch = 1 + Math.floor(runT / 150) + (night - 1);
     for (let i = 0; i < batch; i++) spawnEnemy();
   }
 
@@ -590,6 +660,7 @@ function step(dt: number): void {
     }
     e.x += ux * sp * dt;
     e.y += uy * sp * dt;
+    if (e.type.id !== "ghost") [e.x, e.y] = collideObstacles(e.x, e.y, e.type.r); // les fantômes traversent
 
     if (d < e.type.r + 13) damagePlayer(e.type.dmg);
   }
@@ -708,32 +779,25 @@ function draw(): void {
   ctx.save();
   if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
-  // la nuit vire lentement à l'aube : la progression se lit dans le ciel
+  // sol texturé, puis la nuit vire lentement à l'aube par-dessus
   const p = skyProgress();
-  const r = Math.round(16 + p * 90);
-  const g = Math.round(16 + p * 60);
-  const b = Math.round(30 + p * 60);
-  ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+  ctx.fillStyle = groundPattern ?? "#10101e";
   ctx.fillRect(-20, -20, W + 40, H + 40);
-
-  // dallage discret
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.045)";
-  ctx.lineWidth = 1;
-  for (let x = 0; x < W; x += 64) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, H);
-    ctx.stroke();
-  }
-  for (let y = 0; y < H; y += 64) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(W, y);
-    ctx.stroke();
+  ctx.fillStyle = `rgba(8, 8, 24, ${0.6 * (1 - p)})`; // voile nocturne qui se lève
+  ctx.fillRect(-20, -20, W + 40, H + 40);
+  if (p > 0.4) {
+    ctx.fillStyle = `rgba(255, 170, 60, ${(p - 0.4) * 0.28})`; // lueur d'aube
+    ctx.fillRect(-20, -20, W + 40, H + 40);
   }
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+
+  // obstacles de l'arène
+  for (const o of obstacles) {
+    ctx.font = `${o.r * 2.2}px serif`;
+    ctx.fillText(o.emoji, o.x, o.y);
+  }
 
   // gemmes
   for (const gm of gems) {
@@ -837,7 +901,7 @@ function draw(): void {
 function updateHud(): void {
   if (state === "menu") return;
   const t = Math.floor(runT);
-  hudTime.textContent = `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+  hudTime.textContent = `Nuit ${night} · ${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
   hudLevel.textContent = String(level);
   hudKills.textContent = String(kills);
   hpFill.style.width = `${Math.max(0, (hp / maxHp()) * 100)}%`;
@@ -860,7 +924,7 @@ canvas.addEventListener("pointerdown", (e) => {
     bookEl.classList.add("hidden");
     return;
   }
-  if (state === "menu" || state === "dead" || state === "won") {
+  if (state === "menu" || state === "dead") {
     startRun();
     return;
   }

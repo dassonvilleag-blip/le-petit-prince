@@ -9,15 +9,41 @@ const WORLD_W = 1600;
 const WORLD_H = 1000;
 const HULL_MAX = 3;
 
-// Une mécanique nouvelle par niveau, et la tempête finale combine tout.
-const LEVEL_CONF = [
+// Cinq niveaux d'introduction écrits main (une mécanique chacun), puis
+// génération procédurale illimitée avec une difficulté qui grimpe en douceur.
+interface LevelConf {
+  name: string;
+  intro: string;
+  rocks: number;
+  currents: number;
+  monsters: number;
+  beamMul: number;
+}
+
+const BASE_LEVELS: LevelConf[] = [
   { name: "Les récifs", intro: "Amenez le navire au port 🚩", rocks: 24, currents: 0, monsters: 0, beamMul: 1 },
   { name: "Les courants", intro: "Des courants poussent le navire — le gardien les voit 🌀", rocks: 30, currents: 3, monsters: 0, beamMul: 1 },
   { name: "La créature", intro: "Quelque chose rôde dans le noir… 🐙", rocks: 34, currents: 2, monsters: 1, beamMul: 1 },
   { name: "La brume", intro: "La brume avale le faisceau : il porte moins loin 🌫️", rocks: 38, currents: 3, monsters: 1, beamMul: 0.72 },
   { name: "La tempête", intro: "Tout à la fois. Bonne chance, marins ⛈️", rocks: 42, currents: 4, monsters: 2, beamMul: 0.68 },
 ];
-const MAX_LEVEL = LEVEL_CONF.length;
+
+const LEVEL_NOUNS = ["La passe", "La fosse", "L'anse", "La baie", "Le détroit", "La nasse", "Le chenal"];
+const LEVEL_ADJS = ["hurlante", "sans-lune", "maudite", "du diable", "des brumes", "oubliée", "furieuse", "vorace"];
+
+function levelConf(lvl: number): LevelConf {
+  if (lvl <= BASE_LEVELS.length) return BASE_LEVELS[lvl - 1];
+  const n = lvl - BASE_LEVELS.length;
+  const rng = mulberry32(lvl * 7919);
+  return {
+    name: `${LEVEL_NOUNS[Math.floor(rng() * LEVEL_NOUNS.length)]} ${LEVEL_ADJS[Math.floor(rng() * LEVEL_ADJS.length)]}`,
+    intro: `Niveau ${lvl} — plus dense, plus sombre, plus vivant.`,
+    rocks: Math.min(72, 42 + n * 4),
+    currents: Math.min(6, 3 + Math.floor(n / 2)),
+    monsters: Math.min(4, 2 + Math.floor(n / 3)),
+    beamMul: Math.max(0.5, 0.68 - n * 0.02),
+  };
+}
 
 interface Rock {
   x: number;
@@ -72,7 +98,7 @@ function buildWorld(seed: number, level: number): World {
   ];
   const [start, port] = corners[Math.floor(rng() * corners.length)];
 
-  const conf = LEVEL_CONF[Math.min(level, MAX_LEVEL) - 1];
+  const conf = levelConf(level);
 
   const rocks: Rock[] = [];
   let guard = 0;
@@ -136,6 +162,14 @@ const ctx = canvas.getContext("2d")!;
 const fog = document.createElement("canvas");
 const fctx = fog.getContext("2d")!;
 
+// texture de mer générée (Higgsfield) ; repli sur l'aplat si absente
+const seaTex = new Image();
+let seaPattern: CanvasPattern | null = null;
+seaTex.onload = () => {
+  seaPattern = ctx.createPattern(seaTex, "repeat");
+};
+seaTex.src = "/textures/phare-mer.webp";
+
 const hud = document.getElementById("hud")!;
 const hudRole = document.getElementById("hud-role")!;
 const hudLevel = document.getElementById("hud-level")!;
@@ -167,7 +201,6 @@ let playing = false;
 let world: World | null = null;
 let level = 1;
 let levelStart = 0;
-let totalTime = 0;
 
 // navire (autorité : le joueur navire)
 let shipX = 0;
@@ -360,9 +393,6 @@ function wireChannel(channel: RTCDataChannel): void {
           startLevel(Math.floor(Math.random() * 2 ** 31), level, true);
         }
         break;
-      case "win":
-        finishGame(msg.total);
-        break;
     }
   };
 }
@@ -492,30 +522,16 @@ function startLevel(seed: number, lvl: number, broadcast: boolean): void {
     if (role === "navire") send({ t: "ship", x: Math.round(shipX), y: Math.round(shipY), a: shipA });
     else send({ t: "beam", a: beamA, w: beamW });
   }, 66);
-  const conf = LEVEL_CONF[Math.min(lvl, MAX_LEVEL) - 1];
+  const conf = levelConf(lvl);
   showOverlay(`Niveau ${lvl} — ${conf.name}`, conf.intro, 2600);
 }
 
 function nextLevel(): void {
-  totalTime += now - levelStart;
-  if (level >= MAX_LEVEL) {
-    send({ t: "win", total: Math.round(totalTime) });
-    finishGame(Math.round(totalTime));
-  } else {
-    showOverlay("Port atteint ! 🚩", `Niveau ${level + 1}…`, 2400);
-    startLevel(Math.floor(Math.random() * 2 ** 31), level + 1, true);
-  }
-}
-
-function finishGame(total: number): void {
-  playing = false;
-  const min = Math.floor(total / 60);
-  const sec = Math.floor(total % 60);
-  showOverlay(
-    "Traversée accomplie ⚓",
-    `Les cinq ports en ${min > 0 ? `${min} min ` : ""}${sec} s à deux.<br />Recréez une partie en échangeant les rôles !`,
-    0,
-  );
+  // sans fin : la mer a toujours un port de plus
+  const best = Number(localStorage.getItem("phare-record") ?? "0");
+  if (level + 1 > best) localStorage.setItem("phare-record", String(level + 1));
+  showOverlay("Port atteint ! 🚩", `Niveau ${level + 1}…`, 2400);
+  startLevel(Math.floor(Math.random() * 2 ** 31), level + 1, true);
 }
 
 // ---------- simulation ----------
@@ -646,8 +662,7 @@ function step(dt: number): void {
 // ---------- rendu ----------
 
 function beamLength(w: number): number {
-  const mul = LEVEL_CONF[Math.min(level, MAX_LEVEL) - 1]?.beamMul ?? 1;
-  return Math.max(380, Math.min(980, 200 + 140 / w)) * mul;
+  return Math.max(380, Math.min(980, 200 + 140 / w)) * levelConf(level).beamMul;
 }
 
 function drawBoat(x: number, y: number, a: number, ghost: boolean): void {
@@ -701,7 +716,9 @@ function draw(): void {
 
   // mer
   const [wx0, wy0] = toScreen(0, 0);
-  ctx.fillStyle = "#10163a";
+  ctx.fillStyle = seaPattern ?? "#10163a";
+  ctx.fillRect(wx0, wy0, WORLD_W * scale, WORLD_H * scale);
+  ctx.fillStyle = "rgba(16, 22, 58, 0.35)"; // assombrit la texture, unifie la nuit
   ctx.fillRect(wx0, wy0, WORLD_W * scale, WORLD_H * scale);
   ctx.strokeStyle = "#fffdf4";
   ctx.lineWidth = 2;
