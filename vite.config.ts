@@ -13,7 +13,7 @@ export default defineConfig({
         orbites: resolve(__dirname, "games/petites-orbites/index.html"),
         echelle: resolve(__dirname, "games/echelle-du-temps/index.html"),
         jardin: resolve(__dirname, "games/jardin-infini/index.html"),
-        chute: resolve(__dirname, "games/chute-infinie/index.html"),
+        peche: resolve(__dirname, "games/peche-abyssale/index.html"),
         jukebox: resolve(__dirname, "games/juke-box/index.html"),
       },
     },
