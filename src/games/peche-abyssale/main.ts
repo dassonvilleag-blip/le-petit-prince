@@ -53,13 +53,26 @@ const CREATURES: Creature[] = [
 
 const HOOK_R = 13;
 const HOOK_Y = 0.45; // fraction de l'écran
-const DESCENT_DRAIN = 0.8; // % de ligne par 100 m de descente
-const TIER_DRAIN = [0, 1.0, 1.4, 1.8, 2.1, 2.4]; // % par 100 m de remontée, par tier
-const HIT_DRAIN = 10; // % par collision à la remontée
-const ASCENT_SPEED = 1000; // px/s (100 m/s)
+const DESCENT_DRAIN = 0.6; // % de ligne par 100 m de descente
+const TIER_DRAIN = [0, 0.8, 1.1, 1.4, 1.7, 2.0]; // % par 100 m de remontée, par tier
+const HIT_DRAIN = 8; // % par collision à la remontée
+const ASCENT_SPEED = 550; // px/s — assez lent pour rendre l'esquive lisible
 
 const RECORD_KEY = "peche-record";
 const BOOK_KEY = "peche-bestiaire";
+const SHOP_KEY = "peche-boutique";
+
+// valeur de vente par tier ; une première capture vaut double
+const VALUE = [0, 3, 8, 18, 40, 100];
+const QUIPS = [
+  "le poissonnier n'a posé aucune question.",
+  "ça finira en sushi douteux.",
+  "il sentait bizarre. Tant mieux, ça fait monter le prix.",
+  "la science le réclamait, la poêle l'a eu.",
+  "vendu à un collectionneur louche.",
+  "il a mordu, c'est sa faute.",
+  "l'aquarium municipal dit merci.",
+];
 
 const canvas = document.getElementById("sea") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
@@ -93,11 +106,61 @@ let particles: Particle[] = [];
 let spawnIn = 0;
 let shake = 0;
 let now = 0;
+let graceUntil = 0; // invincibilité brève après le ferrage
 let bestiaire = new Set<string>();
 try {
   bestiaire = new Set(JSON.parse(localStorage.getItem(BOOK_KEY) ?? "[]"));
 } catch {
   bestiaire = new Set();
+}
+
+// ---- économie et équipement ----
+
+let money = 0;
+let upLine = 0; // ligne renforcée : +25 % de solidité par niveau
+let upReel = 0; // moulinet turbo : +15 % de vitesse de remontée par niveau
+let upWeight = 0; // lest de plomb : +15 % de vitesse de descente par niveau
+try {
+  const s = JSON.parse(localStorage.getItem(SHOP_KEY) ?? "{}");
+  money = s.money ?? 0;
+  upLine = s.upLine ?? 0;
+  upReel = s.upReel ?? 0;
+  upWeight = s.upWeight ?? 0;
+} catch {
+  /* valeurs par défaut */
+}
+
+function saveShop(): void {
+  localStorage.setItem(SHOP_KEY, JSON.stringify({ money, upLine, upReel, upWeight }));
+}
+
+function lineMax(): number {
+  return 100 + upLine * 25;
+}
+
+const UPGRADES = [
+  { id: "up-line", name: "🧵 Ligne renforcée", get: () => upLine, inc: () => upLine++, price: (l: number) => 20 * 2 ** l },
+  { id: "up-reel", name: "🎣 Moulinet turbo", get: () => upReel, inc: () => upReel++, price: (l: number) => 15 * 2 ** l },
+  { id: "up-weight", name: "⚓ Lest de plomb", get: () => upWeight, inc: () => upWeight++, price: (l: number) => 15 * 2 ** l },
+];
+const UP_MAX = 5;
+
+function renderShop(): void {
+  const moneyEl = document.getElementById("shop-money");
+  if (moneyEl) moneyEl.textContent = String(money);
+  for (const u of UPGRADES) {
+    const btn = document.getElementById(u.id) as HTMLButtonElement | null;
+    if (!btn) continue;
+    const lvl = u.get();
+    if (lvl >= UP_MAX) {
+      btn.textContent = `${u.name} · MAX`;
+      btn.disabled = true;
+    } else {
+      const price = u.price(lvl);
+      btn.textContent = `${u.name} ${"▮".repeat(lvl)}${"▯".repeat(UP_MAX - lvl)} — ${price} ⚓`;
+      btn.disabled = money < price;
+    }
+  }
 }
 
 let toastTimer = 0;
@@ -120,11 +183,11 @@ function resize(): void {
 }
 
 function descentSpeed(): number {
-  return Math.min(700, 300 + depth * 0.05);
+  return Math.min(700, 300 + depth * 0.05) * (1 + 0.15 * upWeight);
 }
 
 function scrollSpeed(): number {
-  return state === "ascend" ? ASCENT_SPEED : descentSpeed();
+  return state === "ascend" ? ASCENT_SPEED * (1 + 0.15 * upReel) : descentSpeed();
 }
 
 function burst(x: number, y: number, color: string, count: number): void {
@@ -163,7 +226,7 @@ function renderBook(): void {
     const div = document.createElement("div");
     div.className = `book-entry${has ? " caught" : ""}`;
     div.innerHTML = has
-      ? `<span class="emoji">${c.emoji}</span><span>${c.name}<small>${"★".repeat(c.tier)}</small></span>`
+      ? `<span class="emoji">${c.emoji}</span><span>${c.name}<small>${"★".repeat(c.tier)} · ${VALUE[c.tier]} ⚓</small></span>`
       : `<span class="emoji">❓</span><span>???<small>à partir de ${c.minDepth} m</small></span>`;
     bookGrid.appendChild(div);
   }
@@ -177,8 +240,14 @@ function endDive(success: boolean): void {
     bestiaire.add(caught.id);
     saveBook();
     renderBook();
+    const value = VALUE[caught.tier] * (isNew ? 2 : 1);
+    money += value;
+    saveShop();
+    const quip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
     overlayTitle.textContent = `${caught.emoji} ${caught.name} !`;
-    overlayText.innerHTML = `${"★".repeat(caught.tier)}${isNew ? " — <strong>NOUVEAU</strong> au bestiaire 📖" : " — déjà au bestiaire"}<br />Clique pour replonger.`;
+    overlayText.innerHTML =
+      `${"★".repeat(caught.tier)}${isNew ? " — <strong>NOUVEAU</strong> au bestiaire 📖 (prime ×2)" : ""}` +
+      `<br />Vendu <strong>${value} ⚓</strong> — ${quip}<br />Clique pour replonger.`;
   } else if (caught) {
     overlayTitle.textContent = "La ligne a cassé 💔";
     overlayText.innerHTML = `${caught.emoji} ${caught.name} est reparti dans les profondeurs…<br />Clique pour replonger.`;
@@ -187,20 +256,24 @@ function endDive(success: boolean): void {
     overlayText.innerHTML = "Clique pour replonger.";
   }
   caught = null;
+  renderShop();
+  document.getElementById("shop")!.classList.remove("hidden");
   overlay.classList.remove("hidden");
 }
 
 function startDive(): void {
   depth = 0;
-  line = 100;
+  line = lineMax();
   caught = null;
   swimmers = [];
   particles = [];
   spawnIn = 0.4;
   hookX = W / 2;
   hookVX = 0;
+  graceUntil = 0;
   state = "descend";
   overlay.classList.add("hidden");
+  document.getElementById("shop")!.classList.add("hidden");
 }
 
 function step(dt: number): void {
@@ -261,29 +334,33 @@ function step(dt: number): void {
   // ---- créatures ----
   spawnIn -= dt;
   if (spawnIn <= 0) {
-    spawnIn = Math.max(0.3, 0.8 - depth / 4000);
+    // la remontée fait apparaître moins de monde : l'esquive doit rester lisible
+    const base = Math.max(0.3, 0.8 - depth / 4000);
+    spawnIn = state === "ascend" ? base * 1.7 : base;
     spawnSwimmer(state === "ascend");
   }
 
   for (let i = swimmers.length - 1; i >= 0; i--) {
     const s = swimmers[i];
     s.x += s.vx * dt;
-    s.y += (state === "descend" ? -scroll : scroll) * dt * 0.9;
+    // vitesse relative réduite : on a le temps de viser (ou d'esquiver)
+    s.y += (state === "descend" ? -scroll * 0.75 : scroll * 0.6) * dt;
     s.y += Math.sin(now * 2 + s.phase) * 18 * dt;
     if (s.y < -80 || s.y > H + 80 || s.x < -90 || s.x > W + 90) {
       swimmers.splice(i, 1);
       continue;
     }
-    if (Math.hypot(s.x - hookX, s.y - hy) < s.r + HOOK_R) {
+    if (Math.hypot(s.x - hookX, s.y - hy) < s.r * 0.85 + HOOK_R - 3) {
       if (state === "descend") {
         // ferré !
         caught = s.creature;
         swimmers.splice(i, 1);
         burst(hookX, hy, "#ffc93c", 20);
         shake = 5;
+        graceUntil = now + 1.5;
         toast(`${s.creature.emoji} ${s.creature.name} — ferré ! Remonte !`);
         state = "ascend";
-      } else {
+      } else if (now >= graceUntil) {
         // collision pendant la remontée : la ligne souffre
         swimmers.splice(i, 1);
         line -= HIT_DRAIN;
@@ -307,7 +384,7 @@ function step(dt: number): void {
   }
 }
 
-function waterColor(): string {
+function waterColorAt(d: number): string {
   // de bleu clair à noir abyssal
   const stops: [number, number[]][] = [
     [0, [42, 111, 176]],
@@ -316,16 +393,17 @@ function waterColor(): string {
     [2400, [10, 16, 40]],
     [3600, [4, 5, 14]],
   ];
+  const dd = Math.max(0, d);
   let lo = stops[0];
   let hi = stops[stops.length - 1];
   for (let i = 0; i < stops.length - 1; i++) {
-    if (depth >= stops[i][0] && depth <= stops[i + 1][0]) {
+    if (dd >= stops[i][0] && dd <= stops[i + 1][0]) {
       lo = stops[i];
       hi = stops[i + 1];
       break;
     }
   }
-  const t = hi[0] === lo[0] ? 0 : Math.min(1, (depth - lo[0]) / (hi[0] - lo[0]));
+  const t = hi[0] === lo[0] ? 0 : Math.min(1, (dd - lo[0]) / (hi[0] - lo[0]));
   const c = lo[1].map((v, i) => Math.round(v + (hi[1][i] - v) * t));
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
@@ -334,8 +412,34 @@ function draw(t: number): void {
   ctx.save();
   if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
-  ctx.fillStyle = waterColor();
+  // l'eau : un vrai dégradé selon la profondeur visible à l'écran
+  const hyd = H * HOOK_Y;
+  const grad = ctx.createLinearGradient(0, -20, 0, H + 20);
+  grad.addColorStop(0, waterColorAt(depth - hyd / 10));
+  grad.addColorStop(1, waterColorAt(depth + (H - hyd) / 10));
+  ctx.fillStyle = grad;
   ctx.fillRect(-20, -20, W + 40, H + 40);
+
+  // marqueurs de profondeur qui défilent : le monde bouge vraiment
+  if (state !== "surface") {
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.font = "17px 'VT323', monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.lineWidth = 1.5;
+    const first = Math.max(250, Math.ceil((depth - hyd / 10) / 250) * 250);
+    for (let md = first; md <= depth + (H - hyd) / 10; md += 250) {
+      const y = hyd + (md - depth) * 10;
+      ctx.setLineDash([10, 14]);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillText(`${md} m`, 12, y - 5);
+    }
+  }
 
   // rayons de lumière près de la surface
   if (depth < 500) {
@@ -358,16 +462,24 @@ function draw(t: number): void {
   ctx.textBaseline = "middle";
 
   for (const s of swimmers) {
+    // les créatures rares brillent dans le noir
+    if (s.creature.tier >= 3) {
+      const glowR = s.r * (2.2 + 0.25 * Math.sin(t * 3 + s.phase));
+      const glow = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, glowR);
+      const c = s.creature.tier >= 5 ? "255, 92, 138" : s.creature.tier === 4 ? "255, 201, 60" : "76, 201, 240";
+      glow.addColorStop(0, `rgba(${c}, 0.4)`);
+      glow.addColorStop(1, `rgba(${c}, 0)`);
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, glowR, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.save();
     ctx.translate(s.x, s.y + Math.sin(t * 2 + s.phase) * 5);
     if (s.vx > 0) ctx.scale(-1, 1); // les emojis nagent vers la gauche par défaut
     ctx.font = `${s.r * 2}px serif`;
     ctx.fillText(s.creature.emoji, 0, 0);
     ctx.restore();
-    if (s.creature.tier >= 4) {
-      ctx.font = "14px serif";
-      ctx.fillText("✨", s.x + s.r + 8, s.y - s.r);
-    }
   }
 
   for (const pa of particles) {
@@ -389,14 +501,18 @@ function draw(t: number): void {
     ctx.quadraticCurveTo(hookX - hookVX * 0.1, hy * 0.5, hookX, hy - HOOK_R);
     ctx.stroke();
 
-    ctx.font = `${HOOK_R * 2.2}px serif`;
-    ctx.fillText("🪝", hookX, hy);
+    // hameçon (clignote pendant la grâce post-ferrage)
+    if (now >= graceUntil || Math.floor(now * 8) % 2 === 0) {
+      ctx.font = `${HOOK_R * 2.2}px serif`;
+      ctx.fillText("🪝", hookX, hy);
+    }
     if (caught) {
+      const dangle = Math.sin(t * 4) * 6;
       ctx.font = `${(16 + caught.tier * 3) * 2}px serif`;
-      ctx.fillText(caught.emoji, hookX, hy + HOOK_R + 20 + caught.tier * 3);
+      ctx.fillText(caught.emoji, hookX + dangle, hy + HOOK_R + 20 + caught.tier * 3);
       if (caught.tier >= 4) {
         ctx.font = "16px serif";
-        ctx.fillText("✨", hookX + 30, hy + HOOK_R + 10);
+        ctx.fillText("✨", hookX + dangle + 30, hy + HOOK_R + 10);
       }
     }
 
@@ -417,8 +533,13 @@ function draw(t: number): void {
 function updateHud(): void {
   hudDepth.textContent = `${Math.floor(Math.max(0, depth))} m`;
   hudRecord.textContent = `${record} m`;
-  barFill.style.width = `${Math.max(0, line)}%`;
-  barFill.style.background = line > 50 ? "#1fc7a8" : line > 25 ? "#ffc93c" : "#ff5c8a";
+  const moneyEl = document.getElementById("hud-money");
+  if (moneyEl) moneyEl.textContent = String(money);
+  const pct = (Math.max(0, line) / lineMax()) * 100;
+  barFill.style.width = `${pct}%`;
+  barFill.style.background = pct > 50 ? "#1fc7a8" : pct > 25 ? "#ffc93c" : "#ff5c8a";
+  const btnUp = document.getElementById("btn-up");
+  if (btnUp) btnUp.classList.toggle("hidden", state !== "descend");
 }
 
 canvas.addEventListener("pointermove", (e) => {
@@ -431,12 +552,28 @@ canvas.addEventListener("pointerdown", (e) => {
     bookEl.classList.add("hidden");
     return;
   }
+  // cliquer sert uniquement à plonger : plus de remontée accidentelle
   if (state === "surface") startDive();
-  else if (state === "descend" && !caught) {
-    toast("Remontée à vide… courageux 🐔");
-    state = "ascend";
-  }
 });
+
+document.getElementById("btn-up")!.addEventListener("click", () => {
+  if (state !== "descend") return;
+  toast("Remontée à vide… courageux 🐔");
+  state = "ascend";
+});
+
+for (const u of UPGRADES) {
+  document.getElementById(u.id)!.addEventListener("click", () => {
+    const lvl = u.get();
+    const price = u.price(lvl);
+    if (lvl >= UP_MAX || money < price) return;
+    money -= price;
+    u.inc();
+    saveShop();
+    renderShop();
+    toast("Équipement amélioré 🛠️");
+  });
+}
 
 btnBook.addEventListener("click", () => {
   renderBook();
@@ -448,6 +585,7 @@ bookEl.addEventListener("click", () => bookEl.classList.add("hidden"));
 window.addEventListener("resize", resize);
 resize();
 renderBook();
+renderShop();
 updateHud();
 
 let last = 0;
