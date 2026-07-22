@@ -330,76 +330,82 @@ function wireChannel(channel: RTCDataChannel): void {
   };
 }
 
+let pollTimer = 0;
+
 async function hostGame(): Promise<void> {
   role = "gardien";
   lobbyChoice.classList.add("hidden");
   flowHost.classList.remove("hidden");
-  statusEl.textContent = "préparation du code…";
-  pc = newPeer();
-  wireChannel(pc.createDataChannel("phare"));
-  await pc.setLocalDescription(await pc.createOffer());
-  await iceComplete(pc);
-  const offer = encodeDesc(pc.localDescription);
-  (document.getElementById("host-offer") as HTMLTextAreaElement).value = offer;
+  statusEl.textContent = "création de la partie…";
   try {
-    await navigator.clipboard.writeText(offer);
-    statusEl.textContent = "code copié ! envoie-le à ton matelot 📋";
-  } catch {
+    pc = newPeer();
+    wireChannel(pc.createDataChannel("phare"));
+    await pc.setLocalDescription(await pc.createOffer());
+    await iceComplete(pc);
+    const r = await fetch("/api/phare/rooms", { method: "POST", body: encodeDesc(pc.localDescription) });
+    const { code } = await r.json();
+    document.getElementById("room-code")!.textContent = code;
     statusEl.textContent = "en attente du matelot…";
-  }
-}
-
-let accepting = false;
-async function acceptAnswer(): Promise<void> {
-  const code = (document.getElementById("host-answer") as HTMLTextAreaElement).value;
-  if (!pc || !code.trim() || accepting || pc.signalingState !== "have-local-offer") return;
-  accepting = true;
-  try {
-    await pc.setRemoteDescription(decodeDesc(code));
-    statusEl.textContent = "connexion…";
+    pollTimer = window.setInterval(async () => {
+      try {
+        const res = await fetch(`/api/phare/rooms/${code}/answer`);
+        const { answer } = await res.json();
+        if (answer && pc && pc.signalingState === "have-local-offer") {
+          window.clearInterval(pollTimer);
+          await pc.setRemoteDescription(decodeDesc(answer));
+          statusEl.textContent = "connexion…";
+        }
+      } catch {
+        /* le poll suivant réessaiera */
+      }
+    }, 1200);
   } catch {
-    accepting = false;
-    toast("Code invalide 🤔");
+    toast("Impossible de créer la partie 📡");
+    backToLobby();
   }
 }
 
-async function joinGame(): Promise<void> {
+function joinGame(): void {
   role = "navire";
   lobbyChoice.classList.add("hidden");
   flowJoin.classList.remove("hidden");
+  (document.getElementById("join-code") as HTMLInputElement).focus();
 }
 
-let answering = false;
-async function makeAnswer(): Promise<void> {
-  const code = (document.getElementById("join-offer") as HTMLTextAreaElement).value;
-  if (!code.trim() || answering) return;
-  answering = true;
+let joining = false;
+async function joinWithCode(code: string): Promise<void> {
+  if (joining) return;
+  joining = true;
+  statusEl.textContent = "recherche de la partie…";
   try {
+    const res = await fetch(`/api/phare/rooms/${code}`);
+    if (!res.ok) {
+      joining = false;
+      statusEl.textContent = "";
+      toast("Code inconnu 🤔");
+      return;
+    }
+    const { offer } = await res.json();
     pc = newPeer();
     pc.ondatachannel = (e) => wireChannel(e.channel);
-    await pc.setRemoteDescription(decodeDesc(code));
+    await pc.setRemoteDescription(decodeDesc(offer));
     await pc.setLocalDescription(await pc.createAnswer());
     await iceComplete(pc);
-    const answer = encodeDesc(pc.localDescription);
-    (document.getElementById("join-answer") as HTMLTextAreaElement).value = answer;
-    try {
-      await navigator.clipboard.writeText(answer);
-      statusEl.textContent = "réponse copiée ! envoie-la au gardien 📋";
-    } catch {
-      statusEl.textContent = "renvoie la réponse au gardien…";
-    }
+    await fetch(`/api/phare/rooms/${code}/answer`, { method: "POST", body: encodeDesc(pc.localDescription) });
+    statusEl.textContent = "connexion…";
   } catch {
-    answering = false;
-    toast("Code invalide 🤔");
+    joining = false;
+    statusEl.textContent = "";
+    toast("Connexion impossible 📡");
   }
 }
 
 function backToLobby(): void {
   playing = false;
   world = null;
-  answering = false;
-  accepting = false;
+  joining = false;
   window.clearInterval(sendTimer);
+  window.clearInterval(pollTimer);
   if (pc) pc.close();
   pc = null;
   dc = null;
@@ -409,10 +415,8 @@ function backToLobby(): void {
   lobbyChoice.classList.remove("hidden");
   flowHost.classList.add("hidden");
   flowJoin.classList.add("hidden");
-  (document.getElementById("host-offer") as HTMLTextAreaElement).value = "";
-  (document.getElementById("host-answer") as HTMLTextAreaElement).value = "";
-  (document.getElementById("join-offer") as HTMLTextAreaElement).value = "";
-  (document.getElementById("join-answer") as HTMLTextAreaElement).value = "";
+  document.getElementById("room-code")!.textContent = "····";
+  (document.getElementById("join-code") as HTMLInputElement).value = "";
   statusEl.textContent = "";
 }
 
@@ -818,24 +822,13 @@ window.addEventListener("keydown", (e) => {
 window.addEventListener("keyup", (e) => keys.delete(e.code));
 
 document.getElementById("btn-host")!.addEventListener("click", () => void hostGame());
-document.getElementById("btn-join")!.addEventListener("click", () => void joinGame());
-document.getElementById("btn-accept-answer")!.addEventListener("click", () => void acceptAnswer());
-document.getElementById("btn-make-answer")!.addEventListener("click", () => void makeAnswer());
-document.getElementById("btn-copy-offer")!.addEventListener("click", () => {
-  void navigator.clipboard.writeText((document.getElementById("host-offer") as HTMLTextAreaElement).value);
-  toast("Code copié 📋");
-});
-document.getElementById("btn-copy-answer")!.addEventListener("click", () => {
-  void navigator.clipboard.writeText((document.getElementById("join-answer") as HTMLTextAreaElement).value);
-  toast("Réponse copiée 📋");
-});
+document.getElementById("btn-join")!.addEventListener("click", () => joinGame());
 
-// coller un code déclenche l'étape suivante tout seul
-document.getElementById("join-offer")!.addEventListener("input", () => {
-  window.setTimeout(() => void makeAnswer(), 60);
-});
-document.getElementById("host-answer")!.addEventListener("input", () => {
-  window.setTimeout(() => void acceptAnswer(), 60);
+// 4 lettres tapées → connexion automatique
+const joinInput = document.getElementById("join-code") as HTMLInputElement;
+joinInput.addEventListener("input", () => {
+  joinInput.value = joinInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (joinInput.value.length === 4) void joinWithCode(joinInput.value);
 });
 
 window.addEventListener("resize", resize);
