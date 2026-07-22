@@ -15,6 +15,7 @@ export default defineConfig({
         jardin: resolve(__dirname, "games/jardin-infini/index.html"),
         peche: resolve(__dirname, "games/peche-abyssale/index.html"),
         jukebox: resolve(__dirname, "games/juke-box/index.html"),
+        phare: resolve(__dirname, "games/le-phare/index.html"),
       },
     },
   },
