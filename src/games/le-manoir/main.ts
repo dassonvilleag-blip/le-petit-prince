@@ -201,6 +201,7 @@ let floaters: Floater[] = [];
 
 const keys = new Set<string>();
 let touchDir = 0;
+let paused = false;
 
 function pw(): number {
   return 15 * mods.size;
@@ -759,7 +760,11 @@ function updateHud(): void {
 
 window.addEventListener("keydown", (e) => {
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space"].includes(e.code)) e.preventDefault();
-  if (!e.repeat) {
+  if ((e.code === "Escape" || e.code === "KeyP") && state === "play") {
+    paused = !paused;
+    return;
+  }
+  if (!e.repeat && !paused) {
     if (["ArrowUp", "Space", "KeyW", "KeyZ"].includes(e.code)) jump();
     if (["KeyX", "KeyK", "KeyJ"].includes(e.code)) attack();
   }
@@ -767,7 +772,22 @@ window.addEventListener("keydown", (e) => {
 });
 window.addEventListener("keyup", (e) => keys.delete(e.code));
 
+// changer d'onglet : pause automatique + purge des touches coincées
+function autoPause(): void {
+  keys.clear();
+  touchDir = 0;
+  if (state === "play") paused = true;
+}
+window.addEventListener("blur", autoPause);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) autoPause();
+});
+
 canvas.addEventListener("pointerdown", (e) => {
+  if (paused) {
+    paused = false;
+    return;
+  }
   if (state === "menu" || state === "dead") {
     showManor();
     return;
@@ -798,10 +818,23 @@ function frame(nowMs: number): void {
   const t = nowMs / 1000;
   const dt = Math.min(0.04, Math.max(0, t - last));
   last = t;
-  step(dt);
+  if (!paused) step(dt);
   draw();
+  if (paused) drawPause();
   updateHud();
   requestAnimationFrame(frame);
+}
+
+function drawPause(): void {
+  ctx.fillStyle = "rgba(10, 8, 22, 0.62)";
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fffdf4";
+  ctx.font = "bold 46px 'Pixelify Sans', monospace";
+  ctx.fillText("⏸ PAUSE", W / 2, H / 2 - 24);
+  ctx.font = "24px 'VT323', monospace";
+  ctx.fillText("clique ou appuie sur P pour reprendre", W / 2, H / 2 + 22);
 }
 requestAnimationFrame(frame);
 

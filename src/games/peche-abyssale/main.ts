@@ -193,6 +193,20 @@ function toast(message: string): void {
   toastTimer = window.setTimeout(() => toastEl.classList.remove("show"), 2400);
 }
 
+let paused = false;
+
+// changer d'onglet en pleine plongée : pause automatique
+function autoPause(): void {
+  if (state !== "surface") paused = true;
+}
+window.addEventListener("blur", autoPause);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) autoPause();
+});
+window.addEventListener("keydown", (e) => {
+  if ((e.code === "Escape" || e.code === "KeyP") && state !== "surface") paused = !paused;
+});
+
 function resize(): void {
   const dpr = window.devicePixelRatio || 1;
   W = window.innerWidth;
@@ -608,6 +622,10 @@ canvas.addEventListener("pointermove", (e) => {
 
 canvas.addEventListener("pointerdown", (e) => {
   mouseX = e.clientX;
+  if (paused) {
+    paused = false;
+    return;
+  }
   if (!bookEl.classList.contains("hidden")) {
     bookEl.classList.add("hidden");
     return;
@@ -658,13 +676,28 @@ renderShop();
 updateHud();
 
 let last = 0;
+function drawPause(): void {
+  ctx.fillStyle = "rgba(6, 10, 24, 0.62)";
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fffdf4";
+  ctx.font = "bold 46px 'Pixelify Sans', monospace";
+  ctx.fillText("⏸ PAUSE", W / 2, H / 2 - 24);
+  ctx.font = "24px 'VT323', monospace";
+  ctx.fillText("clique ou appuie sur P pour reprendre", W / 2, H / 2 + 22);
+}
+
 function frame(nowMs: number): void {
   const t = nowMs / 1000;
   const dt = Math.min(0.05, Math.max(0, t - last));
   last = t;
-  now = t;
-  step(dt);
+  if (!paused) {
+    now = t;
+    step(dt);
+  }
   draw(t);
+  if (paused) drawPause();
   updateHud();
   requestAnimationFrame(frame);
 }

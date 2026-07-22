@@ -242,6 +242,7 @@ try {
 
 const keys = new Set<string>();
 let touch: { x: number; y: number } | null = null;
+let paused = false;
 
 // ---------- helpers ----------
 
@@ -923,11 +924,30 @@ function updateHud(): void {
 
 window.addEventListener("keydown", (e) => {
   if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
+  if ((e.code === "Escape" || e.code === "KeyP") && state === "play") {
+    paused = !paused;
+    return;
+  }
   keys.add(e.code);
 });
 window.addEventListener("keyup", (e) => keys.delete(e.code));
 
+// changer d'onglet : pause automatique + purge des touches coincées
+function autoPause(): void {
+  keys.clear();
+  touch = null;
+  if (state === "play") paused = true;
+}
+window.addEventListener("blur", autoPause);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) autoPause();
+});
+
 canvas.addEventListener("pointerdown", (e) => {
+  if (paused) {
+    paused = false;
+    return;
+  }
   if (!bookEl.classList.contains("hidden")) {
     bookEl.classList.add("hidden");
     return;
@@ -960,10 +980,23 @@ function frame(nowMs: number): void {
   const t = nowMs / 1000;
   const dt = Math.min(0.05, Math.max(0, t - last));
   last = t;
-  step(dt);
+  if (!paused) step(dt);
   draw();
+  if (paused) drawPause();
   updateHud();
   requestAnimationFrame(frame);
+}
+
+function drawPause(): void {
+  ctx.fillStyle = "rgba(10, 10, 24, 0.62)";
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fffdf4";
+  ctx.font = "bold 46px 'Pixelify Sans', monospace";
+  ctx.fillText("⏸ PAUSE", W / 2, H / 2 - 24);
+  ctx.font = "24px 'VT323', monospace";
+  ctx.fillText("clique ou appuie sur P pour reprendre", W / 2, H / 2 + 22);
 }
 requestAnimationFrame(frame);
 

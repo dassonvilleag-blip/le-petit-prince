@@ -472,7 +472,24 @@ function updateHud(): void {
   hudRecord.textContent = fr(record);
 }
 
+let paused = false;
+
+// changer d'onglet : pause automatique (protège le chrono de stabilité)
+window.addEventListener("blur", () => {
+  paused = true;
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) paused = true;
+});
+window.addEventListener("keydown", (e) => {
+  if (e.code === "Escape" || e.code === "KeyP") paused = !paused;
+});
+
 canvas.addEventListener("pointerdown", (e) => {
+  if (paused) {
+    paused = false;
+    return;
+  }
   canvas.setPointerCapture(e.pointerId);
   drag = { sx: e.clientX, sy: e.clientY, cx: e.clientX, cy: e.clientY };
 });
@@ -514,12 +531,25 @@ canvas.addEventListener("pointercancel", () => {
 window.addEventListener("resize", resize);
 resize();
 
+function drawPause(): void {
+  ctx.fillStyle = "rgba(10, 10, 30, 0.62)";
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fffdf4";
+  ctx.font = "bold 46px 'Pixelify Sans', monospace";
+  ctx.fillText("⏸ PAUSE", W / 2, H / 2 - 24);
+  ctx.font = "24px 'VT323', monospace";
+  ctx.fillText("clique ou appuie sur P pour reprendre", W / 2, H / 2 + 22);
+}
+
 let last = performance.now();
 function frame(now: number): void {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  step(dt);
+  if (!paused) step(dt);
   draw();
+  if (paused) drawPause();
   updateHud();
   requestAnimationFrame(frame);
 }
