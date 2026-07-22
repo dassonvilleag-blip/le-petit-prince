@@ -35,22 +35,14 @@
       </div>
 
       <div class="lobby-flow hidden" id="flow-host">
-        <p>1. Ton code est copié — envoie-le à ton matelot 📤</p>
-        <textarea id="host-offer" readonly></textarea>
-        <button id="btn-copy-offer" type="button">📋 recopier</button>
-        <p>2. Colle sa réponse ici, ça se connecte tout seul :</p>
-        <textarea id="host-answer" placeholder="colle la réponse ici…"></textarea>
-        <button id="btn-accept-answer" type="button" hidden>🔗 connecter</button>
+        <p>Donne ce code à ton matelot :</p>
+        <div class="room-code" id="room-code">····</div>
+        <p class="wait-note">La partie démarre dès qu'il l'aura entré.</p>
       </div>
 
       <div class="lobby-flow hidden" id="flow-join">
-        <p>1. Colle le code du gardien, ta réponse se prépare toute seule :</p>
-        <textarea id="join-offer" placeholder="colle le code ici…"></textarea>
-        <button id="btn-make-answer" type="button" hidden>⚙️ générer ma réponse</button>
-        <p>2. Ta réponse (copiée automatiquement) — renvoie-la lui 📤</p>
-        <textarea id="join-answer" readonly></textarea>
-        <button id="btn-copy-answer" type="button">📋 recopier</button>
-        <p class="wait-note">La partie démarre dès qu'il l'aura collée.</p>
+        <p>Entre le code du gardien :</p>
+        <input id="join-code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" />
       </div>
 
       <p class="status" id="status"></p>
