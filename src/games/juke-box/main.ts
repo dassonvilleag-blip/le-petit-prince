@@ -22,9 +22,15 @@ const ROWS: Row[] = [
   { label: "sol₃", color: "#b388eb", freq: 196 },
   { label: "🥁", color: "#8a5a2b", freq: null, drum: "kick" },
   { label: "🎩", color: "#6d675c", freq: null, drum: "hat" },
-  // en dernier pour que les liens partagés avant son ajout restent valides
+  // ajouts postérieurs : toujours en fin de tableau pour que les liens
+  // partagés avant restent valides (l'ordre d'affichage est séparé)
   { label: "👏", color: "#d6336c", freq: null, drum: "clap" },
+  { label: "si", color: "#f0a6ca", freq: 493.88 },
+  { label: "fa", color: "#94d2bd", freq: 349.23 },
 ];
+
+// ordre d'affichage : la gamme complète du haut vers le bas, percussions en bas
+const DISPLAY_ORDER = [0, 11, 1, 2, 12, 3, 4, 5, 6, 7, 8, 9, 10];
 
 const pattern: boolean[][] = ROWS.map(() => Array(STEPS).fill(false));
 let tempo = 120;
@@ -194,7 +200,8 @@ function stop(): void {
 function renderGrid(): void {
   gridEl.style.gridTemplateColumns = `52px repeat(${STEPS}, 34px)`;
   gridEl.innerHTML = "";
-  ROWS.forEach((row, r) => {
+  for (const r of DISPLAY_ORDER) {
+    const row = ROWS[r];
     const label = document.createElement("span");
     label.className = "row-label";
     label.textContent = row.label;
@@ -216,7 +223,7 @@ function renderGrid(): void {
       });
       gridEl.appendChild(cell);
     }
-  });
+  }
 }
 
 btnPlay.addEventListener("click", () => (playing ? stop() : start()));
