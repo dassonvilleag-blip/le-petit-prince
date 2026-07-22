@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>La Horde de Minuit</title>
+    <meta name="description" content="Roguelike de survie : tiens de minuit à l'aube contre la horde, ramasse des gemmes, choisis des pouvoirs, remplis le bestiaire." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌙</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/la-horde/horde.css" />
+  </head>
+  <body>
+    <canvas id="arena"></canvas>
+
+    <a class="back-link" href="/">← le petit prince</a>
+
+    <div class="hud hidden" id="hud">
+      <div class="hud-line">🌙 <span id="hud-time">00:00</span> → ☀️ 10:00</div>
+      <div class="hud-line">❤️ <span class="bar"><span id="hp-fill"></span></span></div>
+      <div class="hud-line">✨ niv <span id="hud-level">1</span> <span class="bar bar-xp"><span id="xp-fill"></span></span></div>
+      <div class="hud-line">💀 <span id="hud-kills">0</span></div>
+      <div class="hud-line hud-weapons" id="hud-weapons"></div>
+    </div>
+
+    <button id="btn-book" type="button">📖 <span id="book-count">0/8</span></button>
+
+    <div class="overlay" id="overlay">
+      <h1 id="overlay-title">La Horde de Minuit</h1>
+      <p id="overlay-text">Minuit sonne. Les cauchemars arrivent.<br />
+      Bouge avec ZQSD / flèches (ou le doigt) — tes armes frappent toutes seules.<br />
+      Ramasse les 💎, monte de niveau, choisis tes pouvoirs.<br />
+      <strong>Tiens jusqu'à l'aube.</strong> Clique pour commencer.</p>
+    </div>
+
+    <div class="choices hidden" id="choices">
+      <h2>✨ NIVEAU SUPÉRIEUR ✨</h2>
+      <div class="choice-btns" id="choice-btns"></div>
+    </div>
+
+    <div class="book hidden" id="book">
+      <h2>Bestiaire des cauchemars</h2>
+      <div class="book-grid" id="book-grid"></div>
+      <p class="book-tip">clique n'importe où pour fermer</p>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script type="module" src="/src/games/la-horde/main.ts"></script>
+  </body>
+</html>
