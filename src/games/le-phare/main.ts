@@ -200,12 +200,59 @@ let pc: RTCPeerConnection | null = null;
 let dc: RTCDataChannel | null = null;
 let sendTimer = 0;
 
+// Codes courts : on n'échange que l'essentiel du SDP (ufrag, pwd, empreinte
+// DTLS, candidats) et on reconstruit un SDP data-channel canonique en face.
+// ~200 caractères au lieu de ~2000.
+
 function encodeDesc(desc: RTCSessionDescription | null): string {
-  return btoa(unescape(encodeURIComponent(JSON.stringify(desc))));
+  if (!desc) return "";
+  const sdp = desc.sdp;
+  const get = (re: RegExp) => sdp.match(re)?.[1] ?? "";
+  const fpHex = get(/a=fingerprint:sha-256 (\S+)/i);
+  const fp = btoa(String.fromCharCode(...fpHex.split(":").map((h) => parseInt(h, 16))));
+  const seen = new Set<string>();
+  const cands: [string, number, string][] = [];
+  for (const m of sdp.matchAll(/a=candidate:\S+ 1 (?:udp|UDP) \d+ (\S+) (\d+) typ (host|srflx)/g)) {
+    const key = `${m[1]}:${m[2]}`;
+    if (seen.has(key) || cands.length >= 8) continue;
+    seen.add(key);
+    cands.push([m[1], Number(m[2]), m[3] === "host" ? "h" : "s"]);
+  }
+  const payload = { t: desc.type === "offer" ? "o" : "a", u: get(/a=ice-ufrag:(\S+)/), p: get(/a=ice-pwd:(\S+)/), f: fp, c: cands };
+  return btoa(JSON.stringify(payload)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 function decodeDesc(code: string): RTCSessionDescriptionInit {
-  return JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+  const b64 = code.trim().replace(/-/g, "+").replace(/_/g, "/");
+  const data = JSON.parse(atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4)));
+  const fpHex = [...atob(data.f)]
+    .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0").toUpperCase())
+    .join(":");
+  const isOffer = data.t === "o";
+  const lines = [
+    "v=0",
+    "o=- 1 1 IN IP4 0.0.0.0",
+    "s=-",
+    "t=0 0",
+    "a=group:BUNDLE 0",
+    "a=msid-semantic: WMS",
+    "m=application 9 UDP/DTLS/SCTP webrtc-datachannel",
+    "c=IN IP4 0.0.0.0",
+    `a=ice-ufrag:${data.u}`,
+    `a=ice-pwd:${data.p}`,
+    `a=fingerprint:sha-256 ${fpHex}`,
+    `a=setup:${isOffer ? "actpass" : "active"}`,
+    "a=mid:0",
+    "a=sctp-port:5000",
+    "a=max-message-size:262144",
+  ];
+  (data.c as [string, number, string][]).forEach(([ip, port, kind], i) => {
+    const typ = kind === "h" ? "host" : "srflx";
+    const extra = kind === "s" ? " raddr 0.0.0.0 rport 0" : "";
+    lines.push(`a=candidate:${i + 1} 1 udp ${2130706431 - i} ${ip} ${port} typ ${typ}${extra}`);
+  });
+  lines.push("a=end-of-candidates");
+  return { type: isOffer ? "offer" : "answer", sdp: lines.join("\r\n") + "\r\n" };
 }
 
 function newPeer(): RTCPeerConnection {
@@ -292,17 +339,26 @@ async function hostGame(): Promise<void> {
   wireChannel(pc.createDataChannel("phare"));
   await pc.setLocalDescription(await pc.createOffer());
   await iceComplete(pc);
-  (document.getElementById("host-offer") as HTMLTextAreaElement).value = encodeDesc(pc.localDescription);
-  statusEl.textContent = "en attente du matelot…";
+  const offer = encodeDesc(pc.localDescription);
+  (document.getElementById("host-offer") as HTMLTextAreaElement).value = offer;
+  try {
+    await navigator.clipboard.writeText(offer);
+    statusEl.textContent = "code copié ! envoie-le à ton matelot 📋";
+  } catch {
+    statusEl.textContent = "en attente du matelot…";
+  }
 }
 
+let accepting = false;
 async function acceptAnswer(): Promise<void> {
   const code = (document.getElementById("host-answer") as HTMLTextAreaElement).value;
-  if (!pc || !code.trim()) return;
+  if (!pc || !code.trim() || accepting || pc.signalingState !== "have-local-offer") return;
+  accepting = true;
   try {
     await pc.setRemoteDescription(decodeDesc(code));
     statusEl.textContent = "connexion…";
   } catch {
+    accepting = false;
     toast("Code invalide 🤔");
   }
 }
@@ -313,18 +369,27 @@ async function joinGame(): Promise<void> {
   flowJoin.classList.remove("hidden");
 }
 
+let answering = false;
 async function makeAnswer(): Promise<void> {
   const code = (document.getElementById("join-offer") as HTMLTextAreaElement).value;
-  if (!code.trim()) return;
+  if (!code.trim() || answering) return;
+  answering = true;
   try {
     pc = newPeer();
     pc.ondatachannel = (e) => wireChannel(e.channel);
     await pc.setRemoteDescription(decodeDesc(code));
     await pc.setLocalDescription(await pc.createAnswer());
     await iceComplete(pc);
-    (document.getElementById("join-answer") as HTMLTextAreaElement).value = encodeDesc(pc.localDescription);
-    statusEl.textContent = "renvoie la réponse au gardien…";
+    const answer = encodeDesc(pc.localDescription);
+    (document.getElementById("join-answer") as HTMLTextAreaElement).value = answer;
+    try {
+      await navigator.clipboard.writeText(answer);
+      statusEl.textContent = "réponse copiée ! envoie-la au gardien 📋";
+    } catch {
+      statusEl.textContent = "renvoie la réponse au gardien…";
+    }
   } catch {
+    answering = false;
     toast("Code invalide 🤔");
   }
 }
@@ -332,6 +397,8 @@ async function makeAnswer(): Promise<void> {
 function backToLobby(): void {
   playing = false;
   world = null;
+  answering = false;
+  accepting = false;
   window.clearInterval(sendTimer);
   if (pc) pc.close();
   pc = null;
@@ -761,6 +828,14 @@ document.getElementById("btn-copy-offer")!.addEventListener("click", () => {
 document.getElementById("btn-copy-answer")!.addEventListener("click", () => {
   void navigator.clipboard.writeText((document.getElementById("join-answer") as HTMLTextAreaElement).value);
   toast("Réponse copiée 📋");
+});
+
+// coller un code déclenche l'étape suivante tout seul
+document.getElementById("join-offer")!.addEventListener("input", () => {
+  window.setTimeout(() => void makeAnswer(), 60);
+});
+document.getElementById("host-answer")!.addEventListener("input", () => {
+  window.setTimeout(() => void acceptAnswer(), 60);
 });
 
 window.addEventListener("resize", resize);
