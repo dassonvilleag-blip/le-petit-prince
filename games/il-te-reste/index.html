@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Il te reste...</title>
+    <meta name="description" content="Découvre combien de temps il te reste, converti en unités totalement absurdes." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏳</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/il-te-reste/style.css" />
+  </head>
+  <body>
+    <a class="back-link" href="/">← le petit prince</a>
+
+    <main class="card">
+      <section id="intro">
+        <h1>Il te reste...</h1>
+        <p class="tip">Donne ta date de naissance, on te dit ce qu'il te reste — dans des unités qui n'ont aucun sens.</p>
+        <form id="form">
+          <input id="birthdate" type="date" required />
+          <button type="submit">montre-moi</button>
+        </form>
+        <p class="disclaimer">Espérance de vie moyenne utilisée : 80 ans. Ceci n'est absolument pas une prédiction sérieuse.</p>
+      </section>
+
+      <section id="reveal" class="hidden">
+        <ul id="reveal-list"></ul>
+      </section>
+
+      <section id="outro" class="hidden">
+        <p id="outro-message"></p>
+        <button id="btn-restart" type="button">recommencer</button>
+      </section>
+    </main>
+
+    <script type="module" src="/src/games/il-te-reste/main.ts"></script>
+  </body>
+</html>

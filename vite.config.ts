@@ -15,6 +15,7 @@ export default defineConfig({
         jardin: resolve(__dirname, "games/jardin-infini/index.html"),
         chute: resolve(__dirname, "games/chute-infinie/index.html"),
         jukebox: resolve(__dirname, "games/juke-box/index.html"),
+        ilTeReste: resolve(__dirname, "games/il-te-reste/index.html"),
       },
     },
   },

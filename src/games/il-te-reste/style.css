@@ -1,0 +1,153 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --ink: #17171b;
+  --card: #fffdf4;
+  --pink: #ff5c8a;
+  --teal: #1fc7a8;
+  --purple: #6c63ff;
+  --yellow: #ffc93c;
+  --orange: #ff8c42;
+}
+
+html,
+body {
+  min-height: 100%;
+  font-family: "VT323", "Courier New", monospace;
+  color: var(--ink);
+  background:
+    conic-gradient(#f6efdd 90deg, #f1e8d2 90deg 180deg, #f6efdd 180deg 270deg, #f1e8d2 270deg)
+    0 0 / 28px 28px;
+}
+
+.back-link {
+  position: fixed;
+  z-index: 10;
+  top: 16px;
+  left: 18px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 8px 14px;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.back-link:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--pink);
+}
+
+.card {
+  width: min(640px, calc(100% - 32px));
+  margin: 90px auto 40px;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 8px 8px 0 var(--ink);
+  padding: 28px 26px;
+  text-align: center;
+}
+
+.card h1 {
+  font-family: "Pixelify Sans", "VT323", monospace;
+  font-size: clamp(1.9rem, 5vw, 2.8rem);
+  font-weight: 700;
+  margin-bottom: 14px;
+  text-shadow: 3px 3px 0 var(--yellow);
+}
+
+.tip {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+}
+
+form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+input[type="date"] {
+  font-family: inherit;
+  font-size: 1.2rem;
+  padding: 6px 10px;
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  background: #efe8d6;
+  color: var(--ink);
+}
+
+button {
+  font-family: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 8px 16px;
+  background: var(--teal);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+button:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--pink);
+}
+
+button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.disclaimer {
+  font-size: 1rem;
+  font-style: italic;
+  color: #6d675c;
+}
+
+.hidden {
+  display: none;
+}
+
+#reveal-list {
+  list-style: none;
+  text-align: left;
+  font-size: 1.3rem;
+  line-height: 1.7;
+}
+
+#reveal-list li {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: reveal-in 0.4s ease forwards;
+}
+
+@keyframes reveal-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#reveal-list li strong {
+  color: var(--pink);
+}
+
+#outro p {
+  font-size: 1.3rem;
+  margin-bottom: 18px;
+}
