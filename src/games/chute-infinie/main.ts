@@ -55,9 +55,9 @@ const WALL_H = 26;
 const RECORD_KEY = "chute-infinie-record";
 
 // contrôle façon Doodle Jump : accélération + inertie + friction
-const ACCEL = 2800;
-const MAX_VX = 540;
-const FRICTION = 0.86;
+const ACCEL = 2400;
+const MAX_VX = 480;
+const FRICTION = 0.8;
 
 const canvas = document.getElementById("fall") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
@@ -123,8 +123,9 @@ function biomeAt(d: number): Biome {
   return BIOMES[Math.floor(d / BIOME_LEN) % BIOMES.length];
 }
 
+// démarre lentement, grimpe franchement : c'est ça la progression
 function baseSpeed(): number {
-  return Math.min(640, 250 + depth * 0.05);
+  return Math.min(600, 170 + depth * 0.09);
 }
 
 function fallSpeed(): number {
@@ -165,7 +166,7 @@ function reset(): void {
   items = [];
   particles = [];
   distSinceWall = 0;
-  nextWallIn = 420;
+  nextWallIn = 560;
   lastBiomeIndex = -1;
   playerX = W / 2;
   playerVX = 0;
@@ -177,11 +178,12 @@ function reset(): void {
 }
 
 function spawnWall(): void {
-  const gapW = Math.max(84, 180 - depth * 0.012);
+  // très large au début (250 px), se resserre jusqu'à 90 px vers 3200 m
+  const gapW = Math.max(90, 250 - depth * 0.05);
   const gaps: { x: number; w: number }[] = [];
-  if (depth > 1200 && Math.random() < 0.4) {
+  if (depth > 2000 && Math.random() < 0.35) {
     // deux trous plus étroits
-    const w2 = gapW * 0.72;
+    const w2 = gapW * 0.8;
     const x1 = 20 + Math.random() * (W / 2 - w2 - 40);
     const x2 = W / 2 + 20 + Math.random() * (W / 2 - w2 - 40);
     gaps.push({ x: x1, w: w2 }, { x: x2, w: w2 });
@@ -204,14 +206,15 @@ function spawnWall(): void {
     items.push({ x: 40 + Math.random() * (W - 80), y: H + 200 + Math.random() * 120, type, r: 15 });
   }
   const biome = biomeAt(depth + 100);
-  const obsCount = depth < 300 ? 0 : Math.random() < 0.7 ? 1 : 2;
+  // progression : rien avant 400 m, un seul jusqu'à 1500 m, deux possibles ensuite
+  const obsCount = depth < 400 ? 0 : depth < 1500 ? (Math.random() < 0.75 ? 1 : 0) : Math.random() < 0.6 ? 1 : 2;
   for (let i = 0; i < obsCount; i++) {
     const baseX = 30 + Math.random() * (W - 60);
     obstacles.push({
       baseX,
       x: baseX,
       y: H + 180 + Math.random() * 200,
-      amp: Math.random() < 0.5 ? 0 : 40 + Math.random() * 90,
+      amp: Math.random() < 0.5 ? 0 : (30 + Math.random() * 70) * Math.min(1, depth / 1500),
       phase: Math.random() * Math.PI * 2,
       spd: 1 + Math.random() * 1.6,
       emoji: biome.obstacles[Math.floor(Math.random() * biome.obstacles.length)],
@@ -306,15 +309,18 @@ function step(dt: number): void {
   let dir = 0;
   if (keys.has("ArrowLeft") || keys.has("KeyA") || keys.has("KeyQ")) dir = -1;
   if (keys.has("ArrowRight") || keys.has("KeyD")) dir = 1;
-  if (dir === 0 && mouseX !== null && Math.abs(mouseX - playerX) > 10) {
-    dir = Math.sign(mouseX - playerX);
-  }
   if (dir !== 0) {
+    // clavier : pur momentum
     playerVX += dir * ACCEL * dt;
+    playerVX = Math.max(-MAX_VX, Math.min(MAX_VX, playerVX));
+  } else if (mouseX !== null) {
+    // souris : suivi amorti — vitesse proportionnelle à la distance,
+    // convergence douce, aucune oscillation autour du curseur
+    const desired = Math.max(-MAX_VX, Math.min(MAX_VX, (mouseX - playerX) * 7));
+    playerVX += (desired - playerVX) * Math.min(1, dt * 14);
   } else {
     playerVX *= FRICTION ** (dt * 60);
   }
-  playerVX = Math.max(-MAX_VX, Math.min(MAX_VX, playerVX));
   playerX += playerVX * dt;
 
   // wrap d'écran, signature Doodle Jump
@@ -325,7 +331,8 @@ function step(dt: number): void {
   distSinceWall += speed * dt;
   if (distSinceWall >= nextWallIn) {
     distSinceWall = 0;
-    nextWallIn = 380 + Math.random() * 240;
+    // les murs se rapprochent avec la profondeur
+    nextWallIn = Math.max(360, 640 - depth * 0.06) + Math.random() * 200;
     spawnWall();
   }
 
@@ -340,7 +347,7 @@ function step(dt: number): void {
       continue;
     }
     if (py + PLAYER_R - 5 > w.y && py - PLAYER_R + 5 < w.y + WALL_H) {
-      const inGap = w.gaps.some((g) => playerX - PLAYER_R + 6 > g.x && playerX + PLAYER_R - 6 < g.x + g.w);
+      const inGap = w.gaps.some((g) => playerX - PLAYER_R + 9 > g.x && playerX + PLAYER_R - 9 < g.x + g.w);
       if (!inGap) {
         if (now < rocketUntil) {
           // la fusée défonce le mur
