@@ -7,8 +7,17 @@
 
 const WORLD_W = 1600;
 const WORLD_H = 1000;
-const MAX_LEVEL = 3;
 const HULL_MAX = 3;
+
+// Une mécanique nouvelle par niveau, et la tempête finale combine tout.
+const LEVEL_CONF = [
+  { name: "Les récifs", intro: "Amenez le navire au port 🚩", rocks: 24, currents: 0, monsters: 0, beamMul: 1 },
+  { name: "Les courants", intro: "Des courants poussent le navire — le gardien les voit 🌀", rocks: 30, currents: 3, monsters: 0, beamMul: 1 },
+  { name: "La créature", intro: "Quelque chose rôde dans le noir… 🐙", rocks: 34, currents: 2, monsters: 1, beamMul: 1 },
+  { name: "La brume", intro: "La brume avale le faisceau : il porte moins loin 🌫️", rocks: 38, currents: 3, monsters: 1, beamMul: 0.72 },
+  { name: "La tempête", intro: "Tout à la fois. Bonne chance, marins ⛈️", rocks: 42, currents: 4, monsters: 2, beamMul: 0.68 },
+];
+const MAX_LEVEL = LEVEL_CONF.length;
 
 interface Rock {
   x: number;
@@ -35,7 +44,8 @@ interface Monster {
 interface World {
   rocks: Rock[];
   currents: Current[];
-  monster: Monster | null;
+  monsters: Monster[];
+  crate: { x: number; y: number } | null;
   start: { x: number; y: number };
   port: { x: number; y: number };
   lighthouse: { x: number; y: number };
@@ -62,44 +72,61 @@ function buildWorld(seed: number, level: number): World {
   ];
   const [start, port] = corners[Math.floor(rng() * corners.length)];
 
+  const conf = LEVEL_CONF[Math.min(level, MAX_LEVEL) - 1];
+
   const rocks: Rock[] = [];
-  const count = 24 + level * 8;
   let guard = 0;
-  while (rocks.length < count && guard++ < 600) {
+  while (rocks.length < conf.rocks && guard++ < 600) {
     const rock = { x: 60 + rng() * (WORLD_W - 120), y: 60 + rng() * (WORLD_H - 120), r: 16 + rng() * 30 };
     const clear = (p: { x: number; y: number }, d: number) => Math.hypot(rock.x - p.x, rock.y - p.y) > d;
     if (clear(start, 150) && clear(port, 150) && clear(lighthouse, 110)) rocks.push(rock);
   }
 
   const currents: Current[] = [];
+  for (let i = 0; i < conf.currents; i++) {
+    const a = rng() * Math.PI * 2;
+    currents.push({
+      x: 200 + rng() * (WORLD_W - 400),
+      y: 200 + rng() * (WORLD_H - 400),
+      r: 130 + rng() * 90,
+      // poussée adoucie : un courant doit dévier, pas catapulter
+      dx: Math.cos(a) * (28 + rng() * 26),
+      dy: Math.sin(a) * (28 + rng() * 26),
+    });
+  }
+
+  const monsters: Monster[] = [];
+  for (let i = 0; i < conf.monsters; i++) {
+    monsters.push({
+      ax: 420 + rng() * 180,
+      ay: 260 + rng() * 120,
+      fx: 0.1 + rng() * 0.06,
+      fy: 0.13 + rng() * 0.06,
+      phase: rng() * 10 + i * 3.7,
+    });
+  }
+
+  // caisse de réparation : une seconde chance à aller chercher
+  let crate: { x: number; y: number } | null = null;
   if (level >= 2) {
-    for (let i = 0; i < 3; i++) {
-      const a = rng() * Math.PI * 2;
-      currents.push({
-        x: 200 + rng() * (WORLD_W - 400),
-        y: 200 + rng() * (WORLD_H - 400),
-        r: 130 + rng() * 90,
-        dx: Math.cos(a) * (45 + rng() * 40),
-        dy: Math.sin(a) * (45 + rng() * 40),
-      });
+    guard = 0;
+    while (!crate && guard++ < 200) {
+      const c = { x: 100 + rng() * (WORLD_W - 200), y: 100 + rng() * (WORLD_H - 200) };
+      const clear = (p: { x: number; y: number }, d: number) => Math.hypot(c.x - p.x, c.y - p.y) > d;
+      if (clear(start, 200) && clear(port, 200) && clear(lighthouse, 130) && rocks.every((r) => Math.hypot(c.x - r.x, c.y - r.y) > r.r + 50)) {
+        crate = c;
+      }
     }
   }
 
-  const monster: Monster | null =
-    level >= 3
-      ? { ax: 480 + rng() * 120, ay: 300 + rng() * 80, fx: 0.1 + rng() * 0.05, fy: 0.14 + rng() * 0.05, phase: rng() * 10 }
-      : null;
-
-  return { rocks, currents, monster, start, port, lighthouse };
+  return { rocks, currents, monsters, crate, start, port, lighthouse };
 }
 
-function monsterPos(world: World, t: number): { x: number; y: number } | null {
-  if (!world.monster) return null;
-  const m = world.monster;
-  return {
+function monstersPos(world: World, t: number): { x: number; y: number }[] {
+  return world.monsters.map((m) => ({
     x: world.lighthouse.x + Math.sin(t * m.fx * Math.PI * 2 + m.phase) * m.ax,
     y: world.lighthouse.y + Math.cos(t * m.fy * Math.PI * 2 + m.phase * 1.7) * m.ay,
-  };
+  }));
 }
 
 // ---------- DOM ----------
@@ -324,6 +351,9 @@ function wireChannel(channel: RTCDataChannel): void {
           nextLevel();
         }
         break;
+      case "crate":
+        if (world) world.crate = null;
+        break;
       case "sink":
         if (role === "gardien") {
           showOverlay("Naufrage 🌊", "Le navire a coulé… on retente ce niveau.", 2600);
@@ -462,15 +492,8 @@ function startLevel(seed: number, lvl: number, broadcast: boolean): void {
     if (role === "navire") send({ t: "ship", x: Math.round(shipX), y: Math.round(shipY), a: shipA });
     else send({ t: "beam", a: beamA, w: beamW });
   }, 66);
-  showOverlay(
-    `Niveau ${lvl}`,
-    lvl === 1
-      ? "Amenez le navire au port 🚩"
-      : lvl === 2
-        ? "Attention : des courants poussent le navire 🌀"
-        : "Quelque chose rôde dans le noir… 🐙",
-    2400,
-  );
+  const conf = LEVEL_CONF[Math.min(lvl, MAX_LEVEL) - 1];
+  showOverlay(`Niveau ${lvl} — ${conf.name}`, conf.intro, 2600);
 }
 
 function nextLevel(): void {
@@ -490,7 +513,7 @@ function finishGame(total: number): void {
   const sec = Math.floor(total % 60);
   showOverlay(
     "Traversée accomplie ⚓",
-    `Les trois ports en ${min > 0 ? `${min} min ` : ""}${sec} s à deux.<br />Recréez une partie en échangeant les rôles !`,
+    `Les cinq ports en ${min > 0 ? `${min} min ` : ""}${sec} s à deux.<br />Recréez une partie en échangeant les rôles !`,
     0,
   );
 }
@@ -538,11 +561,19 @@ function step(dt: number): void {
     shipY = Math.max(20, Math.min(WORLD_H - 20, shipY + shipVY * dt));
     if (sp > 25) shipA = Math.atan2(shipVY, shipVX);
 
+    // caisse de réparation : le navire la ramasse s'il lui manque de la coque
+    if (world.crate && hull < HULL_MAX && Math.hypot(shipX - world.crate.x, shipY - world.crate.y) < 34) {
+      hull++;
+      world.crate = null;
+      send({ t: "crate" });
+      send({ t: "hit", hull });
+      toast("🧰 Coque réparée ! ❤️");
+    }
+
     // collisions : glissement/rebond physique, dégâts seulement en impact franc
     {
-      const mp = monsterPos(world, t);
       const hazards: { x: number; y: number; r: number; monster?: boolean }[] = [...world.rocks];
-      if (mp) hazards.push({ x: mp.x, y: mp.y, r: 26, monster: true });
+      for (const mp of monstersPos(world, t)) hazards.push({ x: mp.x, y: mp.y, r: 26, monster: true });
       const lh = world.lighthouse;
       hazards.push({ x: lh.x, y: lh.y, r: 40 });
       for (const hz of hazards) {
@@ -615,7 +646,8 @@ function step(dt: number): void {
 // ---------- rendu ----------
 
 function beamLength(w: number): number {
-  return Math.max(380, Math.min(980, 200 + 140 / w));
+  const mul = LEVEL_CONF[Math.min(level, MAX_LEVEL) - 1]?.beamMul ?? 1;
+  return Math.max(380, Math.min(980, 200 + 140 / w)) * mul;
 }
 
 function drawBoat(x: number, y: number, a: number, ghost: boolean): void {
@@ -675,7 +707,7 @@ function draw(): void {
   ctx.lineWidth = 2;
   ctx.strokeRect(wx0, wy0, WORLD_W * scale, WORLD_H * scale);
 
-  // courants
+  // courants : anneaux + particules qui filent dans le sens de la poussée
   for (const c of world.currents) {
     const [cx, cy] = toScreen(c.x, c.y);
     ctx.strokeStyle = "rgba(76, 201, 240, 0.35)";
@@ -685,12 +717,24 @@ function draw(): void {
       ctx.arc(cx, cy, (c.r - i * 26) * scale, 0, Math.PI * 2);
       ctx.stroke();
     }
-    const aLen = 26 * scale;
-    const na = Math.atan2(c.dy, c.dx);
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(na) * aLen, cy + Math.sin(na) * aLen);
-    ctx.stroke();
+    const dn = Math.hypot(c.dx, c.dy) || 1;
+    const ux = c.dx / dn;
+    const uy = c.dy / dn;
+    ctx.strokeStyle = "rgba(76, 201, 240, 0.9)";
+    ctx.lineWidth = 2.5;
+    for (let i = 0; i < 6; i++) {
+      const ph = ((now * 0.35 + i / 6) % 1) * 2 - 1; // -1 → 1, en boucle
+      const off = ((i % 3) - 1) * c.r * 0.45;
+      const px2 = c.x + ux * ph * c.r * 0.8 - uy * off;
+      const py2 = c.y + uy * ph * c.r * 0.8 + ux * off;
+      const [fx2, fy2] = toScreen(px2, py2);
+      ctx.globalAlpha = (1 - Math.abs(ph)) * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(fx2 - ux * 8 * scale, fy2 - uy * 8 * scale);
+      ctx.lineTo(fx2 + ux * 8 * scale, fy2 + uy * 8 * scale);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
   }
 
   // rochers
@@ -723,9 +767,15 @@ function draw(): void {
   ctx.textBaseline = "middle";
   ctx.fillText("🚩", px, py - 24 * scale);
 
-  // monstre
-  const mp = monsterPos(world, t);
-  if (mp) {
+  // caisse de réparation
+  if (world.crate) {
+    const [cx2, cy2] = toScreen(world.crate.x, world.crate.y);
+    ctx.font = `${30 * scale}px serif`;
+    ctx.fillText("🧰", cx2, cy2);
+  }
+
+  // monstres
+  for (const mp of monstersPos(world, t)) {
     const [mx, my] = toScreen(mp.x, mp.y);
     ctx.font = `${52 * scale}px serif`;
     ctx.fillText("🐙", mx, my);
@@ -809,6 +859,14 @@ function draw(): void {
       ctx.beginPath();
       ctx.arc(px, py - 24 * scale, 4 * scale, 0, Math.PI * 2);
       ctx.fillStyle = "#ffc93c";
+      ctx.fill();
+    }
+    // la caisse de réparation aussi, en turquoise
+    if (world.crate && Math.sin(now * 4 + 1.3) > 0.3) {
+      const [cx2, cy2] = toScreen(world.crate.x, world.crate.y);
+      ctx.beginPath();
+      ctx.arc(cx2, cy2 - 14 * scale, 3.5 * scale, 0, Math.PI * 2);
+      ctx.fillStyle = "#1fc7a8";
       ctx.fill();
     }
     // la lampe du phare aussi
