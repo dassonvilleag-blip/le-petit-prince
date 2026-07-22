@@ -1,72 +1,47 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" shape-rendering="crispEdges">
-  <rect x="0" y="0" width="200" height="160" fill="#1fc7a8" />
+  <rect x="0" y="0" width="200" height="160" fill="#17171b" />
 
-  <!-- sparkle top-left -->
-  <rect x="16" y="14" width="10" height="10" fill="#ff5c8a" transform="rotate(45 21 19)" />
-  <!-- sparkle bottom-right -->
-  <rect x="168" y="128" width="10" height="10" fill="#ffc93c" transform="rotate(45 173 133)" />
+  <!-- bezel -->
+  <rect x="24" y="40" width="152" height="80" fill="#2a2a30" />
+  <!-- screen -->
+  <rect x="32" y="48" width="136" height="64" fill="#0b0b0d" />
 
-  <!-- hourglass, 7x9 pixel grid, cell = 16 units, offset (44,8) -->
-  <!-- row 0: top bar -->
-  <rect x="44" y="8" width="16" height="16" fill="#17171b" />
-  <rect x="60" y="8" width="16" height="16" fill="#17171b" />
-  <rect x="76" y="8" width="16" height="16" fill="#17171b" />
-  <rect x="92" y="8" width="16" height="16" fill="#17171b" />
-  <rect x="108" y="8" width="16" height="16" fill="#17171b" />
-  <rect x="124" y="8" width="16" height="16" fill="#17171b" />
-  <rect x="140" y="8" width="16" height="16" fill="#17171b" />
+  <!-- digit "0" -->
+  <rect x="54.2" y="58" width="22" height="5.5" fill="#ff5c8a" />
+  <rect x="52" y="60.2" width="5.5" height="17.6" fill="#ff5c8a" />
+  <rect x="72.9" y="60.2" width="5.5" height="17.6" fill="#ff5c8a" />
+  <rect x="54.2" y="77.25" width="22" height="5.5" fill="#3a1f28" />
+  <rect x="52" y="82.2" width="5.5" height="17.6" fill="#ff5c8a" />
+  <rect x="72.9" y="82.2" width="5.5" height="17.6" fill="#ff5c8a" />
+  <rect x="54.2" y="96.5" width="22" height="5.5" fill="#ff5c8a" />
 
-  <!-- row 1: top chamber, wide, mostly empty -->
-  <rect x="44" y="24" width="16" height="16" fill="#17171b" />
-  <rect x="60" y="24" width="16" height="16" fill="#fffdf4" />
-  <rect x="76" y="24" width="16" height="16" fill="#fffdf4" />
-  <rect x="92" y="24" width="16" height="16" fill="#fffdf4" />
-  <rect x="108" y="24" width="16" height="16" fill="#fffdf4" />
-  <rect x="124" y="24" width="16" height="16" fill="#fffdf4" />
-  <rect x="140" y="24" width="16" height="16" fill="#17171b" />
+  <!-- digit "7" -->
+  <rect x="92.2" y="58" width="22" height="5.5" fill="#ff5c8a" />
+  <rect x="90" y="60.2" width="5.5" height="17.6" fill="#3a1f28" />
+  <rect x="110.9" y="60.2" width="5.5" height="17.6" fill="#ff5c8a" />
+  <rect x="92.2" y="77.25" width="22" height="5.5" fill="#3a1f28" />
+  <rect x="90" y="82.2" width="5.5" height="17.6" fill="#3a1f28" />
+  <rect x="110.9" y="82.2" width="5.5" height="17.6" fill="#ff5c8a" />
+  <rect x="92.2" y="96.5" width="22" height="5.5" fill="#3a1f28" />
 
-  <!-- row 2: top chamber narrowing -->
-  <rect x="60" y="40" width="16" height="16" fill="#17171b" />
-  <rect x="76" y="40" width="16" height="16" fill="#fffdf4" />
-  <rect x="92" y="40" width="16" height="16" fill="#fffdf4" />
-  <rect x="108" y="40" width="16" height="16" fill="#fffdf4" />
-  <rect x="124" y="40" width="16" height="16" fill="#17171b" />
+  <!-- power dot -->
+  <circle cx="150" cy="58" r="3" fill="#ffc93c" />
 
-  <!-- row 3: trickle about to fall -->
-  <rect x="76" y="56" width="16" height="16" fill="#17171b" />
-  <rect x="92" y="56" width="16" height="16" fill="#ffc93c" />
-  <rect x="108" y="56" width="16" height="16" fill="#17171b" />
+  <!-- scanlines -->
+  <g fill="#ffffff" opacity="0.05">
+    <rect x="32" y="48" width="136" height="2" />
+    <rect x="32" y="54" width="136" height="2" />
+    <rect x="32" y="60" width="136" height="2" />
+    <rect x="32" y="66" width="136" height="2" />
+    <rect x="32" y="72" width="136" height="2" />
+    <rect x="32" y="78" width="136" height="2" />
+    <rect x="32" y="84" width="136" height="2" />
+    <rect x="32" y="90" width="136" height="2" />
+    <rect x="32" y="96" width="136" height="2" />
+    <rect x="32" y="102" width="136" height="2" />
+    <rect x="32" y="108" width="136" height="2" />
+  </g>
 
-  <!-- row 4: the neck -->
-  <rect x="92" y="72" width="16" height="16" fill="#17171b" />
-
-  <!-- row 5: sand just landed -->
-  <rect x="76" y="88" width="16" height="16" fill="#17171b" />
-  <rect x="92" y="88" width="16" height="16" fill="#ffc93c" />
-  <rect x="108" y="88" width="16" height="16" fill="#17171b" />
-
-  <!-- row 6: bottom chamber widening -->
-  <rect x="60" y="104" width="16" height="16" fill="#17171b" />
-  <rect x="76" y="104" width="16" height="16" fill="#ffc93c" />
-  <rect x="92" y="104" width="16" height="16" fill="#ffc93c" />
-  <rect x="108" y="104" width="16" height="16" fill="#ffc93c" />
-  <rect x="124" y="104" width="16" height="16" fill="#17171b" />
-
-  <!-- row 7: bottom chamber, full of sand -->
-  <rect x="44" y="120" width="16" height="16" fill="#17171b" />
-  <rect x="60" y="120" width="16" height="16" fill="#ffc93c" />
-  <rect x="76" y="120" width="16" height="16" fill="#ffc93c" />
-  <rect x="92" y="120" width="16" height="16" fill="#ffc93c" />
-  <rect x="108" y="120" width="16" height="16" fill="#ffc93c" />
-  <rect x="124" y="120" width="16" height="16" fill="#ffc93c" />
-  <rect x="140" y="120" width="16" height="16" fill="#17171b" />
-
-  <!-- row 8: bottom bar -->
-  <rect x="44" y="136" width="16" height="16" fill="#17171b" />
-  <rect x="60" y="136" width="16" height="16" fill="#17171b" />
-  <rect x="76" y="136" width="16" height="16" fill="#17171b" />
-  <rect x="92" y="136" width="16" height="16" fill="#17171b" />
-  <rect x="108" y="136" width="16" height="16" fill="#17171b" />
-  <rect x="124" y="136" width="16" height="16" fill="#17171b" />
-  <rect x="140" y="136" width="16" height="16" fill="#17171b" />
+  <!-- label ticks -->
+  <rect x="40" y="118" width="120" height="3" fill="#5a5a60" />
 </svg>
