@@ -96,6 +96,7 @@ export default defineConfig({
         jukebox: resolve(__dirname, "games/juke-box/index.html"),
         phare: resolve(__dirname, "games/le-phare/index.html"),
         horde: resolve(__dirname, "games/la-horde/index.html"),
+        manoir: resolve(__dirname, "games/le-manoir/index.html"),
       },
     },
   },
