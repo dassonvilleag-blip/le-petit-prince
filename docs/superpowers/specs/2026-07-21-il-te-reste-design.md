@@ -67,7 +67,7 @@ Contrairement aux deux jeux du site qui tournent sur `<canvas>` (`petites-orbite
 - `games/il-te-reste/index.html` — page Vite dédiée : écran de saisie, conteneur de révélation, écran final.
 - `src/games/il-te-reste/units.ts` — données pures : liste des 35 unités (`{ label: string; perYear: number }`), l'espérance de vie utilisée (`LIFE_EXPECTANCY_YEARS = 80`), et une fonction pure `computeUnitValues(birthDate: Date, today: Date): { daysLeft: number; units: { label: string; value: number }[] } | null` (retourne `null` si `daysLeft <= 0`, cas limite de la date de naissance trop ancienne).
 - `src/games/il-te-reste/main.ts` — orchestration : lecture du formulaire, appel à `computeUnitValues`, séquencement de la révélation (`setTimeout` + classes CSS pour l'animation), affichage de l'écran final, bouton "recommencer".
-- `src/games/il-te-reste/style.css` — mise en page + palette crayon existante (`--paper`, `--ink`, `--crayon-red`, polices Caveat/Patrick Hand), cohérente avec le reste du site.
+- `src/games/il-te-reste/style.css` — mise en page + charte graphique actuelle du site (mise à jour depuis l'écriture initiale de ce spec) : palette rétro/arcade (`--bg`, `--card`, `--ink`, `--soft`, `--pink`, `--teal`, `--purple`, `--yellow`, `--orange`), police `VT323` pour le corps de texte et `Pixelify Sans` pour les titres, bordures épaisses (3px solid `--ink`) avec ombres portées franches (`4px 4px 0 ...`), cohérente avec `petites-orbites`/`echelle-du-temps` et la homepage tels qu'ils sont aujourd'hui.
 - Tuile ajoutée sur la page d'accueil + entrée `vite.config.ts` + mise à jour du README, suivant la convention des expériences précédentes.
 
 ### Tests
