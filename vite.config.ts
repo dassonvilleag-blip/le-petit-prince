@@ -81,6 +81,9 @@ export default defineConfig({
   server: {
     // le tunnel Cloudflare présente ce hostname au serveur de dev
     allowedHosts: ["leptitprince.simptom.fr"],
+    // jamais de cache (navigateur ou edge Cloudflare) sur les assets de dev :
+    // un HTML frais avec un CSS périmé donne des rendus cassés
+    headers: { "Cache-Control": "no-store" },
   },
   build: {
     rollupOptions: {

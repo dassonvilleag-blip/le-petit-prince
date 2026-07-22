@@ -54,7 +54,7 @@ const CREATURES: Creature[] = [
 const HOOK_R = 13;
 const HOOK_Y = 0.45; // fraction de l'écran
 const DESCENT_DRAIN = 0.6; // % de ligne par 100 m de descente
-const TIER_DRAIN = [0, 0.8, 1.1, 1.4, 1.7, 2.0]; // % par 100 m de remontée, par tier
+const TIER_DRAIN = [0, 0.8, 1.1, 1.4, 1.5, 1.7]; // % par 100 m de remontée, par tier
 const HIT_DRAIN = 8; // % par collision à la remontée
 const ASCENT_SPEED = 550; // px/s — assez lent pour rendre l'esquive lisible
 
@@ -106,7 +106,16 @@ let particles: Particle[] = [];
 let spawnIn = 0;
 let shake = 0;
 let now = 0;
-let graceUntil = 0; // invincibilité brève après le ferrage
+let graceUntil = 0; // invincibilité brève après ferrage ET après chaque choc
+
+// petits chiffres flottants : chaque perte de ligne est visible et chiffrée
+interface Floater {
+  x: number;
+  y: number;
+  txt: string;
+  life: number;
+}
+let floaters: Floater[] = [];
 let bestiaire = new Set<string>();
 try {
   bestiaire = new Set(JSON.parse(localStorage.getItem(BOOK_KEY) ?? "[]"));
@@ -120,18 +129,21 @@ let money = 0;
 let upLine = 0; // ligne renforcée : +25 % de solidité par niveau
 let upReel = 0; // moulinet turbo : +15 % de vitesse de remontée par niveau
 let upWeight = 0; // lest de plomb : +15 % de vitesse de descente par niveau
+let knot = false; // nœud de secours : consommable, sauve UNE casse avec une prise
+let knotUsed = false;
 try {
   const s = JSON.parse(localStorage.getItem(SHOP_KEY) ?? "{}");
   money = s.money ?? 0;
   upLine = s.upLine ?? 0;
   upReel = s.upReel ?? 0;
   upWeight = s.upWeight ?? 0;
+  knot = s.knot ?? false;
 } catch {
   /* valeurs par défaut */
 }
 
 function saveShop(): void {
-  localStorage.setItem(SHOP_KEY, JSON.stringify({ money, upLine, upReel, upWeight }));
+  localStorage.setItem(SHOP_KEY, JSON.stringify({ money, upLine, upReel, upWeight, knot }));
 }
 
 function lineMax(): number {
@@ -159,6 +171,16 @@ function renderShop(): void {
       const price = u.price(lvl);
       btn.textContent = `${u.name} ${"▮".repeat(lvl)}${"▯".repeat(UP_MAX - lvl)} — ${price} ⚓`;
       btn.disabled = money < price;
+    }
+  }
+  const knotBtn = document.getElementById("up-knot") as HTMLButtonElement | null;
+  if (knotBtn) {
+    if (knot) {
+      knotBtn.textContent = "🪢 Nœud de secours · prêt ✓";
+      knotBtn.disabled = true;
+    } else {
+      knotBtn.textContent = "🪢 Nœud de secours (sauve 1 casse) — 40 ⚓";
+      knotBtn.disabled = money < 40;
     }
   }
 }
@@ -271,6 +293,8 @@ function startDive(): void {
   hookX = W / 2;
   hookVX = 0;
   graceUntil = 0;
+  knotUsed = false;
+  floaters = [];
   state = "descend";
   overlay.classList.add("hidden");
   document.getElementById("shop")!.classList.add("hidden");
@@ -288,6 +312,13 @@ function step(dt: number): void {
     }
     pa.x += pa.vx * dt;
     pa.y += pa.vy * dt;
+  }
+
+  for (let i = floaters.length - 1; i >= 0; i--) {
+    const f = floaters[i];
+    f.life -= dt;
+    f.y -= 42 * dt;
+    if (f.life <= 0) floaters.splice(i, 1);
   }
 
   if (state === "surface") return;
@@ -323,12 +354,24 @@ function step(dt: number): void {
     }
   }
   if (line <= 0) {
-    line = 0;
-    burst(hookX, hy, "#ff5c8a", 26);
-    shake = 8;
-    toast("CRAC. La ligne a lâché 💔");
-    endDive(false);
-    return;
+    if (state === "ascend" && caught && knot && !knotUsed) {
+      // le nœud de secours sauve UNE casse par plongée (consommable)
+      knot = false;
+      knotUsed = true;
+      saveShop();
+      line = 12;
+      graceUntil = now + 3;
+      shake = 8;
+      floaters.push({ x: hookX, y: hy - 34, txt: "🪢 le nœud tient !", life: 2 });
+      toast("🪢 Le nœud de secours tient bon ! Fonce !");
+    } else {
+      line = 0;
+      burst(hookX, hy, "#ff5c8a", 26);
+      shake = 8;
+      toast("CRAC. La ligne a lâché 💔");
+      endDive(false);
+      return;
+    }
   }
 
   // ---- créatures ----
@@ -361,9 +404,12 @@ function step(dt: number): void {
         toast(`${s.creature.emoji} ${s.creature.name} — ferré ! Remonte !`);
         state = "ascend";
       } else if (now >= graceUntil) {
-        // collision pendant la remontée : la ligne souffre
+        // collision pendant la remontée : la ligne souffre, puis 1,2 s
+        // d'invincibilité — un banc groupé ne compte plus qu'une touche
         swimmers.splice(i, 1);
         line -= HIT_DRAIN;
+        graceUntil = now + 1.2;
+        floaters.push({ x: s.x, y: s.y - 20, txt: `-${HIT_DRAIN} 🧵`, life: 1.4 });
         burst(s.x, s.y, "#4cc9f0", 14);
         shake = 6;
         toast(`Aïe, ${s.creature.emoji} ! La ligne fatigue…`);
@@ -491,6 +537,20 @@ function draw(t: number): void {
   }
   ctx.globalAlpha = 1;
 
+  // dégâts chiffrés : plus jamais de « la ligne a cassé toute seule »
+  for (const f of floaters) {
+    ctx.globalAlpha = Math.min(1, f.life * 1.5);
+    ctx.font = "22px 'VT323', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.strokeStyle = "#17171b";
+    ctx.lineWidth = 3;
+    ctx.strokeText(f.txt, f.x, f.y);
+    ctx.fillStyle = "#ff5c8a";
+    ctx.fillText(f.txt, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+
   // la ligne et l'hameçon
   if (state !== "surface") {
     const hy = H * HOOK_Y;
@@ -574,6 +634,15 @@ for (const u of UPGRADES) {
     toast("Équipement amélioré 🛠️");
   });
 }
+
+document.getElementById("up-knot")!.addEventListener("click", () => {
+  if (knot || money < 40) return;
+  money -= 40;
+  knot = true;
+  saveShop();
+  renderShop();
+  toast("🪢 Nœud acheté — il sauvera ta prochaine casse");
+});
 
 btnBook.addEventListener("click", () => {
   renderBook();
