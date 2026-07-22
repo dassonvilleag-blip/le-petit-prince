@@ -35,21 +35,21 @@
       </div>
 
       <div class="lobby-flow hidden" id="flow-host">
-        <p>1. Envoie ce code à ton matelot :</p>
+        <p>1. Ton code est copié — envoie-le à ton matelot 📤</p>
         <textarea id="host-offer" readonly></textarea>
-        <button id="btn-copy-offer" type="button">📋 copier le code</button>
-        <p>2. Colle sa réponse ici :</p>
-        <textarea id="host-answer" placeholder="colle la réponse du navire…"></textarea>
-        <button id="btn-accept-answer" type="button">🔗 connecter</button>
+        <button id="btn-copy-offer" type="button">📋 recopier</button>
+        <p>2. Colle sa réponse ici, ça se connecte tout seul :</p>
+        <textarea id="host-answer" placeholder="colle la réponse ici…"></textarea>
+        <button id="btn-accept-answer" type="button" hidden>🔗 connecter</button>
       </div>
 
       <div class="lobby-flow hidden" id="flow-join">
-        <p>1. Colle le code du gardien :</p>
-        <textarea id="join-offer" placeholder="colle le code du gardien…"></textarea>
-        <button id="btn-make-answer" type="button">⚙️ générer ma réponse</button>
-        <p>2. Renvoie-lui ce code :</p>
+        <p>1. Colle le code du gardien, ta réponse se prépare toute seule :</p>
+        <textarea id="join-offer" placeholder="colle le code ici…"></textarea>
+        <button id="btn-make-answer" type="button" hidden>⚙️ générer ma réponse</button>
+        <p>2. Ta réponse (copiée automatiquement) — renvoie-la lui 📤</p>
         <textarea id="join-answer" readonly></textarea>
-        <button id="btn-copy-answer" type="button">📋 copier la réponse</button>
+        <button id="btn-copy-answer" type="button">📋 recopier</button>
         <p class="wait-note">La partie démarre dès qu'il l'aura collée.</p>
       </div>
 
