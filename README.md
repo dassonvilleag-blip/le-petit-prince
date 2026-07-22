@@ -5,6 +5,10 @@ interactives inspirées de l'univers du Petit Prince.
 
 ## Jeux
 
+- **Il te reste...** (`/games/il-te-reste/`) — donne ta date de naissance, regarde
+  ton temps restant se convertir en unités totalement absurdes (tasses de café,
+  battements de cœur, fois où tu vas reperdre tes clés...).
+
 - **Petites Orbites** (`/games/petites-orbites/`) — bac à sable gravitationnel.
   Glisse pour lancer des planètes autour du soleil et construis un système
   solaire qui survit le plus longtemps possible.
