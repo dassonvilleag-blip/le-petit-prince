@@ -159,8 +159,10 @@ body {
 
 .shop {
   display: flex;
-  flex-direction: column;
+  flex-flow: row wrap;
+  justify-content: center;
   gap: 10px;
+  max-width: min(680px, calc(100vw - 40px));
   pointer-events: auto;
   background: var(--card);
   border: 3px solid var(--ink);
@@ -174,6 +176,7 @@ body {
 }
 
 .shop-title {
+  flex-basis: 100%;
   font-size: 1.3rem;
 }
 
@@ -214,7 +217,7 @@ body {
   text-shadow: 4px 4px 0 var(--ink);
 }
 
-.overlay p {
+.overlay > p {
   font-size: 1.4rem;
   line-height: 1.55;
   background: rgba(255, 253, 244, 0.92);
@@ -222,6 +225,7 @@ body {
   border-radius: 8px;
   box-shadow: 4px 4px 0 var(--ink);
   padding: 10px 20px;
+  max-width: calc(100vw - 40px);
 }
 
 .book {
