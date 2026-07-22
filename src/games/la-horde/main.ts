@@ -661,6 +661,9 @@ function step(dt: number): void {
     e.x += ux * sp * dt;
     e.y += uy * sp * dt;
     if (e.type.id !== "ghost") [e.x, e.y] = collideObstacles(e.x, e.y, e.type.r); // les fantômes traversent
+    // jamais très loin hors écran, quoi qu'il arrive
+    e.x = Math.max(-80, Math.min(W + 80, e.x));
+    e.y = Math.max(-80, Math.min(H + 80, e.y));
 
     if (d < e.type.r + 13) damagePlayer(e.type.dmg);
   }
@@ -702,11 +705,16 @@ function step(dt: number): void {
     }
     for (const e of enemies) {
       if (Math.hypot(e.x - b.x, e.y - b.y) < e.type.r + 12) {
+        // knockback UNE fois par touche (même garde-fou que les dégâts),
+        // sinon la poussée s'applique à chaque frame et éjecte la horde
+        const ready = (e.iframes["bubble"] ?? -1) <= runT;
         hurt(e, 4 + (weapons.get("bubble") ?? 1) * 2, "bubble", 0.3);
-        const kn = 46;
-        const d2 = Math.hypot(b.vx, b.vy) || 1;
-        e.x += (b.vx / d2) * kn;
-        e.y += (b.vy / d2) * kn;
+        if (ready) {
+          const kn = 34;
+          const d2 = Math.hypot(b.vx, b.vy) || 1;
+          e.x += (b.vx / d2) * kn;
+          e.y += (b.vy / d2) * kn;
+        }
       }
     }
   }
