@@ -55,7 +55,7 @@ export const ROUND_COMMENTS: CommentTier[] = [
 ];
 
 export function pickRoundComment(score: number): string {
-  const tier = ROUND_COMMENTS.find((t) => score >= t.min)!;
+  const tier = ROUND_COMMENTS.find((t) => score >= t.min) ?? ROUND_COMMENTS[ROUND_COMMENTS.length - 1];
   return tier.lines[Math.floor(Math.random() * tier.lines.length)];
 }
 
@@ -91,6 +91,6 @@ export const CLOSING_COMMENTS: CommentTier[] = [
 ];
 
 export function pickClosingComment(totalScore: number): string {
-  const tier = CLOSING_COMMENTS.find((t) => totalScore >= t.min)!;
+  const tier = CLOSING_COMMENTS.find((t) => totalScore >= t.min) ?? CLOSING_COMMENTS[CLOSING_COMMENTS.length - 1];
   return tier.lines[Math.floor(Math.random() * tier.lines.length)];
 }
