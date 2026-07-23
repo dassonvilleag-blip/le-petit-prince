@@ -168,7 +168,7 @@ let seaPattern: CanvasPattern | null = null;
 seaTex.onload = () => {
   seaPattern = ctx.createPattern(seaTex, "repeat");
 };
-seaTex.src = "/textures/phare-mer.webp";
+seaTex.src = `${import.meta.env.BASE_URL}textures/phare-mer.webp`;
 
 const hud = document.getElementById("hud")!;
 const hudRole = document.getElementById("hud-role")!;

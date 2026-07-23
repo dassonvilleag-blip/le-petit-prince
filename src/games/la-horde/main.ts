@@ -101,7 +101,7 @@ let groundPattern: CanvasPattern | null = null;
 groundTex.onload = () => {
   groundPattern = ctx.createPattern(groundTex, "repeat");
 };
-groundTex.src = "/textures/horde-sol.webp";
+groundTex.src = `${import.meta.env.BASE_URL}textures/horde-sol.webp`;
 
 // arène procédurale : des obstacles thématiques, une nouvelle carte par nuit
 interface Obstacle {
