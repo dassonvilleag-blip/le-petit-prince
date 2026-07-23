@@ -97,6 +97,7 @@ export default defineConfig({
         phare: resolve(__dirname, "games/le-phare/index.html"),
         horde: resolve(__dirname, "games/la-horde/index.html"),
         manoir: resolve(__dirname, "games/le-manoir/index.html"),
+        caCouteCombien: resolve(__dirname, "games/ca-coute-combien/index.html"),
       },
     },
   },
