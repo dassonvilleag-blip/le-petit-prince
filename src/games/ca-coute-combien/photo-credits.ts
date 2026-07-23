@@ -451,4 +451,161 @@ export const PHOTO_CREDITS: PhotoCredit[] = [
     license: "CC BY-SA 4.0",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Tesla_Model_S_2024_Blue.jpg",
   },
+  {
+    id: "site-lancement-spatial-prive",
+    author: "NOAA / NODD",
+    license: "Domaine public",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:SpaceX_Starbase_Launch_Site_Early_2026.jpg",
+  },
+  {
+    id: "vin-plus-cher-encheres",
+    author: "Michael Gaylard",
+    license: "CC BY 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Calem_White_%26_Dry_Porto_Wine_Bottles_(55242019592).jpg",
+  },
+  {
+    id: "timbre-poste-rarissime",
+    author: "Kevin Walsh",
+    license: "Domaine public",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Penny_Black_(10191871).jpg",
+  },
+  {
+    id: "patek-philippe-complication",
+    author: "Kamal Aboul-Hosn",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Tiffany%27s_Patek_Philippe_Watch_Collection_09.jpg",
+  },
+  {
+    id: "aigle-royal-fauconnerie",
+    author: "FieldsportsChannel.tv",
+    license: "CC BY 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Falconry_eagles_hares_Scotland_01.jpg",
+  },
+  {
+    id: "domaine-viticole-bourgogne",
+    author: "Arnaud 25",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Domaine_de_la_Roman%C3%A9e-conti_024.JPG",
+  },
+  {
+    id: "billet-blue-origin",
+    author: "Space.tracker.nerd",
+    license: "CC BY 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Blue_Origin_NS_36.jpg",
+  },
+  {
+    id: "yacht-voile-americas-cup",
+    author: "Jorge Royan",
+    license: "CC BY-SA 3.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:12-metre_class_America%27s_Cup_sailboat,_Auckland_-_1127.jpg",
+  },
+  {
+    id: "studio-enregistrement-pro",
+    author: "Cashlee69",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Neve_81_Series_Mixing_Console.jpg",
+  },
+  {
+    id: "collection-tintin-premiere",
+    author: "tales of a wandering youkai",
+    license: "CC BY 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Colorado_Antique_Gallery_(5115907383)_(2).jpg",
+  },
+  {
+    id: "jet-ski-neuf",
+    author: "Cícero R. C. Omena",
+    license: "CC BY 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Jet_ski_(11553259774).jpg",
+  },
+  {
+    id: "caravane-luxe-equipee",
+    author: "Renée Kools",
+    license: "CC BY 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Dethleffs_Camper_450_DB_side_view.jpg",
+  },
+  {
+    id: "traineau-chiens-excursion",
+    author: "PaterMcFly",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Alaskan_Husky_Gespann.JPG",
+  },
+  {
+    id: "cabane-pilotis-lagon",
+    author: "BoraLife",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Four_Seasons_Resort_Bora_Bora.jpg",
+  },
+  {
+    id: "club-tennis-prive-annuel",
+    author: "Beyond My Ken",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Racquet_and_Tennis_Club_370_Park_Avenue.jpg",
+  },
+  {
+    id: "gants-boxe-signes",
+    author: "Airman 1st Class Kerelin Molina",
+    license: "Domaine public",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Black_boxing_gloves.jpg",
+  },
+  {
+    id: "maillot-star-encheres",
+    author: "P4K1T0",
+    license: "CC0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Historia_del_f%C3%BAtbol_en_Cartagena_(20250307_104208).jpg",
+  },
+  {
+    id: "ballon-foot-officiel-cdm",
+    author: "Shawn Smith",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Adidas_Jabulani_Official_World_Cup_2010_(4158450149).jpg",
+  },
+  {
+    id: "raquette-champion-encheres",
+    author: "Smithsonian NMAAHC",
+    license: "CC0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Smithsonian_-_NMAAHC_-_Tennis_racket_used_by_Althea_Gibson_-_NMAAHC_2014.205.2.1.jpg",
+  },
+  {
+    id: "velo-bmx-pro",
+    author: "Tim Sheerman-Chase",
+    license: "CC BY 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Craig_Strong_Wheelie_BMX_Bike.jpg",
+  },
+  {
+    id: "planche-surf-mesure",
+    author: "Richard Masoner",
+    license: "CC BY-SA 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Surfboard_rack.jpg",
+  },
+  {
+    id: "kayak-mer-carbone",
+    author: "Thruxton",
+    license: "CC BY 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Sea_Kayak.JPG",
+  },
+  {
+    id: "tente-glamping-equipee",
+    author: "PLTRON",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Jungle_Safari_Tents_.jpg",
+  },
+  {
+    id: "machine-espresso-pro",
+    author: "Pgroberts531",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:La_Marzocco_GB5.jpg",
+  },
+  {
+    id: "piano-queue-concert",
+    author: "Jorge Royan",
+    license: "CC BY-SA 3.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Berlin-_Grand_piano_at_the_main_hall_stage_in_the_Konzerthaus_-_4189.jpg",
+  },
 ];
