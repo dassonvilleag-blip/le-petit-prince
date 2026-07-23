@@ -133,7 +133,7 @@ let wallPattern: CanvasPattern | null = null;
 wallTex.onload = () => {
   wallPattern = ctx.createPattern(wallTex, "repeat");
 };
-wallTex.src = "/textures/manoir-mur.webp";
+wallTex.src = `${import.meta.env.BASE_URL}textures/manoir-mur.webp`;
 
 // ---------- persistance ----------
 

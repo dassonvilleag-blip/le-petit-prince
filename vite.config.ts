@@ -77,6 +77,7 @@ function phareSignaling(): Plugin {
 }
 
 export default defineConfig({
+  base: process.env.GITHUB_PAGES ? "/le-petit-prince/" : "/",
   plugins: [phareSignaling()],
   server: {
     // le tunnel Cloudflare présente ce hostname au serveur de dev
