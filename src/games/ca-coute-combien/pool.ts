@@ -11,6 +11,7 @@ export function shuffle<T>(items: readonly T[]): T[] {
   return result;
 }
 
+// If `roundSize` exceeds the total number of items in `items`, the returned round is silently truncated to the pool size (fewer than `roundSize` items).
 export function drawRound<T extends PoolItem>(
   items: readonly T[],
   seenIds: readonly string[],
