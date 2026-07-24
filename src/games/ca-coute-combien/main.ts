@@ -80,6 +80,11 @@ function showRound() {
   roundIndexEl.textContent = String(roundIndex + 1);
   roundPhotoEl.src = item.photo;
   roundPhotoEl.alt = item.nom;
+
+  roundPhotoEl.classList.remove("entering");
+  void roundPhotoEl.offsetWidth; // force reflow so the animation restarts
+  roundPhotoEl.classList.add("entering");
+
   roundNameEl.textContent = item.nom;
   guessInput.value = "";
   roundResultEl.classList.add("hidden");
