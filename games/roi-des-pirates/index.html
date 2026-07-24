@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏴‍☠️</text></svg>" />
+    <link rel="stylesheet" href="/src/games/roi-des-pirates/game.css" />
+    <title>Le Roi des Pirates — Le Petit Prince</title>
+  </head>
+  <body>
+    <header class="game-header">
+      <a class="back-link" href="../../">← le petit prince</a>
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-label">⚔ Force</span>
+          <div class="stat-track"><div id="fill-force" class="stat-fill"></div></div>
+          <span id="val-force" class="stat-val">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">⭐ Prime</span>
+          <div class="stat-track"><div id="fill-notoriete" class="stat-fill"></div></div>
+          <span id="val-notoriete" class="stat-val">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">🏴 Équipage</span>
+          <div class="stat-track"><div id="fill-equipage" class="stat-fill"></div></div>
+          <span id="val-equipage" class="stat-val">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">🍎 Fruit</span>
+          <div class="stat-track"><div id="fill-fruit" class="stat-fill"></div></div>
+          <span id="val-fruit" class="stat-val">0</span>
+        </div>
+      </div>
+    </header>
+
+    <main id="scene">
+      <p id="arc-label" class="arc-label"></p>
+      <h2 id="node-title" class="node-title"></h2>
+      <figure id="illustration" class="illustration"></figure>
+      <p id="node-text" class="node-text"></p>
+      <div id="choices" class="choices-list"></div>
+      <button id="replay-btn" hidden>Recommencer</button>
+    </main>
+
+    <script type="module" src="/src/games/roi-des-pirates/main.ts"></script>
+  </body>
+</html>
