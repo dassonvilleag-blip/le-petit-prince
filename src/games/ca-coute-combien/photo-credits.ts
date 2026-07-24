@@ -608,4 +608,158 @@ export const PHOTO_CREDITS: PhotoCredit[] = [
     sourceUrl:
       "https://commons.wikimedia.org/wiki/File:Berlin-_Grand_piano_at_the_main_hall_stage_in_the_Konzerthaus_-_4189.jpg",
   },
+  {
+    id: "caviar-beluga",
+    author: "The Ogre",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Caviar_tins_(Russian_and_Iranian).jpg",
+  },
+  {
+    id: "foie-gras-entier",
+    author: "Tangopaso",
+    license: "Domaine public",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Restaurant_Argi-Eder_-_Foie_gras_de_canard_en_terrine.jpg",
+  },
+  {
+    id: "jambon-iberique-bellota",
+    author: "Cantabrucu",
+    license: "CC0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Jamon_iberico_de_bellota_2_(cinco_jotas).jpg",
+  },
+  {
+    id: "safran-gramme",
+    author: "Hubertl",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Safran-Weinviertel_Niederreiter_2_Gramm_8285.jpg",
+  },
+  {
+    id: "vanille-madagascar",
+    author: "Le Comptoir de Toamasina",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Graine_de_vanille_Bourbon_de_Madagascar_.jpg",
+  },
+  {
+    id: "melon-yubari",
+    author: "Captain76",
+    license: "Domaine public",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Yubari_melons_in_the_cardboard_box.JPG",
+  },
+  {
+    id: "mangue-miyazaki",
+    author: "Sundar",
+    license: "CC0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Miyazaki_mango_bought_in_Tokyo.jpg",
+  },
+  {
+    id: "the-matcha-ceremonial",
+    author: "Veganbaking.net from USA",
+    license: "CC BY-SA 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Matcha_Green_Tea_Powder_(9409937063).jpg",
+  },
+  {
+    id: "cafe-kopi-luwak",
+    author: "ronnieliew",
+    license: "CC BY 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Luwak_coffee_beans.jpg",
+  },
+  {
+    id: "cognac-louis-xiii",
+    author: "Todaealas",
+    license: "CC BY 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:LouisXiii.JPG",
+  },
+  {
+    id: "sake-junmai-premium",
+    author: "Kozakura154",
+    license: "CC BY 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:%E7%B4%94%E7%B1%B3%E5%90%9F%E9%86%B8_%E7%A3%AF%E8%87%AA%E6%85%A2.jpg",
+  },
+  {
+    id: "absinthe-artisanale",
+    author: "Tangopaso",
+    license: "Domaine public",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Absinthe_bottle_with_glass_and_spoon.jpg",
+  },
+  {
+    id: "huile-olive-grand-cru",
+    author: "Eteogoods",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Eteo_organic_extra_virgin_olive_oil.jpg",
+  },
+  {
+    id: "homard-thermidor",
+    author: "thefoodplace.co.uk",
+    license: "CC BY 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Lobster_Thermidor.jpg",
+  },
+  {
+    id: "fleur-sel-guerande",
+    author: "Romain Bréget",
+    license: "CC BY-SA 3.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Gu%C3%A9rande_-_Comparaison_en_Fleur_de_sel_et_Gros_sel.JPG",
+  },
+  {
+    id: "champagne-krug-millesime",
+    author: "Champagnemaster",
+    license: "CC BY 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Krug_1988_and_box.jpg",
+  },
+  {
+    id: "riz-japonais-premium",
+    author: "Marcel Montes",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Five_kg_rice_bags.jpg",
+  },
+  {
+    id: "whisky-macallan-rare-cask",
+    author: "JIP",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Macallan_Amber_Scotch_whisky.jpg",
+  },
+  {
+    id: "escargots-bourgogne-douzaine",
+    author: "Arnaud 25",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Escargots_de_Bourgogne_1.JPG",
+  },
+  {
+    id: "caviar-oscietre",
+    author: "Arnaud 25",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Caviar_001.jpg",
+  },
+  {
+    id: "chocolat-noir-grand-cru",
+    author: "Knud Winckelmann",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Toms_Guldbarre_Chocolate_Bar_In_Pieces.jpg",
+  },
+  {
+    id: "the-oolong-grand-cru",
+    author: "Nadav Spiegelman",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Wuyi_oolong_tea.jpg",
+  },
+  {
+    id: "sel-himalaya-rose",
+    author: "Poyraz 72",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Himalayan_salt_fine_grain_V1.jpg",
+  },
+  {
+    id: "gin-artisanal-premium",
+    author: "Indrajit Das",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Roku_Japanese_Craft_Gin_01.jpg",
+  },
+  {
+    id: "rhum-vieux-agricole",
+    author: "Raimond Spekking",
+    license: "CC BY-SA 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Appleton_Estate_Aged_21_Years_(bottled_2011)-92329.jpg",
+  },
 ];
