@@ -8,7 +8,7 @@ interface Row {
   label: string;
   color: string;
   freq: number | null; // null = percussion
-  drum?: "kick" | "hat";
+  drum?: "kick" | "hat" | "clap";
 }
 
 const ROWS: Row[] = [
@@ -22,7 +22,15 @@ const ROWS: Row[] = [
   { label: "sol₃", color: "#b388eb", freq: 196 },
   { label: "🥁", color: "#8a5a2b", freq: null, drum: "kick" },
   { label: "🎩", color: "#6d675c", freq: null, drum: "hat" },
+  // ajouts postérieurs : toujours en fin de tableau pour que les liens
+  // partagés avant restent valides (l'ordre d'affichage est séparé)
+  { label: "👏", color: "#d6336c", freq: null, drum: "clap" },
+  { label: "si", color: "#f0a6ca", freq: 493.88 },
+  { label: "fa", color: "#94d2bd", freq: 349.23 },
 ];
+
+// ordre d'affichage : la gamme complète du haut vers le bas, percussions en bas
+const DISPLAY_ORDER = [0, 11, 1, 2, 12, 3, 4, 5, 6, 7, 8, 9, 10];
 
 const pattern: boolean[][] = ROWS.map(() => Array(STEPS).fill(false));
 let tempo = 120;
@@ -58,8 +66,11 @@ function encode(): string {
 
 function decode(hash: string): boolean {
   const parts = hash.replace(/^#/, "").split(".");
-  if (parts.length !== 4 || parts[0] !== "v1" || parts[1].length !== ROWS.length * 4) return false;
-  for (let r = 0; r < ROWS.length; r++) {
+  if (parts.length !== 4 || parts[0] !== "v1") return false;
+  const rowCount = parts[1].length / 4;
+  // accepte aussi les anciens liens (sans la piste clap)
+  if (!Number.isInteger(rowCount) || rowCount > ROWS.length) return false;
+  for (let r = 0; r < rowCount; r++) {
     const bits = parseInt(parts[1].slice(r * 4, r * 4 + 4), 16);
     if (Number.isNaN(bits)) return false;
     for (let s = 0; s < STEPS; s++) pattern[r][s] = Boolean(bits & (1 << s));
@@ -116,6 +127,21 @@ function playNote(row: Row, time: number): void {
     osc.connect(gain).connect(ac.destination);
     osc.start(time);
     osc.stop(time + 0.18);
+  } else if (row.drum === "clap") {
+    // deux bursts de bruit rapprochés = un clap qui claque
+    for (const offset of [0, 0.015]) {
+      const src = ac.createBufferSource();
+      const gain = ac.createGain();
+      const filter = ac.createBiquadFilter();
+      src.buffer = noiseBuffer;
+      filter.type = "bandpass";
+      filter.frequency.value = 1800;
+      filter.Q.value = 1.2;
+      gain.gain.setValueAtTime(offset === 0 ? 0.28 : 0.42, time + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + offset + 0.13);
+      src.connect(filter).connect(gain).connect(ac.destination);
+      src.start(time + offset);
+    }
   } else {
     const src = ac.createBufferSource();
     const gain = ac.createGain();
@@ -174,7 +200,8 @@ function stop(): void {
 function renderGrid(): void {
   gridEl.style.gridTemplateColumns = `52px repeat(${STEPS}, 34px)`;
   gridEl.innerHTML = "";
-  ROWS.forEach((row, r) => {
+  for (const r of DISPLAY_ORDER) {
+    const row = ROWS[r];
     const label = document.createElement("span");
     label.className = "row-label";
     label.textContent = row.label;
@@ -196,7 +223,7 @@ function renderGrid(): void {
       });
       gridEl.appendChild(cell);
     }
-  });
+  }
 }
 
 btnPlay.addEventListener("click", () => (playing ? stop() : start()));
@@ -225,6 +252,8 @@ btnRandom.addEventListener("click", () => {
   }
   for (let s = 0; s < STEPS; s += 4) pattern[8][s] = true; // grosse caisse carrée
   for (let s = 2; s < STEPS; s += 4) pattern[9][s] = Math.random() < 0.8;
+  pattern[10][4] = true; // clap sur les contretemps
+  pattern[10][12] = true;
   renderGrid();
   syncUrl();
   if (!playing) start();

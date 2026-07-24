@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>La pêche abyssale</title>
+    <meta name="description" content="Descends ta ligne dans les abysses, attrape des créatures de plus en plus bizarres, et remonte avant que ça casse." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎣</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/peche-abyssale/peche.css" />
+  </head>
+  <body>
+    <canvas id="sea"></canvas>
+
+    <a class="back-link" href="../../">← le petit prince</a>
+
+    <div class="hud">
+      <div class="hud-line">profondeur : <span id="hud-depth">0 m</span></div>
+      <div class="hud-line">ligne : <span class="bar"><span id="bar-fill"></span></span></div>
+      <div class="hud-line">⚓ <span id="hud-money">0</span></div>
+      <div class="hud-line hud-record">record : <span id="hud-record">0 m</span></div>
+    </div>
+
+    <button id="btn-book" type="button">📖 <span id="book-count">0/20</span></button>
+    <button id="btn-up" class="hidden" type="button">⤴️ remonter</button>
+
+    <div class="overlay" id="overlay">
+      <h1 id="overlay-title">La pêche abyssale</h1>
+      <p id="overlay-text">Guide l'hameçon à la souris. Plus tu descends, plus c'est bizarre et précieux.<br />
+      Touche une créature pour la ferrer, puis esquive tout pendant la remontée :<br />
+      si la ligne casse, la prise est perdue. Vends tes prises ⚓, améliore ton matériel,<br />
+      descends plus profond. Clique pour plonger.</p>
+      <div class="shop" id="shop">
+        <p class="shop-title">🛒 La boutique du port — <span id="shop-money">0</span> ⚓</p>
+        <button id="up-line" type="button"></button>
+        <button id="up-reel" type="button"></button>
+        <button id="up-weight" type="button"></button>
+        <button id="up-knot" type="button"></button>
+      </div>
+    </div>
+
+    <div class="book hidden" id="book">
+      <h2>Bestiaire des profondeurs</h2>
+      <div class="book-grid" id="book-grid"></div>
+      <p class="book-tip">clique n'importe où pour fermer</p>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script type="module" src="/src/games/peche-abyssale/main.ts"></script>
+  </body>
+</html>

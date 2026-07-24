@@ -1,0 +1,263 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --ink: #17171b;
+  --card: #fffdf4;
+  --pink: #ff5c8a;
+  --teal: #1fc7a8;
+  --yellow: #ffc93c;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: #0b1026;
+  font-family: "VT323", "Courier New", monospace;
+  color: var(--ink);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#mer {
+  position: fixed;
+  inset: 0;
+  display: block;
+  touch-action: none;
+}
+
+.back-link {
+  position: fixed;
+  z-index: 30;
+  top: 16px;
+  left: 18px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 8px 14px;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.back-link:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--pink);
+}
+
+.hud {
+  position: fixed;
+  z-index: 10;
+  top: 16px;
+  right: 18px;
+  text-align: right;
+  font-size: 1.3rem;
+  line-height: 1.6;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 8px 14px;
+  pointer-events: none;
+}
+
+.hud.hidden {
+  display: none;
+}
+
+.lobby {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  overflow-y: auto;
+  text-align: center;
+}
+
+.lobby.hidden {
+  display: none;
+}
+
+.lobby h1 {
+  font-family: "Pixelify Sans", "VT323", monospace;
+  font-size: clamp(2.4rem, 7vw, 3.8rem);
+  font-weight: 700;
+  color: var(--card);
+  text-shadow: 4px 4px 0 var(--pink);
+}
+
+.pitch {
+  font-size: 1.35rem;
+  line-height: 1.55;
+  color: #c6ccf5;
+  max-width: 620px;
+}
+
+.pitch strong {
+  color: var(--yellow);
+}
+
+.lobby-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+}
+
+.lobby button {
+  font-family: inherit;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 12px 18px;
+  background: var(--yellow);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--ink);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.lobby button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--pink);
+}
+
+.lobby button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+#btn-join {
+  background: var(--teal);
+}
+
+.lobby-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(560px, 100%);
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 16px;
+  font-size: 1.2rem;
+}
+
+.lobby-flow.hidden {
+  display: none;
+}
+
+.room-code {
+  font-family: "Pixelify Sans", "VT323", monospace;
+  font-size: 3.4rem;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  padding: 6px 10px 6px 24px;
+  background: #efe8d6;
+  border: 3px dashed var(--ink);
+  border-radius: 10px;
+}
+
+#join-code {
+  width: 240px;
+  text-align: center;
+  font-family: "Pixelify Sans", "VT323", monospace;
+  font-size: 2.6rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  padding: 8px 0 8px 12px;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  background: #efe8d6;
+  outline: none;
+}
+
+#join-code:focus {
+  border-color: var(--pink);
+}
+
+.wait-note {
+  color: #6d675c;
+}
+
+.status {
+  min-height: 1.5em;
+  font-size: 1.25rem;
+  color: var(--yellow);
+}
+
+.overlay {
+  position: fixed;
+  z-index: 15;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+  padding: 20px;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.overlay.hidden {
+  opacity: 0;
+}
+
+.overlay h1 {
+  font-family: "Pixelify Sans", "VT323", monospace;
+  font-size: clamp(2rem, 6vw, 3.2rem);
+  font-weight: 700;
+  color: var(--card);
+  text-shadow: 4px 4px 0 var(--ink);
+}
+
+.overlay p {
+  font-size: 1.4rem;
+  line-height: 1.55;
+  background: rgba(255, 253, 244, 0.92);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 10px 20px;
+}
+
+.toast {
+  position: fixed;
+  z-index: 30;
+  bottom: 30px;
+  left: 50%;
+  transform: translate(-50%, 16px);
+  background: var(--card);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 8px 20px;
+  font-size: 1.25rem;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
