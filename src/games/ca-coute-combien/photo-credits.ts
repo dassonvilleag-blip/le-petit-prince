@@ -927,4 +927,168 @@ export const PHOTO_CREDITS: PhotoCredit[] = [
     license: "CC0",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Skydive_Tandem_jump.jpg",
   },
+  {
+    id: "tableau-monet-meules",
+    author: "Claude Monet",
+    license: "Domaine public",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Claude_Monet_-_Meules,_milieu_du_jour_(Haystacks,_midday)_-_Google_Art_Project.jpg",
+  },
+  {
+    id: "piece-double-eagle-1933",
+    author: "Saperaud~commonswiki",
+    license: "Domaine public",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:1933_double_eagle.JPG",
+  },
+  {
+    id: "manuscrit-codex-leicester",
+    author: "Leonardo da Vinci",
+    license: "Domaine public",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:CodexLeicester.jpg",
+  },
+  {
+    id: "bible-gutenberg",
+    author: "Johannes Gutenberg (impression), numérisation Jossi",
+    license: "Domaine public",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Gutenberg_Bible_B42_Genesis.JPG",
+  },
+  {
+    id: "violon-stradivarius-lady-blunt",
+    author: "Tarisio Auctions",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Lady_Blunt_top.jpg",
+  },
+  {
+    id: "diamant-hope",
+    author: "David Bjorgen",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Hope_Diamond.jpg",
+  },
+  {
+    id: "commode-louis-xv-marqueterie",
+    author: "Rijksmuseum",
+    license: "CC0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:A_Louis_XV._Marqueterie_Commode,_RP-F-F25653-A.jpg",
+  },
+  {
+    id: "ferrari-250-gto",
+    author: "Sfoskett~commonswiki",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:1962_Ferrari_250_GTO_34_2.jpg",
+  },
+  {
+    id: "montre-poche-tiffany-ancienne",
+    author: "Tiffany & Co. (Walters Art Museum)",
+    license: "Domaine public",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Tiffany_and_Company_-_Ladies_Open-face_Pocket_Watch_-_Walters_58290_-_Side_A.jpg",
+  },
+  {
+    id: "collier-perles-naturelles",
+    author: "W.carter",
+    license: "CC BY 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Strands_of_freshwater_pearls_threaded_on_silk.jpg",
+  },
+  {
+    id: "affiche-metropolis-1927",
+    author: "Boris Bilinsky",
+    license: "Domaine public",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Boris_Bilinski_-_Filmplakat_für_Metropolis_restored.jpg",
+  },
+  {
+    id: "squelette-trex-stan",
+    author: "InSapphoWeTrust",
+    license: "CC BY-SA 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:AMNH_5027_mount.jpg",
+  },
+  {
+    id: "meteorite-martienne",
+    author: "Steve Jurvetson",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Canyon_Diablo_meteorite_(51993316411).jpg",
+  },
+  {
+    id: "tapis-persan-safavide",
+    author: "Christies.com",
+    license: "Domaine public",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:A_highly_important_Safavid_silk_and_metal-thread_'Polonaise'_carpet,_probably_Isfahan,_central_Persia,_early_17th_century.jpg",
+  },
+  {
+    id: "vase-porcelaine-ming",
+    author: "Gary Todd",
+    license: "CC0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Ming_Porcelain_Vase_01.jpg",
+  },
+  {
+    id: "carte-waldseemuller",
+    author: "Martin Waldseemüller",
+    license: "Domaine public",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Waldseemuller_map_2.jpg",
+  },
+  {
+    id: "buste-romain-marbre",
+    author: "J. Paul Getty Museum",
+    license: "CC0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Bust_of_Germanicus,_front_-_Getty_Museum_(2021.66).jpg",
+  },
+  {
+    id: "sabre-japonais-ancien",
+    author: "Naganori (The Metropolitan Museum of Art)",
+    license: "CC0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Blade_and_Mounting_for_a_Slung_Sword_(Tachi)_MET_1820.jpg",
+  },
+  {
+    id: "poupee-porcelaine-ancienne",
+    author: "Thomas Quine",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Antique_porcelain_dolls_(26536635506).jpg",
+  },
+  {
+    id: "voiture-miniature-hotwheels-rare",
+    author: "Tahmid Rubayet Hossan",
+    license: "CC BY 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:HOTWHEELS_CHEVROLET_COPO_CAMARO.jpg",
+  },
+  {
+    id: "guitare-acoustique-legendaire",
+    author: "Sam Howzit",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Johnny_Cash%27s_1943_Martin_guitar_%26_suit_-_Rock_and_Roll_Hall_of_Fame_(2014-12-30_12.15.41_by_Sam_Howzit).jpg",
+  },
+  {
+    id: "appareil-photo-leica-ancien",
+    author: "Kameraprojekt Graz 2015",
+    license: "CC BY-SA 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:LEI0060_186_Leica_I_Sn.5193_1927_Originalzustand_Front-2_FS-15.jpg",
+  },
+  {
+    id: "machine-a-ecrire-ecrivain-celebre",
+    author: "Michael Lang",
+    license: "CC BY-SA 3.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Typenhebelschreibmaschine_Type_Lever_Typewriter_(192071323).jpeg",
+  },
+  {
+    id: "photographie-daguerreotype-ancienne",
+    author: "Inconnu (restauration Wcamp9)",
+    license: "Domaine public",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Portrait_of_a_Daguerreotypist,_1845_(with_Frame).jpg",
+  },
+  {
+    id: "sceau-imperial-jade-chinois",
+    author: "Gary Lee Todd",
+    license: "CC0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Jade_Seal_of_Ming-Qing_Dynasties_01.jpg",
+  },
 ];
