@@ -99,6 +99,7 @@ export default defineConfig({
         horde: resolve(__dirname, "games/la-horde/index.html"),
         manoir: resolve(__dirname, "games/le-manoir/index.html"),
         caCouteCombien: resolve(__dirname, "games/ca-coute-combien/index.html"),
+        roiDesPirates: resolve(__dirname, "games/roi-des-pirates/index.html"),
       },
     },
   },

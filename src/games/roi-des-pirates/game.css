@@ -1,0 +1,231 @@
+:root {
+  --arc-color: #8888cc;
+  --bg: #06060f;
+  --surface: #0e0e1c;
+  --text: #ddd4b8;
+  --text-dim: #8a8270;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+body[data-arc="east-blue"]   { --arc-color: #2cc4e0; }
+body[data-arc="grand-line"]  { --arc-color: #e0a030; }
+body[data-arc="nouveau-monde"] { --arc-color: #e04040; }
+body[data-arc="final"]       { --arc-color: #c080f0; }
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  line-height: 1.75;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 0 60px;
+}
+
+/* ── Header ── */
+.game-header {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(6px);
+}
+
+.back-link {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-family: sans-serif;
+  font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.back-link:hover { color: var(--text); }
+
+/* ── Stats Bar ── */
+.stats-bar {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.stat-label {
+  font-family: sans-serif;
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.stat-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  min-width: 24px;
+}
+
+.stat-fill {
+  height: 100%;
+  background: var(--arc-color);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+.stat-val {
+  font-family: sans-serif;
+  font-size: 11px;
+  color: var(--arc-color);
+  width: 22px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Main Scene ── */
+#scene {
+  width: min(640px, 100%);
+  padding: 0 20px;
+  margin-top: 8px;
+}
+
+/* ── Arc & Title ── */
+.arc-label {
+  font-family: sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--arc-color);
+  margin-top: 24px;
+  margin-bottom: 4px;
+  opacity: 0.85;
+}
+
+.node-title {
+  font-size: 22px;
+  font-weight: normal;
+  color: var(--text);
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
+/* ── Illustration ── */
+.illustration {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+  line-height: 0;
+}
+
+.illustration svg {
+  width: 100%;
+  display: block;
+}
+
+/* ── Narrative Text ── */
+.node-text {
+  font-size: 17px;
+  line-height: 1.85;
+  color: var(--text);
+  margin-bottom: 28px;
+}
+
+/* ── Choices ── */
+.choices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+
+.choice-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 14px 18px;
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-size: 16px;
+  line-height: 1.5;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.choice-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--arc-color);
+}
+
+.choice-text {
+  display: block;
+}
+
+.choice-sub {
+  display: block;
+  font-size: 13px;
+  color: var(--arc-color);
+  font-family: sans-serif;
+  opacity: 0.8;
+}
+
+/* ── Replay button (ending) ── */
+#replay-btn {
+  display: block;
+  margin: 0 auto;
+  padding: 12px 32px;
+  background: transparent;
+  border: 1px solid var(--arc-color);
+  border-radius: 8px;
+  color: var(--arc-color);
+  font-family: Georgia, serif;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+#replay-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+#replay-btn[hidden] {
+  display: none;
+}
+
+/* ── Responsive ── */
+@media (max-width: 500px) {
+  .stat-label { display: none; }
+  .stat-val { display: none; }
+  .game-header { gap: 10px; }
+  .node-text { font-size: 16px; }
+  .choice-btn { font-size: 15px; padding: 12px 14px; }
+}
