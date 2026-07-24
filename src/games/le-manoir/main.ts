@@ -1,7 +1,8 @@
 // Le Manoir — rogue-lite de plateforme façon Rogue Legacy : salles
 // procédurales infinies, l'or survit à la mort et s'investit en
 // améliorations permanentes, et chaque run se joue avec un héritier
-// aux traits aléatoires.
+// aux traits aléatoires. Direction artistique peinte à la main
+// (assets générés via Higgsfield, détourés et rendus seamless).
 
 interface Rect {
   x: number;
@@ -16,13 +17,14 @@ interface MEnemyType {
   hp: number;
   dmgHearts: number;
   r: number;
+  spriteH: number; // hauteur d'affichage du sprite, en px
 }
 
 const ENEMY_TYPES: Record<string, MEnemyType> = {
-  skel: { id: "skel", emoji: "💀", hp: 3, dmgHearts: 1, r: 14 },
-  slime: { id: "slime", emoji: "🟢", hp: 2, dmgHearts: 1, r: 13 },
-  bat: { id: "bat", emoji: "🦇", hp: 2, dmgHearts: 1, r: 12 },
-  statue: { id: "statue", emoji: "🗿", hp: 5, dmgHearts: 1, r: 16 },
+  skel: { id: "skel", emoji: "💀", hp: 3, dmgHearts: 1, r: 14, spriteH: 46 },
+  slime: { id: "slime", emoji: "🟢", hp: 2, dmgHearts: 1, r: 13, spriteH: 30 },
+  bat: { id: "bat", emoji: "🦇", hp: 2, dmgHearts: 1, r: 12, spriteH: 26 },
+  statue: { id: "statue", emoji: "🗿", hp: 5, dmgHearts: 1, r: 16, spriteH: 52 },
 };
 
 interface MEnemy {
@@ -36,6 +38,7 @@ interface MEnemy {
   timer: number;
   phase: number;
   platform: Rect | null;
+  hurtT: number; // flash blanc après un coup
 }
 
 interface Orb {
@@ -127,13 +130,66 @@ function toast(message: string): void {
   toastTimer = window.setTimeout(() => toastEl.classList.remove("show"), 2200);
 }
 
-// texture de mur générée (Higgsfield) ; repli sur l'aplat si absente
-const wallTex = new Image();
-let wallPattern: CanvasPattern | null = null;
-wallTex.onload = () => {
-  wallPattern = ctx.createPattern(wallTex, "repeat");
+// ---------- assets peints (Higgsfield) ----------
+
+const BASE = import.meta.env.BASE_URL;
+
+function loadImg(file: string): HTMLImageElement {
+  const i = new Image();
+  i.src = `${BASE}manoir/${file}`;
+  return i;
+}
+
+const IMG = {
+  hero: loadImg("hero.png"),
+  skel: loadImg("skel.png"),
+  slime: loadImg("slime.png"),
+  bat: loadImg("bat.png"),
+  statue: loadImg("statue.png"),
+  coin: loadImg("coin.png"),
+  wall: loadImg("wall.webp"),
+  ledge: loadImg("ledge.webp"),
+  salle: loadImg("salle.webp"),
+  titre: loadImg("titre.webp"),
 };
-wallTex.src = `${import.meta.env.BASE_URL}textures/manoir-mur.webp`;
+
+function ready(i: HTMLImageElement): boolean {
+  return i.complete && i.naturalWidth > 0;
+}
+
+let wallPattern: CanvasPattern | null = null;
+let ledgePattern: CanvasPattern | null = null;
+IMG.wall.onload = () => {
+  wallPattern = ctx.createPattern(IMG.wall, "repeat");
+  wallPattern?.setTransform(new DOMMatrix().scale(192 / IMG.wall.naturalWidth));
+};
+IMG.ledge.onload = () => {
+  ledgePattern = ctx.createPattern(IMG.ledge, "repeat");
+  ledgePattern?.setTransform(new DOMMatrix().scale(72 / IMG.ledge.naturalWidth));
+};
+
+// dessine une image à hauteur donnée en préservant le ratio, centrée sur (x, y)
+function drawSprite(i: HTMLImageElement, x: number, y: number, h: number, flip: boolean, sx = 1, sy = 1, rot = 0): boolean {
+  if (!ready(i)) return false;
+  const w = (i.naturalWidth / i.naturalHeight) * h;
+  ctx.save();
+  ctx.translate(x, y);
+  if (rot !== 0) ctx.rotate(rot);
+  ctx.scale(flip ? -sx : sx, sy);
+  ctx.drawImage(i, -w / 2, -h / 2, w, h);
+  ctx.restore();
+  return true;
+}
+
+// image plein écran en mode "cover"
+function drawCover(i: HTMLImageElement): boolean {
+  if (!ready(i)) return false;
+  const s = Math.max(W / i.naturalWidth, H / i.naturalHeight);
+  const w = i.naturalWidth * s;
+  const h = i.naturalHeight * s;
+  ctx.drawImage(i, (W - w) / 2, (H - h) / 2, w, h);
+  return true;
+}
 
 // ---------- persistance ----------
 
@@ -190,6 +246,14 @@ let runGold = 0;
 let shake = 0;
 let autoSwing = false; // activé au premier contrôle tactile
 
+// game feel
+let coyote = 0; // on peut encore sauter juste après avoir quitté un bord
+let jumpBuf = 0; // le saut demandé un peu trop tôt est mémorisé
+let landT = 0; // écrasement à l'atterrissage
+let freeze = 0; // hit-stop : le monde s'arrête un instant sur un coup
+let wasAirborne = false;
+const swingHit = new Set<MEnemy>(); // ennemis déjà touchés pendant ce coup
+
 interface Floater {
   x: number;
   y: number;
@@ -198,6 +262,28 @@ interface Floater {
   color: string;
 }
 let floaters: Floater[] = [];
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  max: number;
+  size: number;
+  color: string;
+  grav: number;
+}
+let particles: Particle[] = [];
+
+function burst(x: number, y: number, color: string, count: number, speed = 160, grav = 500): void {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const v = speed * (0.35 + Math.random() * 0.65);
+    const life = 0.3 + Math.random() * 0.35;
+    particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 40, life, max: life, size: 1.5 + Math.random() * 2.5, color, grav });
+  }
+}
 
 const keys = new Set<string>();
 let touchDir = 0;
@@ -253,7 +339,7 @@ function genRoom(depth: number): Room {
         x: 60 + Math.random() * (W - 120 - w),
         y: levels[li] + (Math.random() - 0.5) * 30,
         w,
-        h: 16,
+        h: 18,
       });
     }
   }
@@ -302,6 +388,7 @@ function genRoom(depth: number): Room {
       timer: Math.random() * 2,
       phase: Math.random() * Math.PI * 2,
       platform: plat,
+      hurtT: 0,
     });
   }
 
@@ -315,6 +402,7 @@ function enterRoom(depth: number): void {
   roomIndex = depth;
   room = genRoom(depth);
   orbs = [];
+  particles = [];
   px = 40;
   py = H - 60;
   pvx = 0;
@@ -399,7 +487,7 @@ function showHeirs(): void {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.innerHTML =
-      `<span class="h-name">🧑‍🚀 ${heir.name}</span>` +
+      `<span class="h-name">🛡️ ${heir.name}</span>` +
       heir.traits.map((t) => `<span class="h-trait">◈ ${t.name} — ${t.desc}</span>`).join("");
     btn.addEventListener("click", () => {
       applyHeir(heir);
@@ -419,7 +507,12 @@ function startRun(): void {
   attackCd = 0;
   runGold = 0;
   jumpsLeft = 0;
+  coyote = 0;
+  jumpBuf = 0;
+  landT = 0;
+  freeze = 0;
   floaters = [];
+  particles = [];
   state = "play";
   enterRoom(1);
   hudHeir.textContent = `${heirName} · ${heirTraits.map((t) => t.name).join(", ")}`;
@@ -428,6 +521,8 @@ function startRun(): void {
 function die(): void {
   state = "dead";
   shake = 10;
+  burst(px, py, "#ffc93c", 18, 220);
+  burst(px, py, "#ff5c8a", 12, 180);
   overlayTitle.textContent = `${heirName} n'est plus 💀`;
   overlayText.innerHTML =
     `Salle ${roomIndex} atteinte · ${Math.floor(runGold)} 🪙 légués au manoir` +
@@ -444,6 +539,8 @@ function hurtPlayer(heartsLost: number): void {
   hearts -= heartsLost;
   iframes = iframeDur();
   shake = 7;
+  freeze = Math.max(freeze, 0.05);
+  burst(px, py, "#ff5c8a", 8, 150);
   floaters.push({ x: px, y: py - ph(), txt: "-1 ❤️", life: 0.9, color: "#ff5c8a" });
   pvy = -260;
   if (hearts <= 0) die();
@@ -459,8 +556,9 @@ function addGold(amount: number, x: number, y: number): void {
 
 function attack(): void {
   if (attackCd > 0 || state !== "play") return;
-  attackCd = 0.38;
-  attackT = 0.14;
+  attackCd = 0.36;
+  attackT = 0.16;
+  swingHit.clear();
 }
 
 function step(dt: number): void {
@@ -471,12 +569,32 @@ function step(dt: number): void {
     f.y -= 36 * dt;
     if (f.life <= 0) floaters.splice(i, 1);
   }
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt;
+    if (p.life <= 0) {
+      particles.splice(i, 1);
+      continue;
+    }
+    p.vy += p.grav * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+  }
 
   if (state !== "play" || !room) return;
+
+  // hit-stop : le monde marque un très court arrêt sur les impacts
+  if (freeze > 0) {
+    freeze -= dt;
+    return;
+  }
 
   if (iframes > 0) iframes -= dt;
   if (attackCd > 0) attackCd -= dt;
   if (attackT > 0) attackT -= dt;
+  if (landT > 0) landT -= dt;
+  if (coyote > 0) coyote -= dt;
+  if (jumpBuf > 0) jumpBuf -= dt;
 
   // ---- déplacements joueur ----
   let dir = 0;
@@ -502,20 +620,40 @@ function step(dt: number): void {
 
   // axe Y
   py += pvy * dt;
+  wasAirborne = !onGround;
   onGround = false;
   for (const p of room.platforms) {
     if (px + hw > p.x && px - hw < p.x + p.w && py + hh > p.y && py - hh < p.y + p.h) {
       if (pvy > 0 && py - hh < p.y) {
         py = p.y - hh;
+        if (wasAirborne && pvy > 420) landT = 0.12; // petit écrasement à l'atterrissage
         pvy = 0;
         onGround = true;
-        jumpsLeft = up("agilite") > 0 ? 2 : 1;
+        jumpsLeft = up("agilite") > 0 ? 1 : 0;
       } else if (pvy < 0) {
         py = p.y + p.h + hh;
         pvy = 0;
       }
     }
   }
+  if (onGround) coyote = 0.09;
+
+  // saut demandé (bufferisé) : sol, coyote time ou double saut
+  if (jumpBuf > 0) {
+    if (onGround || coyote > 0) {
+      pvy = -560;
+      onGround = false;
+      coyote = 0;
+      jumpBuf = 0;
+      landT = 0;
+    } else if (jumpsLeft > 0) {
+      jumpsLeft--;
+      pvy = -560;
+      jumpBuf = 0;
+      burst(px, py + hh, "#cfd5ff", 6, 90, 200);
+    }
+  }
+
   if (py - hh > H + 40) {
     hurtPlayer(1);
     px = 40;
@@ -542,13 +680,21 @@ function step(dt: number): void {
   if (attackT > 0) {
     const reach = 52 * mods.size;
     const hit: Rect = { x: facing > 0 ? px : px - reach, y: py - 26, w: reach, h: 52 };
-    for (const e of room.enemies) {
+    for (const e of [...room.enemies]) {
+      if (swingHit.has(e)) continue;
       if (e.x + e.type.r > hit.x && e.x - e.type.r < hit.x + hit.w && e.y + e.type.r > hit.y && e.y - e.type.r < hit.y + hit.h) {
-        e.hp -= swordDmg() * dt * 14; // dégâts au contact pendant la fenêtre du coup
+        swingHit.add(e);
+        e.hp -= swordDmg();
+        e.hurtT = 0.14;
+        e.x += facing * 14; // recul
+        freeze = Math.max(freeze, 0.045);
+        shake = Math.max(shake, 3);
+        burst(e.x, e.y, "#fff3c4", 7, 190, 300);
         if (e.hp <= 0) {
           room.enemies.splice(room.enemies.indexOf(e), 1);
           addGold(2 + roomIndex * 0.5, e.x, e.y);
-          floaters.push({ x: e.x, y: e.y, txt: "💥", life: 0.5, color: "#ffc93c" });
+          burst(e.x, e.y, e.type.id === "slime" ? "#9edd63" : "#e8e3d5", 12, 200);
+          burst(e.x, e.y, "#ffc93c", 6, 160);
         }
       }
     }
@@ -556,6 +702,7 @@ function step(dt: number): void {
 
   // ---- ennemis ----
   for (const e of room.enemies) {
+    if (e.hurtT > 0) e.hurtT -= dt;
     if (e.type.id === "skel") {
       const p = e.platform!;
       e.x += e.dir * 55 * dt;
@@ -580,6 +727,7 @@ function step(dt: number): void {
       const d = Math.hypot(px - e.x, py - e.y) || 1;
       e.x += ((px - e.x) / d) * 46 * dt;
       e.y += ((py - e.y) / d) * 46 * dt + Math.sin(performance.now() / 200 + e.phase) * 40 * dt;
+      e.dir = px > e.x ? 1 : -1;
     } else if (e.type.id === "statue") {
       e.timer -= dt;
       if (e.timer <= 0) {
@@ -587,6 +735,7 @@ function step(dt: number): void {
         const d = Math.hypot(px - e.x, py - e.y) || 1;
         orbs.push({ x: e.x, y: e.y - 10, vx: ((px - e.x) / d) * 190, vy: ((py - e.y) / d) * 190, life: 4 });
       }
+      e.dir = px > e.x ? 1 : -1;
     }
     if (Math.abs(e.x - px) < e.type.r + hw && Math.abs(e.y - py) < e.type.r + hh) hurtPlayer(e.type.dmgHearts);
   }
@@ -612,6 +761,7 @@ function step(dt: number): void {
     if (!c.taken && Math.abs(c.x - px) < 20 + hw && Math.abs(c.y - py) < 24 + hh) {
       c.taken = true;
       addGold(1, c.x, c.y);
+      burst(c.x, c.y, "#ffc93c", 5, 110, 250);
     }
   }
   if (room.heart && !room.heart.taken && Math.abs(room.heart.x - px) < 22 && Math.abs(room.heart.y - py) < 26) {
@@ -622,55 +772,201 @@ function step(dt: number): void {
   if (room.chest && !room.chest.opened && Math.abs(room.chest.x - px) < 26 && Math.abs(room.chest.y - py) < 30) {
     room.chest.opened = true;
     addGold(25, room.chest.x, room.chest.y - 20);
+    burst(room.chest.x, room.chest.y - 10, "#ffc93c", 16, 220);
     toast("📦 Le trésor du manoir !");
   }
 }
 
 function jump(): void {
   if (state !== "play") return;
-  if (onGround || jumpsLeft > 0) {
-    if (!onGround) jumpsLeft--;
-    else jumpsLeft = up("agilite") > 0 ? 1 : 0;
-    pvy = -560;
-  }
+  jumpBuf = 0.12;
+}
+
+function cutJump(): void {
+  if (pvy < -140) pvy *= 0.45; // relâcher tôt = saut plus court
 }
 
 // ---------- rendu ----------
+
+function drawTorch(x: number, y: number): void {
+  const t = performance.now() / 1000;
+  const flick = 0.85 + 0.15 * Math.sin(t * 11 + x);
+  // halo
+  const g = ctx.createRadialGradient(x, y, 4, x, y, 90 * flick);
+  g.addColorStop(0, "rgba(255, 176, 64, 0.32)");
+  g.addColorStop(1, "rgba(255, 176, 64, 0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(x - 90, y - 90, 180, 180);
+  // support
+  ctx.fillStyle = "#3a2a1c";
+  ctx.fillRect(x - 3, y + 4, 6, 18);
+  // flamme
+  const fh = 14 * flick + Math.sin(t * 23 + x) * 2;
+  const fg = ctx.createRadialGradient(x, y, 1, x, y, fh);
+  fg.addColorStop(0, "#fff3c4");
+  fg.addColorStop(0.5, "#ffb040");
+  fg.addColorStop(1, "rgba(255, 92, 40, 0)");
+  ctx.fillStyle = fg;
+  ctx.beginPath();
+  ctx.ellipse(x, y, fh * 0.55, fh, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawDoor(): void {
+  const dw = 46;
+  const dh = 74;
+  const dx = W - 14 - dw / 2;
+  const dy = H - 36 - dh;
+  // halo doré : la sortie se voit de loin
+  const g = ctx.createRadialGradient(dx, dy + dh / 2, 6, dx, dy + dh / 2, 70);
+  g.addColorStop(0, "rgba(255, 201, 60, 0.25)");
+  g.addColorStop(1, "rgba(255, 201, 60, 0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(dx - 70, dy - 30, 140, dh + 100);
+  // encadrement de pierre
+  ctx.fillStyle = "#4a445f";
+  ctx.beginPath();
+  ctx.moveTo(dx - dw / 2 - 6, dy + dh);
+  ctx.lineTo(dx - dw / 2 - 6, dy + dw / 2);
+  ctx.arc(dx, dy + dw / 2, dw / 2 + 6, Math.PI, 0);
+  ctx.lineTo(dx + dw / 2 + 6, dy + dh);
+  ctx.closePath();
+  ctx.fill();
+  // porte en bois
+  const wg = ctx.createLinearGradient(dx - dw / 2, 0, dx + dw / 2, 0);
+  wg.addColorStop(0, "#5d4024");
+  wg.addColorStop(0.5, "#7a5530");
+  wg.addColorStop(1, "#503719");
+  ctx.fillStyle = wg;
+  ctx.beginPath();
+  ctx.moveTo(dx - dw / 2, dy + dh);
+  ctx.lineTo(dx - dw / 2, dy + dw / 2);
+  ctx.arc(dx, dy + dw / 2, dw / 2, Math.PI, 0);
+  ctx.lineTo(dx + dw / 2, dy + dh);
+  ctx.closePath();
+  ctx.fill();
+  // ferrures
+  ctx.strokeStyle = "#2c2417";
+  ctx.lineWidth = 2;
+  for (const fy of [dy + dh * 0.4, dy + dh * 0.72]) {
+    ctx.beginPath();
+    ctx.moveTo(dx - dw / 2 + 4, fy);
+    ctx.lineTo(dx + dw / 2 - 4, fy);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#ffc93c";
+  ctx.beginPath();
+  ctx.arc(dx - dw / 4, dy + dh * 0.58, 3.4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPlayer(): void {
+  if (state !== "play") return;
+  if (iframes > 0 && Math.floor(performance.now() / 90) % 2 === 1) return;
+
+  const t = performance.now() / 1000;
+  const moving = Math.abs(pvx) > 1;
+  const spriteH = 46 * mods.size;
+
+  // squash & stretch : écrasé à l'atterrissage, étiré en plein saut
+  let sy = 1;
+  if (landT > 0) sy = 1 - 0.22 * (landT / 0.12);
+  else if (!onGround) sy = 1 + Math.min(0.14, Math.abs(pvy) / 4200);
+  const sx = 1 / sy;
+
+  // inclinaison de course + petit rebond
+  let rot = 0;
+  let bob = 0;
+  if (onGround && moving) {
+    rot = facing * 0.07;
+    bob = Math.abs(Math.sin(t * 13)) * -2.5;
+  }
+
+  // fente en avant pendant le coup
+  const lunge = attackT > 0 ? facing * (attackT / 0.16) * 7 : 0;
+
+  const drawn = drawSprite(IMG.hero, px + lunge, py - spriteH * 0.18 + bob, spriteH, facing < 0, sx, sy, rot);
+  if (!drawn) {
+    ctx.font = `${30 * mods.size}px serif`;
+    ctx.fillText("🤺", px, py);
+  }
+
+  // arc du coup d'épée
+  if (attackT > 0) {
+    const reach = 52 * mods.size;
+    const prog = 1 - attackT / 0.16; // 0 → 1
+    const a0 = -1.25 + prog * 1.9;
+    ctx.save();
+    ctx.translate(px, py - 4);
+    if (facing < 0) ctx.scale(-1, 1);
+    const grad = ctx.createRadialGradient(0, 0, reach * 0.35, 0, 0, reach);
+    grad.addColorStop(0, "rgba(255, 253, 244, 0)");
+    grad.addColorStop(0.75, `rgba(255, 253, 244, ${0.55 * (1 - prog * 0.5)})`);
+    grad.addColorStop(1, "rgba(255, 201, 60, 0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, reach, a0, a0 + 0.9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+}
 
 function draw(): void {
   ctx.save();
   ctx.filter = mods.gray && state === "play" ? "grayscale(1)" : "none";
   if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
-  // murs du manoir
-  ctx.fillStyle = wallPattern ?? "#241e33";
-  ctx.fillRect(-20, -20, W + 40, H + 40);
-  ctx.fillStyle = "rgba(14, 10, 26, 0.45)";
-  ctx.fillRect(-20, -20, W + 40, H + 40);
+  // écran titre / manoir : l'illustration du domaine
+  if (state !== "play") {
+    if (!drawCover(IMG.titre)) {
+      ctx.fillStyle = "#191524";
+      ctx.fillRect(-20, -20, W + 40, H + 40);
+    }
+    if (state === "dead") {
+      ctx.fillStyle = "rgba(12, 8, 20, 0.45)";
+      ctx.fillRect(-20, -20, W + 40, H + 40);
+    }
+  } else {
+    // salle : décor peint, sinon tuile de mur, sinon aplat
+    if (!drawCover(IMG.salle)) {
+      ctx.fillStyle = wallPattern ?? "#241e33";
+      ctx.fillRect(-20, -20, W + 40, H + 40);
+    }
+    // assombrit légèrement pour que le premier plan reste lisible
+    ctx.fillStyle = "rgba(12, 9, 24, 0.30)";
+    ctx.fillRect(-20, -20, W + 40, H + 40);
+  }
 
-  if (room) {
+  if (room && state === "play") {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
     // torches d'ambiance
-    ctx.font = "22px serif";
-    ctx.fillText("🕯️", W * 0.25, 60);
-    ctx.fillText("🕯️", W * 0.75, 60);
+    drawTorch(W * 0.25, 64);
+    drawTorch(W * 0.75, 64);
 
-    // plateformes
+    // plateformes habillées de pierre
     for (const p of room.platforms) {
-      ctx.fillStyle = "#3c3752";
-      ctx.fillRect(p.x, p.y, p.w, p.h);
-      ctx.fillStyle = "#565073";
-      ctx.fillRect(p.x, p.y, p.w, 4);
-      ctx.strokeStyle = "#17171b";
+      ctx.fillStyle = ledgePattern ?? "#3c3752";
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.fillRect(0, 0, p.w, p.h);
+      ctx.restore();
+      // liseré éclairé en haut, ombre en bas
+      ctx.fillStyle = "rgba(255, 240, 200, 0.28)";
+      ctx.fillRect(p.x, p.y, p.w, 3);
+      ctx.fillStyle = "rgba(10, 8, 20, 0.5)";
+      ctx.fillRect(p.x, p.y + p.h - 3, p.w, 3);
+      ctx.strokeStyle = "rgba(10, 8, 20, 0.65)";
       ctx.lineWidth = 2;
       ctx.strokeRect(p.x, p.y, p.w, p.h);
     }
 
     // piques
-    ctx.fillStyle = "#b9b9c9";
-    ctx.strokeStyle = "#17171b";
+    ctx.fillStyle = "#cfcadb";
+    ctx.strokeStyle = "#17141f";
     for (const s of room.spikes) {
       const n = Math.floor(s.w / 14);
       for (let i = 0; i < n; i++) {
@@ -684,14 +980,17 @@ function draw(): void {
       }
     }
 
-    // porte
-    ctx.font = "40px serif";
-    ctx.fillText("🚪", W - 26, H - 62);
+    drawDoor();
 
+    // pièces d'or qui tournoient
     for (const c of room.coins) {
-      if (!c.taken) {
+      if (c.taken) continue;
+      const t = performance.now() / 1000;
+      const wob = Math.sin(t * 3.4 + c.x) * 3;
+      const spin = Math.abs(Math.sin(t * 4 + c.x * 0.1));
+      if (!drawSprite(IMG.coin, c.x, c.y + wob, 20, false, Math.max(0.15, spin), 1)) {
         ctx.font = "17px serif";
-        ctx.fillText("🪙", c.x, c.y + Math.sin(performance.now() / 300 + c.x) * 3);
+        ctx.fillText("🪙", c.x, c.y + wob);
       }
     }
     if (room.heart && !room.heart.taken) {
@@ -703,30 +1002,71 @@ function draw(): void {
       ctx.fillText(room.chest.opened ? "🗃️" : "📦", room.chest.x, room.chest.y);
     }
 
+    // ennemis animés
+    const now = performance.now() / 1000;
     for (const e of room.enemies) {
-      ctx.font = `${e.type.r * 2.1}px serif`;
-      ctx.fillText(e.type.emoji, e.x, e.y);
-    }
-
-    ctx.font = "16px serif";
-    for (const o of orbs) ctx.fillText("🔮", o.x, o.y);
-
-    // joueur
-    if (state === "play" && (iframes <= 0 || Math.floor(performance.now() / 90) % 2 === 0)) {
-      ctx.save();
-      ctx.translate(px, py);
-      if (facing < 0) ctx.scale(-1, 1);
-      ctx.font = `${30 * mods.size}px serif`;
-      ctx.fillText("🤺", 0, 0);
-      if (attackT > 0) {
-        ctx.font = `${24 * mods.size}px serif`;
-        ctx.fillText("⚔️", 40 * mods.size, -4);
+      const img = IMG[e.type.id as keyof typeof IMG];
+      let sx = 1;
+      let sy = 1;
+      let rot = 0;
+      let yoff = 0;
+      if (e.type.id === "skel") {
+        rot = e.dir * 0.05 + Math.sin(now * 9 + e.phase) * 0.04;
+        yoff = Math.abs(Math.sin(now * 9 + e.phase)) * -2;
+      } else if (e.type.id === "slime") {
+        const sq = Math.abs(e.vy) > 20 ? Math.min(0.25, Math.abs(e.vy) / 1600) : -0.12 * Math.abs(Math.sin(now * 4 + e.phase));
+        sy = 1 + sq;
+        sx = 1 / sy;
+      } else if (e.type.id === "bat") {
+        sy = 1 + 0.22 * Math.sin(now * 17 + e.phase);
+      } else if (e.type.id === "statue") {
+        // frémit juste avant de tirer
+        if (e.timer < 0.45) rot = Math.sin(now * 60) * 0.02;
       }
-      ctx.restore();
+      const flip = e.type.id === "skel" ? e.dir > 0 : e.dir < 0;
+      const drawn = drawSprite(img as HTMLImageElement, e.x, e.y - e.type.spriteH * 0.14 + yoff, e.type.spriteH, flip, sx, sy, rot);
+      if (!drawn) {
+        ctx.font = `${e.type.r * 2.1}px serif`;
+        ctx.fillText(e.type.emoji, e.x, e.y);
+      }
+      // flash quand l'ennemi encaisse
+      if (drawn && e.hurtT > 0) {
+        ctx.save();
+        ctx.globalAlpha = e.hurtT / 0.14;
+        ctx.globalCompositeOperation = "lighter";
+        drawSprite(img as HTMLImageElement, e.x, e.y - e.type.spriteH * 0.14 + yoff, e.type.spriteH, flip, sx, sy, rot);
+        ctx.restore();
+      }
     }
+
+    // projectiles : orbes spectrales
+    for (const o of orbs) {
+      const g = ctx.createRadialGradient(o.x, o.y, 1, o.x, o.y, 9);
+      g.addColorStop(0, "#e8ddff");
+      g.addColorStop(0.5, "#9d7bff");
+      g.addColorStop(1, "rgba(108, 99, 255, 0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, 9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    drawPlayer();
   }
 
+  // particules
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life / p.max);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
   for (const f of floaters) {
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.globalAlpha = Math.min(1, f.life * 1.6);
     ctx.font = "19px 'VT323', monospace";
     ctx.strokeStyle = "#17171b";
@@ -758,6 +1098,8 @@ function updateHud(): void {
 
 // ---------- entrées ----------
 
+const JUMP_KEYS = ["ArrowUp", "Space", "KeyW", "KeyZ"];
+
 window.addEventListener("keydown", (e) => {
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space"].includes(e.code)) e.preventDefault();
   if ((e.code === "Escape" || e.code === "KeyP") && state === "play") {
@@ -765,12 +1107,15 @@ window.addEventListener("keydown", (e) => {
     return;
   }
   if (!e.repeat && !paused) {
-    if (["ArrowUp", "Space", "KeyW", "KeyZ"].includes(e.code)) jump();
+    if (JUMP_KEYS.includes(e.code)) jump();
     if (["KeyX", "KeyK", "KeyJ"].includes(e.code)) attack();
   }
   keys.add(e.code);
 });
-window.addEventListener("keyup", (e) => keys.delete(e.code));
+window.addEventListener("keyup", (e) => {
+  if (JUMP_KEYS.includes(e.code) && state === "play" && !paused) cutJump();
+  keys.delete(e.code);
+});
 
 // changer d'onglet : pause automatique + purge des touches coincées
 function autoPause(): void {
