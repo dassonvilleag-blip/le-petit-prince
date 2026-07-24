@@ -1243,4 +1243,166 @@ export const PHOTO_CREDITS: PhotoCredit[] = [
     license: "Domaine public",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:140th_Security_Forces_Use_Robots_(8).jpg",
   },
+  {
+    id: "robe-marilyn-monroe-seven-year-itch",
+    author: "Sabrinap2015",
+    license: "CC BY-SA 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Profiles_in_History_Marilyn_Monroe_%22Subway_Dress%22.jpg",
+  },
+  {
+    id: "chaussures-rubis-dorothy-oz",
+    author: "dbking",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Dorothy%27s_Ruby_Slippers,_Wizard_of_Oz_1938.jpg",
+  },
+  {
+    id: "sac-hermes-birkin-himalaya-diamants",
+    author: "Ohconfucius",
+    license: "CC BY 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Croc_Birkin_bag.jpg",
+  },
+  {
+    id: "costume-dark-vador-promotionnel",
+    author: "Sam Howzit",
+    license: "CC BY 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:SWC_6_-_Darth_Vader_Costume_(7865106344).jpg",
+  },
+  {
+    id: "costume-superman-christopher-reeve",
+    author: "ManoSolo13241324",
+    license: "CC BY-SA 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Superman_costume_Cin%C3%A9math%C3%A8que_fran%C3%A7aise.jpg",
+  },
+  {
+    id: "gant-michael-jackson-moonwalk",
+    author: "savemejebus",
+    license: "CC BY-SA 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Michael_Jackson%27s_Glove_and_Cardigan.jpg",
+  },
+  {
+    id: "robe-mariee-haute-couture-elie-saab",
+    author: "CHRISTOPHER MACSURAK",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Elie_Saab_Wedding_Dress_-_Paris_Haute_Couture_Spring-Summer_2012.jpg",
+  },
+  {
+    id: "costume-savile-row-bespoke",
+    author: "He Spoke Style",
+    license: "CC BY 3.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Edward_Sexton,_interview,_seated_indoors_(October_2016).jpg",
+  },
+  {
+    id: "veste-chanel-tweed-vintage",
+    author: "Mabalu",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Cream_Chanel_suit,_late_1960s.jpg",
+  },
+  {
+    id: "manteau-vison-vintage",
+    author: "Libricool",
+    license: "Domaine public",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Sapphire_mink_fur_coat_1980.jpg",
+  },
+  {
+    id: "kimono-soie-vintage-japonais",
+    author: "Khalili Collections",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Khalili_Collection_of_Kimono_K043.jpg",
+  },
+  {
+    id: "escarpins-manolo-blahnik-hangisi",
+    author: "Vladimir R.",
+    license: "CC BY 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Hermitage_Museum_Manolo_Blahnik-_The_Art_of_Shoes_Photo-Vladimir_R_May_10_2017.jpg",
+  },
+  {
+    id: "tailleur-ysl-le-smoking-vintage",
+    author: "David Hilowitz",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Yves_St_Laurent_le_smoking_at_deYoung_Museum_San_Francisco.jpg",
+  },
+  {
+    id: "gants-longs-soiree-vintage",
+    author: "The Metropolitan Museum of Art",
+    license: "CC0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Evening_gloves_MET_24.562a-b_CP2.jpg",
+  },
+  {
+    id: "carre-hermes-soie",
+    author: "Lilac.mundo",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Hermes_silk_scarf_.jpg",
+  },
+  {
+    id: "parfum-chanel-no5",
+    author: "arz",
+    license: "Domaine public",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:CHANEL_No5_parfum.jpg",
+  },
+  {
+    id: "cravate-hermes-soie",
+    author: "Kent Wang",
+    license: "CC BY-SA 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Hermes_ties.jpg",
+  },
+  {
+    id: "chale-pashmina-brode",
+    author: "AG",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Embroidered-pashmina-shawl.jpg",
+  },
+  {
+    id: "qipao-soie-vintage",
+    author: "Rhode Island School of Design Museum of Art",
+    license: "CC0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:1930s_qipao_dress,_China._Black_silk_gauze_dyed_with_ju-liang_root_and_tannin-rich_mud.jpg",
+  },
+  {
+    id: "robe-flamenco-artisanale",
+    author: "Yanajin33",
+    license: "CC BY-SA 3.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:La_Villa_Espa%C3%B1ola_de_Shima,_Parque_Espa%C3%B1a_-_Museo_%22Castillo_de_Xavier%22_-_El_traje_de_flamenca_y_el_sombrero.jpg",
+  },
+  {
+    id: "chapeau-feutre-italien-luxe",
+    author: "Hallwylska museet",
+    license: "Domaine public",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Italiensk_filthatt._Gentlemannen_-_om_m%C3%A4n_och_mode_-_Hallwylska_museet_-_85832.tif",
+  },
+  {
+    id: "chapeau-panama-montecristi",
+    author: "Lamarquezahats",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Optimo_Montecristi_Panama_Hat.jpg",
+  },
+  {
+    id: "ensemble-smoking-ysl-musee",
+    author: "dalbera",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Robes_et_smokings_f%C3%A9minins_d%27Yves_Saint_Laurent_(mus%C3%A9e_d%27Orsay,_Paris).jpg",
+  },
+  {
+    id: "lunettes-rayban-vintage-collector",
+    author: "Tyrol5",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:B%26L_Ray-Ban_Leathers_Outdoorsman_II.jpg",
+  },
+  {
+    id: "robe-soiree-ysl-1971-musee",
+    author: "dalbera",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:1971_evening_dress_by_Yves_Saint_Laurent_for_Marie-H%C3%A9l%C3%A8ne_de_Rothschild_with_Le_Smoking_suit_from_1988_(mus%C3%A9e_d%27Orsay,_Paris).jpg",
+  },
 ];
