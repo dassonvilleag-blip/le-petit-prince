@@ -7,6 +7,10 @@
   --yellow: #ffc93c;
 }
 
+.numeric {
+  font-family: "Pixelify Sans", monospace;
+}
+
 * {
   margin: 0;
   padding: 0;
