@@ -1008,7 +1008,7 @@ function genLevel(node: MapNode, seed: number): Level {
 
 // ---------- état ----------
 
-type State = "title" | "map" | "play" | "dead" | "clear";
+type State = "title" | "map" | "play" | "dead" | "clear" | "celebrate" | "dying";
 let state: State = "title";
 
 let W = 0;
@@ -1041,6 +1041,14 @@ let camX = 0;
 let checkpointX = 40;
 let checkpointY = 0;
 let levelCoins = 0;
+
+// séquences de victoire et de défaite
+let celebrateT = 0;
+let celebrateY = 0;
+let pendingSecret = false;
+let dyingT = 0;
+let deathVy = 0;
+let deathRot = 0;
 
 const PW = 11;
 const PH = 24;
@@ -1229,10 +1237,8 @@ function finishLevel(secret: boolean): void {
   }
 }
 
-function die(): void {
+function showDeadScreen(): void {
   state = "dead";
-  phoneHide();
-  shake = 8;
   burst(px, py, "#ffc93c", 14, 130);
   overlayTitle.textContent = "FAKE NEWS ! 💥";
   overlayText.innerHTML =
@@ -1368,8 +1374,31 @@ function hurt(): void {
   burst(px, py, "#ff5c8a", 8, 100);
   pvy = -140 * gdir;
   pvx = -facing * 90;
-  if (hearts <= 0) die();
+  if (hearts <= 0) startDying();
   updateHud();
+}
+
+// éjecté en tournoyant, façon Mario, avant l'écran de défaite
+function startDying(): void {
+  state = "dying";
+  phoneHide();
+  dyingT = 1.4;
+  deathVy = -380;
+  deathRot = 0;
+  shake = 8;
+  burst(px, py, "#ffc93c", 16, 180);
+}
+
+// le héros saute de joie sous les confettis avant l'écran de victoire
+function startCelebrate(secret: boolean): void {
+  state = "celebrate";
+  pendingSecret = secret;
+  celebrateT = 1.9;
+  celebrateY = py;
+  phoneHide();
+  pvx = 0;
+  pvy = -240;
+  shake = 0;
 }
 
 function respawnAtCheckpoint(): void {
@@ -1414,6 +1443,44 @@ function step(dt: number): void {
     p.y += p.vy * dt;
   }
   if (shake > 0) shake = Math.max(0, shake - dt * 14);
+
+  // ---- séquences de fin de niveau ----
+  if (state === "celebrate" && level) {
+    celebrateT -= dt;
+    // pluie de confettis
+    if (Math.random() < 0.7) {
+      const colors = ["#ffc93c", "#ff5c8a", "#1fc7a8", "#6c63ff", "#fffdf4"];
+      particles.push({
+        x: camX + Math.random() * (W / zoom),
+        y: -6,
+        vx: (Math.random() - 0.5) * 50,
+        vy: 40 + Math.random() * 70,
+        life: 1.8,
+        max: 1.8,
+        size: 2 + Math.random() * 2,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        grav: 70,
+      });
+    }
+    // petits bonds de joie
+    pvy += 820 * dt;
+    py += pvy * dt;
+    if (py >= celebrateY) {
+      py = celebrateY;
+      pvy = -180 - Math.random() * 100;
+      burst(px, py + PH / 2, "#fff3c4", 4, 60, 120);
+    }
+    if (celebrateT <= 0) finishLevel(pendingSecret);
+    return;
+  }
+  if (state === "dying" && level) {
+    dyingT -= dt;
+    deathVy += 950 * dt;
+    py += deathVy * dt;
+    deathRot += dt * 9;
+    if (dyingT <= 0) showDeadScreen();
+    return;
+  }
 
   if (state !== "play" || !level) return;
   if (freeze > 0) {
@@ -1588,10 +1655,10 @@ function step(dt: number): void {
         burst((tx + 0.5) * T, (ty + 0.5) * T, "#63e6be", 14, 120);
         toast(gdir < 0 ? "🚀 TO THE MOON ! Gravité inversée !" : "📉 Krach ! Gravité rétablie !");
       } else if (t === Tile.Exit) {
-        finishLevel(false);
+        startCelebrate(false);
         return;
       } else if (t === Tile.SecretExit) {
-        finishLevel(true);
+        startCelebrate(true);
         return;
       }
     }
@@ -1945,7 +2012,24 @@ function drawEnemy(e: Enemy, b: BiomeDef): void {
 }
 
 function drawPlayer(): void {
-  if (iframes > 0 && Math.floor(performance.now() / 90) % 2 === 1) return;
+  // KO : éjecté en tournoyant
+  if (state === "dying") {
+    const s = SHEETS.jump;
+    if (ready(s)) {
+      const fi = 6;
+      const sx = (fi % s.cols) * s.cw;
+      const sy = Math.floor(fi / s.cols) * s.ch;
+      const h = 34;
+      const w = (s.cw / s.ch) * h;
+      ctx.save();
+      ctx.translate(Math.round(px), Math.round(py));
+      ctx.rotate(deathRot);
+      ctx.drawImage(s.img, sx, sy, s.cw, s.ch, -w / 2, -h / 2, w, h);
+      ctx.restore();
+    }
+    return;
+  }
+  if (iframes > 0 && state === "play" && Math.floor(performance.now() / 90) % 2 === 1) return;
   const footY = py + (PH / 2) * gdir;
   const hVis = 34;
   const flip = facing < 0;
@@ -2391,6 +2475,38 @@ genMap(saveData.seed);
 if (!nodes.some((n) => n.id === saveData.pos)) saveData.pos = 0;
 showTitle();
 
+// bannières animées des séquences de victoire / défaite
+function drawBanner(): void {
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  if (state === "celebrate") {
+    const prog = Math.min(1, (1.9 - celebrateT) * 3);
+    ctx.save();
+    ctx.translate(W / 2, H * 0.3);
+    ctx.scale(prog, prog);
+    ctx.font = "bold 52px 'Pixelify Sans', monospace";
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "#17141f";
+    const txt = pendingSecret ? "✨ SORTIE SECRÈTE !" : "NIVEAU CONQUIS !";
+    ctx.strokeText(txt, 0, 0);
+    ctx.fillStyle = "#ffe066";
+    ctx.fillText(txt, 0, 0);
+    ctx.restore();
+  } else if (state === "dying") {
+    const prog = Math.min(1, (1.4 - dyingT) * 4);
+    ctx.save();
+    ctx.translate(W / 2 + (Math.random() - 0.5) * 6 * prog, H * 0.3);
+    ctx.scale(prog, prog);
+    ctx.font = "bold 56px 'Pixelify Sans', monospace";
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "#17141f";
+    ctx.strokeText("FAKE NEWS !", 0, 0);
+    ctx.fillStyle = "#ff5c8a";
+    ctx.fillText("FAKE NEWS !", 0, 0);
+    ctx.restore();
+  }
+}
+
 let last = 0;
 function frame(nowMs: number): void {
   const t = nowMs / 1000;
@@ -2398,8 +2514,14 @@ function frame(nowMs: number): void {
   last = t;
   if (!paused) step(dt);
 
-  if (state === "play" || state === "dead") drawLevel();
-  else if (state === "map") drawMap();
+  if (state === "play" || state === "dead" || state === "clear" || state === "celebrate" || state === "dying") {
+    drawLevel();
+    if (state === "dead" || state === "clear") {
+      ctx.fillStyle = "rgba(12, 8, 22, 0.5)";
+      ctx.fillRect(0, 0, W, H);
+    }
+    drawBanner();
+  } else if (state === "map") drawMap();
   else {
     // écran titre : la carte floutée derrière
     drawMap();
