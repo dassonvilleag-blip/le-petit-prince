@@ -469,213 +469,263 @@ const CHUNK_SECRET: string[] = [
   "####################",
 ];
 
-const CHUNKS_MID: Chunk[] = [
+// Chunks exclusifs par monde : le golf a ses obstacles d'eau et ses greens,
+// le canyon ses tours du Mur à franchir par les courants, la crypto-grotte
+// sa gravité. Nouveaux symboles : ~ eau (noyade), F drapeau déco,
+// U colonne de courant ascendant.
+
+const CHUNKS_PRAIRIE: Chunk[] = [
   {
-    // la pyramide : colline à gravir, coins en arc, route haute continue
+    // le fairway vallonné : collines à gravir, drapeau au green
     d: 1,
     rows: [
       "....................",
       "....................",
       "....................",
-      "....o..........o....",
-      "...=====......=====.",
+      "....o.....o....o....",
+      "===..............===",
+      "........----........",
       "....................",
-      "........o..o........",
-      ".......o....o.......",
       "....................",
-      ".........##.........",
-      "........####........",
-      ".......######.......",
-      "..w...########....w.",
+      ".........o.o.o......",
+      "..........####......",
+      "..........####......",
+      "..####....####......",
+      "..####.w..####....F.",
       "####################",
       "####################",
     ],
   },
   {
-    // le sous-bois : trois étages traversables, trouées pour grimper
+    // l'obstacle d'eau : plan d'eau à franchir par les plots
+    d: 2,
+    rows: [
+      "....................",
+      "....................",
+      ".....o.o.o.o........",
+      "....========........",
+      "===..............===",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "......--...--.......",
+      "....................",
+      "....F...............",
+      "#####~~~~~~~~~######",
+      "#####~~~~~~~~~######",
+    ],
+  },
+  {
+    // les greens suspendus : plateformes-drapeaux, drone en patrouille
+    d: 2,
+    rows: [
+      "....................",
+      "....................",
+      "......F.......F.....",
+      ".....====....====...",
+      "===..............===",
+      "......----..........",
+      "....................",
+      "..F.................",
+      ".====......f........",
+      "....................",
+      "..............====..",
+      "....................",
+      ".........w..........",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // le parcours de casquettes : rebonds au-dessus de l'eau
+    d: 2,
+    rows: [
+      "....................",
+      "....................",
+      "...o....o....o......",
+      "....................",
+      "===..............===",
+      "....................",
+      "....................",
+      ".............---....",
+      ".......S............",
+      "......---...........",
+      "....................",
+      "....................",
+      "..S.................",
+      "###~~~~~~~~~~~~#####",
+      "###~~~~~~~~~~~~#####",
+    ],
+  },
+  {
+    // sous le club-house : trois étages traversables
     d: 1,
+    rows: [
+      "....................",
+      "..o...o...o...o.....",
+      ".------------------.",
+      "....................",
+      "....................",
+      ".-----....----------",
+      "........o...........",
+      "....................",
+      "..........w.........",
+      "---------------.....",
+      "....o...............",
+      "..w.............----",
+      "....................",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // la fontaine : colonne de pièces au-dessus du bassin
+    d: 3,
+    rows: [
+      "....................",
+      "........o...........",
+      "....................",
+      "........o...........",
+      "===..............===",
+      "........o...........",
+      "....................",
+      "........o...........",
+      "......======........",
+      "....................",
+      "....................",
+      "..........S.........",
+      "............k.......",
+      "#####~~~~###########",
+      "#####~~~~###########",
+    ],
+  },
+];
+
+const CHUNKS_VENT: Chunk[] = [
+  {
+    // les portes du Mur : deux tours, on passe par les courants
+    d: 2,
+    rows: [
+      "....................",
+      "....................",
+      "....................",
+      "...o......o.........",
+      "===..............===",
+      "....................",
+      "......##......##....",
+      "......##......##....",
+      "......##..o...##..o.",
+      "......##......##....",
+      "......##......##....",
+      "......##......##....",
+      "...U..##..U...##.w..",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // les terrasses : escalier de mesas
+    d: 1,
+    rows: [
+      "....................",
+      "....................",
+      "....o.....o......o..",
+      "....................",
+      "===..............===",
+      "....................",
+      "..............####..",
+      "....................",
+      "........####..####..",
+      "....................",
+      "..####..####..####..",
+      "..####..####..####..",
+      ".w####..####..####..",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // les échafaudages du chantier
+    d: 2,
     rows: [
       "....................",
       "...o....o....o......",
       ".------------------.",
       "....................",
-      "......k.............",
-      ".----------....-----",
-      "..........o.o.......",
+      "===...........f..===",
       "....................",
-      "-----....-----------",
-      "...o......o.........",
+      "....----....----....",
       "....................",
-      "..w.........w...----",
       "....................",
+      "..----....----....--",
+      "....................",
+      "....U...............",
+      "..........w.....k...",
       "####################",
       "####################",
     ],
   },
   {
-    // le gouffre : fosse large, îlot au milieu, pont tout en haut
-    d: 2,
+    // la grande traversée : un gouffre entier porté par le vent
+    d: 3,
     rows: [
       "....................",
       "....................",
-      ".....o.o.o.o.o......",
-      "....=========.......",
+      ".....o...o...o......",
       "....................",
       "===..............===",
       "....................",
+      "........o...o.......",
+      "....................",
+      "...o...........o....",
+      "....................",
+      "......o.....o.......",
       "....................",
       "....................",
-      "....................",
-      ".......f............",
-      "......##............",
-      "....o......o........",
-      "####......##########",
-      "####......##########",
+      "###..............###",
+      "###..............###",
     ],
   },
   {
-    // la tour : échelle de plateformes traversables, gardien épineux
-    d: 2,
-    rows: [
-      "....................",
-      "....................",
-      "......o.o.o.........",
-      ".....------.........",
-      "===...........=====.",
-      ".......k............",
-      "....------..........",
-      "....................",
-      "....................",
-      "......------........",
-      "....................",
-      "....................",
-      "...------......w....",
-      "####################",
-      "####################",
-    ],
-  },
-  {
-    // les falaises : plateau à escalader, ressort pour remonter
-    d: 2,
-    rows: [
-      "....................",
-      "....................",
-      "....................",
-      "........o.o.o.......",
-      "===..............===",
-      ".........----.......",
-      "....................",
-      "....................",
-      "..........w.........",
-      "........########....",
-      "........########....",
-      "....##..########....",
-      "....##..########.S..",
-      "####################",
-      "####################",
-    ],
-  },
-  {
-    // le canyon à ressorts : piliers infranchissables sans bondir
+    // les grues : plateformes suspendues, gardien épineux
     d: 2,
     rows: [
       "....................",
       "....................",
       "......o......o......",
-      ".........f..........",
+      ".....===....===.....",
       "===..............===",
       "....................",
-      "....##......##......",
-      "....##......##......",
-      "....##..o...##......",
-      "....##......##......",
-      "....##......##......",
-      "....##......##......",
-      "..S.##..S...##..S...",
+      "....................",
+      "..o......k......o...",
+      ".===....===....===..",
+      "....................",
+      "....................",
+      "........---.........",
+      "........w...........",
       "####################",
       "####################",
     ],
   },
   {
-    // le sprint : gouffre trop large pour un saut — dash, vent ou route haute
-    d: 2,
-    rows: [
-      "....................",
-      "....................",
-      "....................",
-      "........o.o.........",
-      "===..............===",
-      "....................",
-      "....................",
-      "....................",
-      "....................",
-      "....................",
-      "....................",
-      "............o.......",
-      ".........o..........",
-      "#######........#####",
-      "#######........#####",
-    ],
-  },
-  {
-    // le marais : piques au sol, ponts fragiles, route haute salvatrice
+    // l'allée poussiéreuse : piques au sol, route haute salvatrice
     d: 3,
     rows: [
       "....................",
       "....................",
-      "....o...o...o...o...",
+      "...o...o...o...o....",
       "..----------------..",
       "....................",
       "....................",
       "....................",
-      "....................",
-      "..........f.........",
-      "....................",
-      "....................",
-      "....------..------..",
-      "....^^^^......^^^^..",
-      "####################",
-      "####################",
-    ],
-  },
-  {
-    // les ruines : vestiges flottants, pièces au sommet
-    d: 3,
-    rows: [
+      "........f...........",
       "....................",
       "....................",
       "....................",
-      "..o.o....o.o....o.o.",
-      ".====...====...====.",
-      "....................",
-      "....................",
-      "..........o.........",
-      "........====........",
-      "....................",
-      "....................",
-      "..====......====....",
-      "......k....w........",
-      "####################",
-      "####################",
-    ],
-  },
-  {
-    // la descente piégée : on entre par le haut, piques en contrebas
-    d: 3,
-    rows: [
-      "....................",
-      "....................",
-      "....................",
-      "....................",
-      "===........===...===",
-      "....................",
-      "......===...........",
-      "....................",
-      "...===..............",
-      "....................",
-      "..........===.......",
-      "..........w.........",
-      ".....^^^........^^^.",
+      "...........k........",
+      "..^^...^^^....^^....",
       "####################",
       "####################",
     ],
@@ -683,7 +733,6 @@ const CHUNKS_MID: Chunk[] = [
 ];
 
 // chunks cristal : sol ET plafond, les orbes 🔮 font le lien entre les deux.
-// Chaque orbe est atteignable depuis la surface d'où on arrive.
 const CHUNKS_CRISTAL: Chunk[] = [
   {
     // le mur : infranchissable au sol, l'orbe ouvre la voie du plafond
@@ -790,6 +839,27 @@ const CHUNKS_CRISTAL: Chunk[] = [
       "####################",
     ],
   },
+  {
+    // les deux couloirs : une dalle sépare sol et plafond
+    d: 2,
+    rows: [
+      "####################",
+      "####################",
+      "..o..o..o..o..o..o..",
+      "....................",
+      "....G..........G....",
+      "....................",
+      "....................",
+      "#########..#########",
+      "....................",
+      "....................",
+      "..o..o..o..o..o..o..",
+      "..w.......w....G....",
+      "....................",
+      "####################",
+      "####################",
+    ],
+  },
 ];
 
 // garde-fou : un chunk mal formé est un bug silencieux pénible à voir en jeu
@@ -798,7 +868,8 @@ for (const [name, rowsList] of [
   ["end", [CHUNK_END]],
   ["checkpoint", [CHUNK_CHECKPOINT]],
   ["secret", [CHUNK_SECRET]],
-  ["mid", CHUNKS_MID.map((c) => c.rows)],
+  ["prairie", CHUNKS_PRAIRIE.map((c) => c.rows)],
+  ["vent", CHUNKS_VENT.map((c) => c.rows)],
   ["cristal", CHUNKS_CRISTAL.map((c) => c.rows)],
 ] as [string, string[][]][]) {
   for (const rows of rowsList) {
@@ -817,6 +888,8 @@ const enum Tile {
   SecretExit = 6,
   Checkpoint = 7,
   GravOrb = 8,
+  Water = 9,
+  Flag = 10,
 }
 
 interface Enemy {
@@ -873,7 +946,7 @@ function genLevel(node: MapNode, seed: number): Level {
   seedRng(seed ^ (node.id * 7919 + saveData.world * 104729));
   const biome = node.biome;
   const isCristal = biome === "cristal";
-  const midPool = isCristal ? CHUNKS_CRISTAL : CHUNKS_MID;
+  const midPool = isCristal ? CHUNKS_CRISTAL : biome === "vent" ? CHUNKS_VENT : CHUNKS_PRAIRIE;
   const midCount = node.bonus ? 2 : 3 + Math.min(2, Math.floor((saveData.world - 1) / 2) + (node.layer > 2 ? 1 : 0));
 
   const chunkList: string[][] = [CHUNK_START];
@@ -921,6 +994,16 @@ function genLevel(node: MapNode, seed: number): Level {
             break;
           case "S":
             tiles[y * w + gx] = Tile.Spring;
+            break;
+          case "~":
+            tiles[y * w + gx] = Tile.Water;
+            break;
+          case "F":
+            tiles[y * w + gx] = Tile.Flag;
+            break;
+          case "U":
+            // colonne de courant ascendant explicite
+            winds.push({ x: gx * T, y: 3 * T, w: T, h: (LEVEL_H - 3) * T });
             break;
           case "E":
             tiles[y * w + gx] = Tile.Exit;
@@ -987,8 +1070,10 @@ function genLevel(node: MapNode, seed: number): Level {
     const tx = rndInt(CHUNK_W + 2, w - CHUNK_W - 2);
     for (let ty = 1; ty < LEVEL_H - 1; ty++) {
       if (tiles[ty * w + tx] === Tile.Empty && (tiles[(ty + 1) * w + tx] === Tile.Solid || tiles[(ty + 1) * w + tx] === Tile.OneWay)) {
+        const enemyPool: Enemy["kind"][] =
+          biome === "prairie" ? ["walker", "walker", "flyer"] : biome === "vent" ? ["flyer", "spiky", "walker"] : ["spiky", "walker", "spiky"];
         enemies.push({
-          kind: rnd() < 0.7 ? "walker" : "spiky",
+          kind: pick(enemyPool),
           x: (tx + 0.5) * T,
           y: (ty + 0.5) * T,
           vx: 0,
@@ -1138,6 +1223,8 @@ let paused = false;
 
 // sélection sur la carte
 let mapSel = 0;
+let mapHover = -1;
+let mapTravel: { from: number; to: number; t: number } | null = null;
 
 function resize(): void {
   const dpr = window.devicePixelRatio || 1;
@@ -1171,6 +1258,7 @@ function showTitle(): void {
 
 function showMap(): void {
   state = "map";
+  mapTravel = null;
   overlay.classList.add("hidden");
   shopEl.classList.add("hidden");
   hud.classList.remove("hidden");
@@ -1444,6 +1532,19 @@ function step(dt: number): void {
   }
   if (shake > 0) shake = Math.max(0, shake - dt * 14);
 
+  // ---- voyage sur la carte : le héros court d'île en île ----
+  if (state === "map" && mapTravel) {
+    mapTravel.t += dt * 1.4;
+    if (mapTravel.t >= 1) {
+      const dest = nodeById(mapTravel.to);
+      mapTravel = null;
+      saveData.pos = dest.id;
+      save();
+      startLevel(dest);
+    }
+    return;
+  }
+
   // ---- séquences de fin de niveau ----
   if (state === "celebrate" && level) {
     celebrateT -= dt;
@@ -1634,6 +1735,11 @@ function step(dt: number): void {
       const t = tileAt(tx, ty);
       if (t === Tile.Spike) {
         hurt();
+      } else if (t === Tile.Water) {
+        // plouf : retour au checkpoint
+        burst(px, py, "#7ec8ff", 10, 110);
+        respawnAtCheckpoint();
+        return;
       } else if (t === Tile.Spring) {
         pvy = -440 * gdir;
         jumpAnimT = 0;
@@ -1832,20 +1938,70 @@ function drawTiles(b: BiomeDef): void {
       const x = tx * T;
       const y = ty * T;
       if (t === Tile.Solid) {
+        const biome = level.biome;
         const topFree = tileAt(tx, ty - 1) !== Tile.Solid;
-        ctx.fillStyle = hash2(tx, ty) < 0.5 ? b.ground : b.groundDark;
-        ctx.fillRect(x, y, T, T);
-        if (topFree) {
-          ctx.fillStyle = b.top;
-          ctx.fillRect(x, y, T, 5);
-          ctx.fillStyle = b.accent;
-          if (hash2(tx, ty + 7) < 0.4) ctx.fillRect(x + 3 + Math.floor(hash2(tx, 3) * 8), y - 3, 2, 3);
+        if (biome === "vent") {
+          // grès en strates, joints de briques sur les structures
+          ctx.fillStyle = ty % 2 === 0 ? "#c97b3f" : "#b06a34";
+          ctx.fillRect(x, y, T, T);
+          ctx.fillStyle = "rgba(60, 30, 10, 0.18)";
+          ctx.fillRect(x + (ty % 2 === 0 ? 3 : 9), y + 4, 2, T - 8);
+          if (topFree) {
+            ctx.fillStyle = "#e8a25c";
+            ctx.fillRect(x, y, T, 4);
+          }
+        } else if (biome === "cristal") {
+          ctx.fillStyle = hash2(tx, ty) < 0.5 ? "#4a3b73" : "#382b59";
+          ctx.fillRect(x, y, T, T);
+          if (hash2(tx * 3, ty * 5) < 0.16) {
+            ctx.fillStyle = hash2(tx * 7, ty) < 0.5 ? "#b79bff" : "#63e6be";
+            ctx.fillRect(x + 4 + Math.floor(hash2(tx, ty + 2) * 8), y + 5 + Math.floor(hash2(ty, tx) * 7), 2, 2);
+          }
+          if (topFree) {
+            ctx.fillStyle = "#8f7fd4";
+            ctx.fillRect(x, y, T, 4);
+          }
+        } else {
+          // gazon de golf tondu en rayures, terre en dessous
+          ctx.fillStyle = hash2(tx, ty) < 0.5 ? "#8a5a3c" : "#6d4530";
+          ctx.fillRect(x, y, T, T);
+          if (topFree) {
+            ctx.fillStyle = (tx >> 1) % 2 === 0 ? "#57c04c" : "#46a839";
+            ctx.fillRect(x, y, T, 6);
+            if (hash2(tx, ty + 7) < 0.25) {
+              ctx.fillStyle = hash2(tx, 5) < 0.5 ? "#ff7b9c" : "#fffdf4";
+              ctx.fillRect(x + 3 + Math.floor(hash2(tx, 3) * 9), y - 2, 2, 2);
+            }
+          }
         }
         // le bas d'un bloc suspendu est plus sombre
         if (tileAt(tx, ty + 1) !== Tile.Solid) {
           ctx.fillStyle = "rgba(0,0,0,0.22)";
           ctx.fillRect(x, y + T - 3, T, 3);
         }
+      } else if (t === Tile.Water) {
+        // eau animée : mortelle mais jolie
+        const surfFree = tileAt(tx, ty - 1) !== Tile.Water;
+        ctx.fillStyle = "#2f7fd1";
+        ctx.fillRect(x, y, T, T);
+        ctx.fillStyle = "#4b9fe8";
+        ctx.fillRect(x, y, T, surfFree ? 4 : 2);
+        if (surfFree) {
+          const wobble = Math.sin(now * 3 + tx * 1.3) * 1.5;
+          ctx.fillStyle = "rgba(255,255,255,0.55)";
+          ctx.fillRect(x + 2 + wobble, y + 1, 4, 1.5);
+        }
+      } else if (t === Tile.Flag) {
+        // petit drapeau de green (décoratif)
+        ctx.fillStyle = "#e8e3d5";
+        ctx.fillRect(x + 7, y - 8, 1.5, T + 8);
+        const wave = Math.sin(now * 5 + tx) * 1.5;
+        ctx.fillStyle = "#e03131";
+        ctx.beginPath();
+        ctx.moveTo(x + 8.5, y - 8);
+        ctx.lineTo(x + 16 + wave, y - 5);
+        ctx.lineTo(x + 8.5, y - 2);
+        ctx.fill();
       } else if (t === Tile.OneWay) {
         ctx.fillStyle = b.groundDark;
         ctx.fillRect(x, y, T, 5);
@@ -2231,6 +2387,32 @@ function drawMap(): void {
     ctx.stroke();
   }
 
+  // voiliers qui dérivent
+  for (let i = 0; i < 2; i++) {
+    const bx = ((now * (8 + i * 5) + i * 430) % (W + 120)) - 60;
+    const by = H * (0.16 + i * 0.68);
+    ctx.fillStyle = "#fffdf4";
+    ctx.beginPath();
+    ctx.moveTo(bx, by - 14);
+    ctx.lineTo(bx, by - 2);
+    ctx.lineTo(bx - 9, by - 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#7a5530";
+    ctx.fillRect(bx - 11, by, 22, 4);
+  }
+  // mouettes
+  ctx.strokeStyle = "rgba(255,255,255,0.7)";
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 3; i++) {
+    const gx = ((now * 22 + i * 320) % (W + 100)) - 50;
+    const gy = H * 0.09 + i * 26 + Math.sin(now * 2 + i) * 6;
+    ctx.beginPath();
+    ctx.arc(gx - 4, gy, 4, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.arc(gx + 4, gy, 4, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.stroke();
+  }
+
   // routes maritimes en pointillés courbes
   for (const n of nodes) {
     if (n.bonus && !nodes.some((p) => p.secretTo === n.id && saveData.secrets.includes(p.id))) continue;
@@ -2266,7 +2448,9 @@ function drawMap(): void {
     const isUnlocked = unlocked(n);
     const isDone = saveData.done.includes(n.id);
     const isSel = mapSel === n.id;
-    const h = islandH(n);
+    let h = islandH(n);
+    if (isSel) h *= 1 + 0.03 * Math.sin(now * 4);
+    else if (n.id === mapHover) h *= 1.08;
     const img = islandImg(n);
 
     // ombre portée sur l'eau
@@ -2322,27 +2506,64 @@ function drawMap(): void {
   ctx.font = "16px 'VT323', monospace";
   ctx.fillStyle = "#cfe3f7";
   ctx.fillText("←→↑↓ choisir · Entrée / clic jouer · ❔ secret à trouver · ⭐ trouvé", W / 2, 68);
-  // nom de l'île sélectionnée
+  // fiche de l'île sélectionnée, en bas
   const sel = nodeById(mapSel);
+  ctx.fillStyle = "rgba(12, 24, 48, 0.62)";
+  ctx.beginPath();
+  ctx.roundRect(W / 2 - 230, H - 92, 460, 72, 12);
+  ctx.fill();
   if (unlocked(sel)) {
-    ctx.fillStyle = "rgba(12, 24, 48, 0.55)";
-    ctx.beginPath();
-    ctx.roundRect(W / 2 - 170, 84, 340, 30, 8);
-    ctx.fill();
     ctx.fillStyle = "#ffe066";
-    ctx.font = "17px 'VT323', monospace";
-    ctx.fillText(`📍 ${sel.name}`, W / 2, 104);
+    ctx.font = "bold 20px 'Pixelify Sans', monospace";
+    ctx.fillText(`📍 ${sel.name}`, W / 2, H - 66);
+    const status = saveData.done.includes(sel.id) ? "drapeau planté 🏳️" : "à conquérir";
+    const secret =
+      sel.secretTo === null || sel.bonus ? "" : saveData.secrets.includes(sel.id) ? " · ⭐ secret trouvé" : " · ❔ un secret s'y cache";
+    ctx.fillStyle = "#cfe3f7";
+    ctx.font = "16px 'VT323', monospace";
+    ctx.fillText(`${BIOMES[sel.biome].name} · ${status}${secret}`, W / 2, H - 46);
+    ctx.fillStyle = "#8fd3ff";
+    ctx.fillText(mapTravel ? "en route…" : "Entrée ↵ ou clic pour y aller", W / 2, H - 28);
+  } else {
+    ctx.fillStyle = "#aab3c7";
+    ctx.font = "bold 20px 'Pixelify Sans', monospace";
+    ctx.fillText("🔒 Île verrouillée", W / 2, H - 60);
+    ctx.font = "16px 'VT323', monospace";
+    ctx.fillText("Termine un niveau qui y mène pour débloquer la route.", W / 2, H - 38);
   }
 
-  // le héros posé sur son île
+  // le héros : posé sur son île, ou en train de courir vers la suivante
   const cur = nodeById(saveData.pos);
-  const [pxm, pym] = mapNodePos(cur);
   const hCur = islandH(cur);
-  const bobT = Math.sin(now * 1.6 + cur.id * 1.7) * 3 + Math.sin(now * 3.1) * 2;
-  if (ready(SHEETS.idle)) {
-    const h = hCur * 0.52;
-    const w2 = (SHEETS.idle.cw / SHEETS.idle.ch) * h;
-    ctx.drawImage(SHEETS.idle.img, pxm - w2 / 2, pym - hCur * 0.5 - h + bobT, w2, h);
+  if (mapTravel) {
+    const [x1, y1] = mapNodePos(nodeById(mapTravel.from));
+    const [x2, y2] = mapNodePos(nodeById(mapTravel.to));
+    const mx = (x1 + x2) / 2 - (y2 - y1) * 0.18;
+    const my = (y1 + y2) / 2 + (x2 - x1) * 0.18;
+    const t = Math.min(1, mapTravel.t);
+    const hx = (1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * mx + t * t * x2;
+    const hy = (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * my + t * t * y2 - 18;
+    const s = SHEETS.run;
+    if (ready(s)) {
+      const fi = Math.floor(now * s.fps) % s.frames;
+      const sx = (fi % s.cols) * s.cw;
+      const sy = Math.floor(fi / s.cols) * s.ch;
+      const h = 46;
+      const w2 = (s.cw / s.ch) * h;
+      ctx.save();
+      ctx.translate(hx, hy);
+      if (x2 < x1) ctx.scale(-1, 1);
+      ctx.drawImage(s.img, sx, sy, s.cw, s.ch, -w2 / 2, -h, w2, h);
+      ctx.restore();
+    }
+  } else {
+    const [pxm, pym] = mapNodePos(cur);
+    const bobT = Math.sin(now * 1.6 + cur.id * 1.7) * 3 + Math.sin(now * 3.1) * 2;
+    if (ready(SHEETS.idle)) {
+      const h = hCur * 0.52;
+      const w2 = (SHEETS.idle.cw / SHEETS.idle.ch) * h;
+      ctx.drawImage(SHEETS.idle.img, pxm - w2 / 2, pym - hCur * 0.5 - h + bobT, w2, h);
+    }
   }
 }
 
@@ -2370,14 +2591,17 @@ function mapMove(dx: number, dy: number): void {
 }
 
 function mapEnter(): void {
+  if (mapTravel) return;
   const n = nodeById(mapSel);
   if (!unlocked(n)) {
     toast("🔒 Termine d'abord un niveau qui y mène !");
     return;
   }
-  saveData.pos = n.id;
-  save();
-  startLevel(n);
+  if (n.id === saveData.pos) {
+    startLevel(n);
+    return;
+  }
+  mapTravel = { from: saveData.pos, to: n.id, t: 0 };
 }
 
 // ---------- HUD ----------
@@ -2459,6 +2683,27 @@ canvas.addEventListener("pointerdown", (e) => {
 });
 canvas.addEventListener("pointerup", () => {
   touchDir = 0;
+});
+
+// survol des îles sur la carte
+canvas.addEventListener("pointermove", (e) => {
+  if (state !== "map") {
+    if (mapHover !== -1) {
+      mapHover = -1;
+      canvas.style.cursor = "default";
+    }
+    return;
+  }
+  mapHover = -1;
+  for (const n of nodes) {
+    if (n.bonus && !nodes.some((p) => p.secretTo === n.id && saveData.secrets.includes(p.id))) continue;
+    const [x, y] = mapNodePos(n);
+    if (Math.hypot(e.clientX - x, e.clientY - y) < islandH(n) * 0.55) {
+      mapHover = n.id;
+      break;
+    }
+  }
+  canvas.style.cursor = mapHover >= 0 ? "pointer" : "default";
 });
 btnDash.addEventListener("pointerdown", (e) => {
   e.preventDefault();
