@@ -762,4 +762,169 @@ export const PHOTO_CREDITS: PhotoCredit[] = [
     sourceUrl:
       "https://commons.wikimedia.org/wiki/File:Appleton_Estate_Aged_21_Years_(bottled_2011)-92329.jpg",
   },
+  {
+    id: "orient-express-venise-londres",
+    author: "Tangopaso",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Orient_Express_Pullman_car.jpg",
+  },
+  {
+    id: "croisiere-antarctique-semaine",
+    author: "Gordon Leggett",
+    license: "CC BY-SA 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:2020-08-24_MS_FRAM_-_IMO_9370018,_at_Brown_Station,_Antarctica_2019-03-10.jpg",
+  },
+  {
+    id: "suite-sous-marine-muraka",
+    author: "Tyler",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Conrad_the_Maraka_interior.png",
+  },
+  {
+    id: "safari-masai-mara-semaine",
+    author: "Ninara",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Masai_Mara_National_Reserve,_Kenya_-_52515733913.jpg",
+  },
+  {
+    id: "trek-camp-base-everest",
+    author: "Icicles Adventure Treks & Tours (P.) Ltd.",
+    license: "CC BY-SA 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:A_group_of_trekkers_on_the_way_to_Everest_Base_Camp.jpg",
+  },
+  {
+    id: "passager-cargo-tour-du-monde",
+    author: "Petar Milošević",
+    license: "CC BY-SA 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:MSC_HARMONY_III_(container_ship,_2006)_in_Port_Koper_(SIKOP,_2024).jpg",
+  },
+  {
+    id: "cage-requins-blancs-guadalupe",
+    author: "Sharkcrew",
+    license: "CC BY-SA 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Guadalupe_Island_Great_White_Shark_Cage_Diving_Adventures.jpg",
+  },
+  {
+    id: "vol-voltige-biplace",
+    author: "Eric Friedebach",
+    license: "CC BY 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:1968_Pitts_S-1C_Special,_N20P.jpg",
+  },
+  {
+    id: "traversee-queen-mary-2",
+    author: "Dietmar Rabich",
+    license: "CC BY-SA 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Hamburg,_Hafen,_Kreuzfahrtschiff_-Queen_Mary_2-_--_2016_--_3050.jpg",
+  },
+  {
+    id: "transsiberien-cabine-2e-classe",
+    author: "Pierre André Leclercq",
+    license: "CC BY 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Furniture_of_the_Trans-Mongolian_Railway_dining_car.jpg",
+  },
+  {
+    id: "plongee-epave-apra-harbor",
+    author: "COMSEVENTHFLT",
+    license: "CC BY-SA 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Diver_on_shipwreck_in_Apra_Harbor,_Guam.jpeg",
+  },
+  {
+    id: "caledonian-sleeper-cabine",
+    author: "Chris McKenna (Thryduulf)",
+    license: "CC BY-SA 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Caledonian_Sleeper_at_Fort_William_station_2005-06-16_03.jpg",
+  },
+  {
+    id: "vol-zeppelin-touristique",
+    author: "Kecko",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:German_Zeppelin_NT_over_the_St.Gallen-Altenrhein_Airport.jpg",
+  },
+  {
+    id: "croisiere-nil-semaine",
+    author: "Vyacheslav Argenberg",
+    license: "CC BY 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Luxor,_Egypt,_Cruise_ship_on_River_Nile.jpg",
+  },
+  {
+    id: "vol-parabolique-apesanteur",
+    author: "NASA",
+    license: "Domaine public",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Christa_McAuliffe_Experiences_Weightlessness_During_KC-135_Flight_-_GPN-2002-000149.jpg",
+  },
+  {
+    id: "expedition-brise-glace-pole-nord",
+    author: "Christopher Michel",
+    license: "CC BY 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Icebreaker_Yamal_(19592271976).jpg",
+  },
+  {
+    id: "trek-patagonie-torres-del-paine",
+    author: "Alexis Alvarez",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Refugio_Paine_Grande.jpg",
+  },
+  {
+    id: "nuit-refuge-kilimandjaro",
+    author: "Jorge Láscar",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Lascar_Following_the_climber%27s_motto-_%22Climb_high,_sleep_low%22_(4463893431).jpg",
+  },
+  {
+    id: "trek-gorilles-virunga",
+    author: "Ad Meskens",
+    license: "CC BY-SA 3.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Mountain_gorilla_Virunga_21.jpg",
+  },
+  {
+    id: "hydravion-fjords-alaska",
+    author: "Diego Delso",
+    license: "CC BY-SA 4.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:De_Havilland_Canada_DHC-2_Beaver,_Ketchikan,_Alaska,_Estados_Unidos,_2017-08-16,_DD_65.jpg",
+  },
+  {
+    id: "plongee-grande-barriere-corail",
+    author: "Dmitry Brant",
+    license: "CC BY-SA 4.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Great_Barrier_Reef_snorkeling_5.jpg",
+  },
+  {
+    id: "helicoptere-grand-canyon",
+    author: "Jim Gateley",
+    license: "CC BY 3.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Helicopter_tour_of_the_Grand_Canyon_and_Hoover_Dam,_Arizona,_USA._-_panoramio.jpg",
+  },
+  {
+    id: "train-machu-picchu",
+    author: "James Preston",
+    license: "CC BY 2.0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:PeruRail_train_from_Machu_Picchu.jpg",
+  },
+  {
+    id: "observation-baleines-reykjavik",
+    author: "Tony Hisgett",
+    license: "CC BY 2.0",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Elding_Whale_Watching_boats_Reykjavik_harbour_(25381979881).jpg",
+  },
+  {
+    id: "saut-parachute-tandem",
+    author: "SkydivePhoto",
+    license: "CC0",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Skydive_Tandem_jump.jpg",
+  },
 ];
