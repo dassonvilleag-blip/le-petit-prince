@@ -151,10 +151,16 @@ const PROPS = {
   cryptocoin: loadImg("cryptocoin.png"),
 };
 
-const BGS: Record<Biome, HTMLImageElement> = {
-  prairie: loadImg("bg-golf.webp"),
-  vent: loadImg("bg-mur.webp"),
-  cristal: loadImg("bg-crypto.webp"),
+// couches de parallaxe par biome : lointaine (skyline) et proche (premier plan)
+const FAR: Record<Biome, HTMLImageElement> = {
+  prairie: loadImg("far-golf.webp"),
+  vent: loadImg("far-mur.webp"),
+  cristal: loadImg("far-crypto.webp"),
+};
+const NEAR: Record<Biome, HTMLImageElement> = {
+  prairie: loadImg("near-golf.webp"),
+  vent: loadImg("near-mur.webp"),
+  cristal: loadImg("near-crypto.webp"),
 };
 
 const MAP_IMGS = {
@@ -1171,6 +1177,9 @@ function startLevel(node: MapNode): void {
   state = "play";
   overlay.classList.add("hidden");
   shopEl.classList.add("hidden");
+  phoneEl.classList.add("hidden");
+  phoneUp = false;
+  phoneCd = 10 + Math.random() * 14;
   hearts = maxHearts();
   gdir = 1;
   px = 40;
@@ -1201,6 +1210,7 @@ function finishLevel(secret: boolean): void {
   saveData.pos = currentNode.id;
   save();
   state = "clear";
+  phoneHide();
   overlayTitle.textContent = secret ? "✨ L'escalator doré !" : "Niveau conquis !";
   overlayText.innerHTML =
     `« ${pick(CLEAR_QUOTES)} »<br />+${levelCoins} 💵 · trésor de campagne : ${Math.floor(saveData.coins)} 💵<br />Clique pour revenir à la carte.`;
@@ -1221,6 +1231,7 @@ function finishLevel(secret: boolean): void {
 
 function die(): void {
   state = "dead";
+  phoneHide();
   shake = 8;
   burst(px, py, "#ffc93c", 14, 130);
   overlayTitle.textContent = "FAKE NEWS ! 💥";
@@ -1259,6 +1270,72 @@ function renderShop(): void {
     shopItems.appendChild(btn);
   }
 }
+
+// ---------- le téléphone présidentiel ----------
+
+const phoneEl = document.getElementById("phone")!;
+const phoneCaller = document.getElementById("phone-caller")!;
+const phoneText = document.getElementById("phone-text")!;
+const phoneHint = document.getElementById("phone-hint")!;
+
+interface Call {
+  caller: string;
+  text: string;
+  reply: string;
+}
+
+const CALLS: Call[] = [
+  { caller: "Bibi", text: "Donald, il me faudrait encore quelques bombes. Des belles.", reply: "Les plus belles. Personne ne fait de plus belles bombes que nous." },
+  { caller: "Xi Jinping", text: "On doit parler des tarifs à 145 %…", reply: "La Chine paie. C'est signé. Bisous à Pékin." },
+  { caller: "La Fed", text: "Monsieur, on ne peut pas baisser les taux comme ça.", reply: "Alors je baisse la Fed. Réfléchissez." },
+  { caller: "Numéro masqué", text: "On a retrouvé les dossiers Epstein…", reply: "*bip… bip… le Président a raccroché.*" },
+  { caller: "Kim Jong-un", text: "Ma nouvelle fusée est plus grosse que la tienne.", reply: "FAUX. Et la mienne est dorée." },
+  { caller: "Melania", text: "Tu rentres quand ?", reply: "Après la Salle de Bal, promis. Elle est MAGNIFIQUE." },
+  { caller: "Golf de Mar-a-Lago", text: "Votre tee time de 14 h est confirmé, Monsieur.", reply: "Décalez le sommet de l'OTAN. Le golf, c'est sacré." },
+  { caller: "Elon", text: "Reviens au DOGE, on s'amusait bien…", reply: "Occupé. Je saute sur des télés menteuses." },
+  { caller: "Téhéran", text: "Le détroit d'Ormuz, on le rouvre quand ?", reply: "Après le déjeuner. Peut-être." },
+  { caller: "L'ONU", text: "Vous aviez promis un cessez-le-feu…", reply: "Nouveau téléphone. Qui êtes-vous ?" },
+  { caller: "La FIFA", text: "Au sujet de votre carton rouge en tribune…", reply: "Annulé. J'ai signé un décret. Le plus beau décret." },
+];
+
+let phoneCd = 12;
+let phoneUp = false;
+let phoneAnswered = false;
+let phoneHideT = 0;
+
+function phoneShow(): void {
+  const c = CALLS[Math.floor(Math.random() * CALLS.length)];
+  phoneCaller.textContent = c.caller;
+  phoneText.textContent = `☎️ ${c.text}`;
+  phoneEl.dataset.reply = c.reply;
+  phoneHint.textContent = "clique pour décrocher";
+  phoneEl.classList.remove("hidden", "answered");
+  phoneUp = true;
+  phoneAnswered = false;
+  phoneHideT = 8;
+}
+
+function phoneHide(): void {
+  phoneEl.classList.add("hidden");
+  phoneUp = false;
+  phoneCd = 24 + Math.random() * 26;
+}
+
+phoneEl.addEventListener("click", () => {
+  if (!phoneUp) return;
+  if (!phoneAnswered) {
+    phoneAnswered = true;
+    phoneEl.classList.add("answered");
+    phoneText.textContent = `🗣️ ${phoneEl.dataset.reply ?? ""}`;
+    phoneHint.textContent = "+3 💵 de dons de campagne";
+    saveData.coins += 3;
+    save();
+    updateHud();
+    phoneHideT = 3.5;
+  } else {
+    phoneHide();
+  }
+});
 
 // la boutique s'ouvre depuis la carte ET en pleine partie (le jeu se met en pause)
 btnShop.addEventListener("click", () => {
@@ -1351,6 +1428,15 @@ function step(dt: number): void {
   if (dashCd > 0) dashCd -= dt;
   if (speechT > 0) speechT -= dt;
   jumpAnimT += dt;
+
+  // le téléphone sonne de temps en temps
+  if (!phoneUp) {
+    phoneCd -= dt;
+    if (phoneCd <= 0) phoneShow();
+  } else {
+    phoneHideT -= dt;
+    if (phoneHideT <= 0) phoneHide();
+  }
 
   // ↓ près du pupitre : le Président improvise un discours
   if (keys.has("ArrowDown") && lastPodium && speechT <= 0 && Math.abs(px - lastPodium.x) < 26 && Math.abs(py - lastPodium.y) < 40) {
@@ -1586,71 +1672,86 @@ function hash2(x: number, y: number): number {
   return ((h ^ (h >> 16)) >>> 0) / 4294967296;
 }
 
+// dessine une bande décorative répétée, à sa vitesse de parallaxe,
+// ancrée sur la ligne de sol (coordonnées écran)
+function drawStrip(img: HTMLImageElement, parallax: number, hFrac: number, bottomY: number, alpha = 1): void {
+  if (!imgReady(img)) return;
+  const h = H * hFrac;
+  const w = (img.naturalWidth / img.naturalHeight) * h;
+  const off = -((camX * zoom * parallax) % w);
+  ctx.globalAlpha = alpha;
+  for (let x = off; x < W; x += w) ctx.drawImage(img, Math.round(x), Math.round(bottomY - h), w, h);
+  ctx.globalAlpha = 1;
+}
+
+// ligne de sol du niveau, en pixels écran
+function groundScreenY(): number {
+  return ((LEVEL_H - 2) * T + (H / zoom - LEVEL_H * T) / 2) * zoom;
+}
+
 function drawBackground(b: BiomeDef, biome: Biome): void {
+  // ciel
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, b.sky[0]);
   g.addColorStop(1, b.sky[1]);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
-  // décor peint du monde, répété en parallaxe douce
-  const bgImg = BGS[biome];
-  if (imgReady(bgImg)) {
-    const s = H / bgImg.naturalHeight;
-    const bw = bgImg.naturalWidth * s;
-    const off = -((camX * zoom * 0.25) % bw);
-    for (let x = off; x < W; x += bw) ctx.drawImage(bgImg, x, 0, bw, H);
-    ctx.fillStyle = "rgba(10, 12, 30, 0.16)";
-    ctx.fillRect(0, 0, W, H);
-    return;
-  }
-
-  // soleil / lune
+  // soleil / lune, quasi fixe
   ctx.fillStyle = biome === "cristal" ? "#e6dbff" : "#fff3c4";
   ctx.beginPath();
-  ctx.arc(W * 0.82, H * 0.16, 26, 0, Math.PI * 2);
+  ctx.arc(W * 0.82 - ((camX * zoom * 0.02) % 40), H * 0.14, 26, 0, Math.PI * 2);
   ctx.fill();
 
-  // silhouettes parallaxe
+  // nuages, très lents
   ctx.save();
-  ctx.translate(-((camX * 0.25) % (W + 300)), 0);
+  ctx.translate(-((camX * zoom * 0.06) % (W + 230)), 0);
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  for (let i = -1; i < 7; i++) {
+    const cx = i * 230 + 60;
+    const cy = 34 + (((i % 3) + 3) % 3) * 30;
+    ctx.fillRect(cx, cy, 54, 12);
+    ctx.fillRect(cx + 10, cy - 8, 30, 8);
+  }
+  ctx.restore();
+
+  const groundY = groundScreenY();
+
+  // couche lointaine : la skyline du biome (lente)
+  drawStrip(FAR[biome], 0.14, 0.42, groundY + 4, 0.9);
+
+  // silhouettes intermédiaires procédurales (vitesse moyenne)
+  ctx.save();
+  ctx.globalAlpha = 0.45;
+  ctx.translate(-((camX * zoom * 0.28) % (W + 300)), 0);
   ctx.fillStyle = biome === "prairie" ? "#7cc576" : biome === "vent" ? "#e0b072" : "#55418a";
-  for (let i = -1; i < 5; i++) {
+  for (let i = -1; i < 6; i++) {
     const bx = i * 260;
     if (biome === "vent") {
       ctx.beginPath();
-      ctx.moveTo(bx, H);
-      ctx.lineTo(bx + 90, H * 0.45 + (i % 2) * 40);
-      ctx.lineTo(bx + 180, H);
+      ctx.moveTo(bx, groundY);
+      ctx.lineTo(bx + 90, groundY - H * 0.3 + (((i % 2) + 2) % 2) * 30);
+      ctx.lineTo(bx + 180, groundY);
       ctx.fill();
     } else if (biome === "cristal") {
       ctx.beginPath();
-      ctx.moveTo(bx, H);
-      ctx.lineTo(bx + 50, H * 0.5 + (i % 3) * 30);
-      ctx.lineTo(bx + 100, H);
-      ctx.moveTo(bx + 120, H);
-      ctx.lineTo(bx + 150, H * 0.62);
-      ctx.lineTo(bx + 190, H);
+      ctx.moveTo(bx, groundY);
+      ctx.lineTo(bx + 50, groundY - H * 0.26 + (((i % 3) + 3) % 3) * 22);
+      ctx.lineTo(bx + 100, groundY);
+      ctx.moveTo(bx + 120, groundY);
+      ctx.lineTo(bx + 150, groundY - H * 0.18);
+      ctx.lineTo(bx + 190, groundY);
       ctx.fill();
     } else {
       ctx.beginPath();
-      ctx.arc(bx + 120, H + 60, 170, Math.PI, 0);
+      ctx.arc(bx + 120, groundY + 40, 140, Math.PI, 0);
       ctx.fill();
     }
   }
   ctx.restore();
 
-  // nuages
-  ctx.save();
-  ctx.translate(-((camX * 0.5) % (W + 200)), 0);
-  ctx.fillStyle = "rgba(255,255,255,0.75)";
-  for (let i = -1; i < 5; i++) {
-    const cx = i * 230 + 60;
-    const cy = 40 + (i % 3) * 34;
-    ctx.fillRect(cx, cy, 54, 12);
-    ctx.fillRect(cx + 10, cy - 8, 30, 8);
-  }
-  ctx.restore();
+  // couche proche : décor de premier plan (rapide)
+  drawStrip(NEAR[biome], 0.5, 0.3, groundY + 10, 0.96);
 }
 
 function drawTiles(b: BiomeDef): void {
