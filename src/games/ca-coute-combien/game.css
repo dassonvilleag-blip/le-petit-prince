@@ -8,7 +8,8 @@
 }
 
 .numeric {
-  font-family: "Pixelify Sans", monospace;
+  font-family: "Nunito", sans-serif;
+  font-weight: 700;
 }
 
 * {
@@ -22,8 +23,8 @@ body {
   min-height: 100vh;
   background: #f6efdd;
   color: var(--ink);
-  font-family: "VT323", "Courier New", monospace;
-  font-size: 20px;
+  font-family: "Nunito", sans-serif;
+  font-size: 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -34,7 +35,8 @@ body {
   align-self: flex-start;
   color: var(--ink);
   text-decoration: none;
-  font-family: "Pixelify Sans", monospace;
+  font-family: "Nunito", sans-serif;
+  font-weight: 600;
   margin-bottom: 20px;
 }
 .back-link:hover {
@@ -50,7 +52,8 @@ main {
 }
 
 .title {
-  font-family: "Pixelify Sans", monospace;
+  font-family: "Nunito", sans-serif;
+  font-weight: 800;
   font-size: 42px;
   text-align: center;
   text-shadow: 4px 4px 0 var(--yellow);
@@ -75,8 +78,9 @@ main {
   padding: 12px 28px;
   background: var(--yellow);
   color: var(--ink);
-  font-family: "Pixelify Sans", monospace;
-  font-size: 20px;
+  font-family: "Nunito", sans-serif;
+  font-weight: 700;
+  font-size: 18px;
   border: 3px solid var(--ink);
   border-radius: 6px;
   box-shadow: 4px 4px 0 var(--ink);
@@ -134,7 +138,8 @@ main {
 }
 
 .round-name {
-  font-family: "Pixelify Sans", monospace;
+  font-family: "Nunito", sans-serif;
+  font-weight: 700;
   font-size: 24px;
   text-align: center;
   margin: 0 0 16px;
@@ -159,8 +164,9 @@ main {
 }
 
 .round-comment {
-  font-family: "Pixelify Sans", monospace;
-  font-size: 22px;
+  font-family: "Nunito", sans-serif;
+  font-weight: 700;
+  font-size: 20px;
   color: var(--pink);
   text-align: center;
 }
@@ -172,7 +178,8 @@ main {
 
 .recap-total {
   text-align: center;
-  font-family: "Pixelify Sans", monospace;
+  font-family: "Nunito", sans-serif;
+  font-weight: 800;
   font-size: 28px;
   text-shadow: 3px 3px 0 var(--teal);
 }
