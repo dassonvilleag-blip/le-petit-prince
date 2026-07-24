@@ -42,3 +42,23 @@ test("interpolate handles a decreasing range", () => {
 test("interpolate works for large values (e.g. an 800 million euro item)", () => {
   assert.equal(interpolate(0, 800_000_000, 1), 800_000_000);
 });
+
+test("visibleCharacterCount shows nothing at elapsed=0", () => {
+  assert.equal(visibleCharacterCount("bonjour", 0, 30), 0);
+});
+
+test("visibleCharacterCount shows characters proportional to elapsed time", () => {
+  assert.equal(visibleCharacterCount("bonjour", 89, 30), 2);
+});
+
+test("visibleCharacterCount clamps to the text length", () => {
+  assert.equal(visibleCharacterCount("bonjour", 10_000, 30), 7);
+});
+
+test("visibleCharacterCount shows the full text immediately when msPerChar is 0", () => {
+  assert.equal(visibleCharacterCount("bonjour", 50, 0), 7);
+});
+
+test("visibleCharacterCount handles an empty string", () => {
+  assert.equal(visibleCharacterCount("", 500, 30), 0);
+});

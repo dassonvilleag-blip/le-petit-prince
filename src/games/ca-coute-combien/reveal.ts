@@ -6,3 +6,8 @@ export function easeOutCubic(t: number): number {
 export function interpolate(from: number, to: number, progress: number): number {
   return from + (to - from) * progress;
 }
+
+export function visibleCharacterCount(text: string, elapsedMs: number, msPerChar: number): number {
+  if (msPerChar <= 0) return text.length;
+  return Math.min(text.length, Math.floor(elapsedMs / msPerChar));
+}
