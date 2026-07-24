@@ -17,18 +17,19 @@ html,
 body {
   height: 100%;
   overflow: hidden;
-  background: #191524;
+  background: #1d2b53;
   font-family: "VT323", "Courier New", monospace;
   color: var(--ink);
   -webkit-user-select: none;
   user-select: none;
 }
 
-#castle {
+#game {
   position: fixed;
   inset: 0;
   display: block;
   touch-action: none;
+  image-rendering: pixelated;
 }
 
 .back-link {
@@ -66,16 +67,27 @@ body {
   border-radius: 8px;
   box-shadow: 4px 4px 0 var(--ink);
   padding: 8px 14px;
-  pointer-events: none;
 }
 
 .hud.hidden {
   display: none;
 }
 
-.hud-heir {
+#btn-shop {
+  font-family: inherit;
   font-size: 1.05rem;
-  color: #6d675c;
+  margin-top: 4px;
+  padding: 4px 10px;
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+#btn-shop:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--pink);
 }
 
 .overlay {
@@ -99,7 +111,7 @@ body {
 
 .overlay h1 {
   font-family: "Pixelify Sans", "VT323", monospace;
-  font-size: clamp(2.2rem, 6.5vw, 3.6rem);
+  font-size: clamp(2.2rem, 6.5vw, 3.8rem);
   font-weight: 700;
   color: var(--card);
   text-shadow: 4px 4px 0 var(--purple);
@@ -116,7 +128,7 @@ body {
   max-width: calc(100vw - 40px);
 }
 
-.manor {
+.shop {
   position: fixed;
   z-index: 25;
   inset: 0;
@@ -127,21 +139,21 @@ body {
   gap: 18px;
   padding: 20px;
   overflow-y: auto;
-  background: rgba(20, 16, 32, 0.82);
+  background: rgba(20, 16, 32, 0.85);
 }
 
-.manor.hidden {
+.shop.hidden {
   display: none;
 }
 
-.manor h2 {
+.shop h2 {
   font-family: "Pixelify Sans", "VT323", monospace;
   font-size: clamp(1.8rem, 5vw, 2.6rem);
   color: var(--yellow);
   text-shadow: 3px 3px 0 var(--ink);
 }
 
-.upgrades {
+.shop-items {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -149,8 +161,8 @@ body {
   max-width: 860px;
 }
 
-.upgrades button,
-#btn-heirs {
+.shop-items button,
+#btn-close-shop {
   font-family: inherit;
   font-size: 1.15rem;
   line-height: 1.25;
@@ -164,66 +176,48 @@ body {
   transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
-.upgrades button {
+.shop-items button {
   width: 250px;
   text-align: left;
 }
 
-.upgrades button:hover:not(:disabled),
-#btn-heirs:hover {
+.shop-items button:hover:not(:disabled),
+#btn-close-shop:hover {
   transform: translate(-2px, -2px);
   box-shadow: 6px 6px 0 var(--pink);
 }
 
-.upgrades button:disabled {
+.shop-items button:disabled {
   opacity: 0.45;
   cursor: default;
   box-shadow: none;
 }
 
-#btn-heirs {
+#btn-close-shop {
   background: var(--teal);
-  font-size: 1.3rem;
 }
 
-.heir-cards {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 14px;
-  max-width: 940px;
+.touch-ui {
+  display: none;
 }
 
-.heir-cards button {
-  font-family: inherit;
-  width: 270px;
-  text-align: left;
-  font-size: 1.1rem;
-  line-height: 1.35;
-  padding: 14px 16px;
-  background: var(--card);
-  color: var(--ink);
+.touch-ui.visible {
+  display: block;
+}
+
+#btn-dash {
+  position: fixed;
+  z-index: 20;
+  right: 22px;
+  bottom: 26px;
+  width: 74px;
+  height: 74px;
+  font-size: 2rem;
+  background: var(--purple);
   border: 3px solid var(--ink);
-  border-radius: 10px;
-  cursor: pointer;
-  box-shadow: 5px 5px 0 var(--ink);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-
-.heir-cards button:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 7px 7px 0 var(--pink);
-}
-
-.heir-cards .h-name {
-  display: block;
-  font-size: 1.35rem;
-  margin-bottom: 4px;
-}
-
-.heir-cards .h-trait {
-  display: block;
-  color: #6d675c;
+  border-radius: 50%;
+  box-shadow: 4px 4px 0 var(--ink);
+  touch-action: none;
 }
 
 .toast {

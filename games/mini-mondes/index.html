@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Les Mini-Mondes</title>
+    <meta name="description" content="Plateforme pixel art : des mini-mondes générés pleins de chemins alternatifs, de sorties secrètes et de mécaniques farfelues, sur une carte à embranchements." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/mini-mondes/mondes.css" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+
+    <a class="back-link" href="../../">← le petit prince</a>
+
+    <div class="hud hidden" id="hud">
+      <div class="hud-line" id="hud-hearts"></div>
+      <div class="hud-line">🪙 <span id="hud-coins">0</span> · <span id="hud-level"></span></div>
+      <button id="btn-shop" type="button">🛒 Boutique</button>
+    </div>
+
+    <div class="overlay" id="overlay">
+      <h1 id="overlay-title">Les Mini-Mondes</h1>
+      <p id="overlay-text"></p>
+    </div>
+
+    <div class="shop hidden" id="shop">
+      <h2>🛒 La Boutique — <span id="shop-coins">0</span> 🪙</h2>
+      <div class="shop-items" id="shop-items"></div>
+      <button id="btn-close-shop" type="button">← Retour à la carte</button>
+    </div>
+
+    <div class="touch-ui" id="touch-ui">
+      <button id="btn-dash" type="button">💨</button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script type="module" src="/src/games/mini-mondes/main.ts"></script>
+  </body>
+</html>
