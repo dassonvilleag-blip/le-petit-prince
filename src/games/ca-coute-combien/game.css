@@ -152,7 +152,6 @@ main {
 .guess-form input {
   width: 160px;
   padding: 8px 10px;
-  font-family: "VT323", monospace;
   font-size: 22px;
   border: 3px solid var(--ink);
   border-radius: 6px;
