@@ -25,7 +25,7 @@ interface BiomeDef {
 
 const BIOMES: Record<Biome, BiomeDef> = {
   prairie: {
-    name: "Prairie",
+    name: "Golf de Mar-a-Lago",
     sky: ["#8fd3ff", "#d8f7e6"],
     ground: "#8a5a3c",
     groundDark: "#6d4530",
@@ -34,7 +34,7 @@ const BIOMES: Record<Biome, BiomeDef> = {
     deco: "#ff7b9c",
   },
   vent: {
-    name: "Canyon du Vent",
+    name: "Canyon du Grand Mur",
     sky: ["#ffd48a", "#ffedc9"],
     ground: "#c97b3f",
     groundDark: "#a15f2e",
@@ -43,7 +43,7 @@ const BIOMES: Record<Biome, BiomeDef> = {
     deco: "#7fd8d0",
   },
   cristal: {
-    name: "Grottes de Cristal",
+    name: "Crypto-Grotte",
     sky: ["#3d2b66", "#6d4fa3"],
     ground: "#4a3b73",
     groundDark: "#382b59",
@@ -133,6 +133,46 @@ function ready(s: Sheet): boolean {
   return s.img.complete && s.img.naturalWidth > 0;
 }
 
+// sprites thématiques (Higgsfield) : ennemis, props, décors par monde
+function loadImg(file: string): HTMLImageElement {
+  const i = new Image();
+  i.src = `${BASE}mini-mondes/${file}`;
+  return i;
+}
+
+const PROPS = {
+  fakenews: loadImg("fakenews.png"),
+  drone: loadImg("drone.png"),
+  subpoena: loadImg("subpoena.png"),
+  cap: loadImg("cap.png"),
+  golfflag: loadImg("golfflag.png"),
+  podium: loadImg("podium.png"),
+  escalator: loadImg("escalator.png"),
+  cryptocoin: loadImg("cryptocoin.png"),
+};
+
+const BGS: Record<Biome, HTMLImageElement> = {
+  prairie: loadImg("bg-golf.webp"),
+  vent: loadImg("bg-mur.webp"),
+  cristal: loadImg("bg-crypto.webp"),
+};
+
+function imgReady(i: HTMLImageElement): boolean {
+  return i.complete && i.naturalWidth > 0;
+}
+
+// dessine une image ancrée en bas-centre à hauteur donnée (px logiques)
+function drawImgH(i: HTMLImageElement, x: number, bottomY: number, h: number, flip = false): boolean {
+  if (!imgReady(i)) return false;
+  const w = (i.naturalWidth / i.naturalHeight) * h;
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(bottomY));
+  if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(i, -w / 2, -h, w, h);
+  ctx.restore();
+  return true;
+}
+
 // dessine la frame f d'une sheet, ancrée pieds au sol en (x, footY)
 function drawSheetFrame(s: Sheet, f: number, x: number, footY: number, hLogical: number, flip: boolean): boolean {
   if (!ready(s)) return false;
@@ -193,9 +233,9 @@ interface Upgrade {
 }
 
 const UPGRADES: Upgrade[] = [
-  { id: "coeur", emoji: "❤️", name: "Cœur en or", desc: "+1 cœur maximum", max: 2, price: (l) => 60 + 60 * l },
-  { id: "dash", emoji: "💨", name: "Dash présidentiel", desc: "Recharge du dash plus rapide", max: 3, price: (l) => 40 + 35 * l },
-  { id: "aimant", emoji: "🧲", name: "Lobby magnétique", desc: "Attire les pièces de plus loin", max: 3, price: (l) => 30 + 30 * l },
+  { id: "coeur", emoji: "🦺", name: "Gilet doré pare-fake-news", desc: "+1 cœur maximum", max: 2, price: (l) => 60 + 60 * l },
+  { id: "dash", emoji: "💨", name: "Toupet aérodynamique", desc: "Recharge du dash plus rapide", max: 3, price: (l) => 40 + 35 * l },
+  { id: "aimant", emoji: "🧲", name: "Lobby magnétique", desc: "Attire les billets de plus loin", max: 3, price: (l) => 30 + 30 * l },
 ];
 
 // ---------- carte de monde ----------
@@ -1016,6 +1056,35 @@ interface Floater {
 }
 let floaters: Floater[] = [];
 
+// punchlines présidentielles (parodie)
+const CHECKPOINT_QUOTES = [
+  "Le plus beau checkpoint de l'Histoire. Tout le monde le dit.",
+  "J'ai construit ce pupitre. L'archipel va le rembourser.",
+  "Sondage : 100 % des présidents ici m'adorent.",
+  "On fait une pause. Une pause FANTASTIQUE.",
+  "Les fake news disent que je suis perdu. FAUX.",
+  "Ce niveau ? Je l'ai déjà gagné. Deux fois.",
+];
+const CLEAR_QUOTES = [
+  "Personne ne finit les niveaux comme moi. Personne.",
+  "C'était parfait. Le niveau le plus parfait.",
+  "On vient de gagner TELLEMENT.",
+  "Même le drapeau a voté pour moi.",
+  "Un travail incroyable. Le meilleur travail.",
+];
+let speechTxt = "";
+let speechT = 0;
+let speechX = 0;
+let speechY = 0;
+let lastPodium: { x: number; y: number } | null = null;
+
+function speak(x: number, y: number, txt: string): void {
+  speechTxt = txt;
+  speechT = 3.2;
+  speechX = x;
+  speechY = y;
+}
+
 const keys = new Set<string>();
 let touchDir = 0;
 let paused = false;
@@ -1041,11 +1110,13 @@ function resize(): void {
 function showTitle(): void {
   state = "title";
   overlay.classList.remove("hidden");
-  overlayTitle.textContent = "Les Mini-Mondes";
+  overlayTitle.textContent = "Les Mini-Mondes du Président";
   overlayText.innerHTML =
-    "Un archipel de mini-mondes générés, plein de chemins et de secrets.<br />" +
-    "←→ courir · ↑/espace sauter · Maj/X dash · les sorties ⭐ ouvrent des routes cachées.<br />" +
-    "Clique pour ouvrir la carte.";
+    "Les fake news ont volé sa cravate porte-bonheur et l'ont cachée à la Maison-Blanche dorée.<br />" +
+    "Pour la reprendre, le Président reconquiert l'archipel : du golf de Mar-a-Lago à la Crypto-Grotte,<br />" +
+    "ramasse les billets, écrase les télés menteuses, esquive les SUBPOENA — et trouve les escalators dorés.<br />" +
+    "←→ courir · ↑/espace sauter · Maj/X dash · ↓ près d'un pupitre : discours.<br />" +
+    "Clique pour lancer la campagne.";
   hud.classList.add("hidden");
   shopEl.classList.add("hidden");
 }
@@ -1091,13 +1162,14 @@ function finishLevel(secret: boolean): void {
   if (!saveData.done.includes(currentNode.id)) saveData.done.push(currentNode.id);
   if (secret && currentNode.secretTo !== null && !saveData.secrets.includes(currentNode.id)) {
     saveData.secrets.push(currentNode.id);
-    toast("⭐ Sortie secrète ! Une route cachée s'ouvre sur la carte.");
+    toast("✨ L'escalator doré ! Une route cachée s'ouvre sur la carte.");
   }
   saveData.pos = currentNode.id;
   save();
   state = "clear";
-  overlayTitle.textContent = secret ? "⭐ Sortie secrète !" : "Niveau terminé !";
-  overlayText.innerHTML = `+${levelCoins} 🪙 · total ${Math.floor(saveData.coins)} 🪙<br />Clique pour revenir à la carte.`;
+  overlayTitle.textContent = secret ? "✨ L'escalator doré !" : "Niveau conquis !";
+  overlayText.innerHTML =
+    `« ${pick(CLEAR_QUOTES)} »<br />+${levelCoins} 💵 · trésor de campagne : ${Math.floor(saveData.coins)} 💵<br />Clique pour revenir à la carte.`;
   overlay.classList.remove("hidden");
 
   if (currentNode.final) {
@@ -1108,8 +1180,8 @@ function finishLevel(secret: boolean): void {
     saveData.pos = 0;
     save();
     genMap(saveData.seed);
-    overlayTitle.textContent = `🏆 Monde ${saveData.world - 1} conquis !`;
-    overlayText.innerHTML = `Un nouvel archipel apparaît, plus retors…<br />+${levelCoins} 🪙 · Clique pour découvrir le monde ${saveData.world}.`;
+    overlayTitle.textContent = `🏆 Archipel ${saveData.world - 1} : GAGNÉ. Beaucoup.`;
+    overlayText.innerHTML = `« On a rendu cet archipel great again. »<br />Un nouvel archipel apparaît, plus retors…<br />+${levelCoins} 💵 · Clique pour découvrir le monde ${saveData.world}.`;
   }
 }
 
@@ -1117,8 +1189,10 @@ function die(): void {
   state = "dead";
   shake = 8;
   burst(px, py, "#ffc93c", 14, 130);
-  overlayTitle.textContent = "K.O. 💥";
-  overlayText.innerHTML = `Les pièces sont gardées (${Math.floor(saveData.coins)} 🪙).<br />Clique pour revenir à la carte.`;
+  overlayTitle.textContent = "FAKE NEWS ! 💥";
+  overlayText.innerHTML =
+    "Le Président ne perd jamais : il fait une pause stratégique.<br />" +
+    `Le trésor de campagne est intact (${Math.floor(saveData.coins)} 💵).<br />Clique pour revenir à la carte.`;
   overlay.classList.remove("hidden");
 }
 
@@ -1136,7 +1210,7 @@ function renderShop(): void {
       btn.disabled = true;
     } else {
       const price = u.price(lvl);
-      btn.innerHTML = `${u.emoji} <strong>${u.name}</strong> ${"▮".repeat(lvl)}${"▯".repeat(u.max - lvl)} — ${price} 🪙<br /><small>${u.desc}</small>`;
+      btn.innerHTML = `${u.emoji} <strong>${u.name}</strong> ${"▮".repeat(lvl)}${"▯".repeat(u.max - lvl)} — ${price} 💵<br /><small>${u.desc}</small>`;
       btn.disabled = saveData.coins < price;
       btn.addEventListener("click", () => {
         if (saveData.coins < price) return;
@@ -1152,12 +1226,17 @@ function renderShop(): void {
   }
 }
 
+// la boutique s'ouvre depuis la carte ET en pleine partie (le jeu se met en pause)
 btnShop.addEventListener("click", () => {
-  if (state !== "map") return;
+  if (state !== "map" && state !== "play") return;
+  if (state === "play") paused = true;
   renderShop();
   shopEl.classList.remove("hidden");
 });
-btnCloseShop.addEventListener("click", () => shopEl.classList.add("hidden"));
+btnCloseShop.addEventListener("click", () => {
+  shopEl.classList.add("hidden");
+  if (state === "play") paused = false;
+});
 
 // ---------- simulation ----------
 
@@ -1236,7 +1315,13 @@ function step(dt: number): void {
   if (jumpBuf > 0) jumpBuf -= dt;
   if (landT > 0) landT -= dt;
   if (dashCd > 0) dashCd -= dt;
+  if (speechT > 0) speechT -= dt;
   jumpAnimT += dt;
+
+  // ↓ près du pupitre : le Président improvise un discours
+  if (keys.has("ArrowDown") && lastPodium && speechT <= 0 && Math.abs(px - lastPodium.x) < 26 && Math.abs(py - lastPodium.y) < 40) {
+    speak(lastPodium.x, lastPodium.y - T * 2.2, pick(CHECKPOINT_QUOTES));
+  }
 
   // ---- entrées ----
   let dir = 0;
@@ -1260,7 +1345,7 @@ function step(dt: number): void {
     for (const wz of level.winds) {
       if (px > wz.x && px < wz.x + wz.w && py > wz.y && py < wz.y + wz.h) {
         pvy -= 1500 * dt;
-        if (Math.random() < 0.3) particles.push({ x: wz.x + Math.random() * wz.w, y: py + 30, vx: 0, vy: -120, life: 0.4, max: 0.4, size: 1.5, color: "#ffffff88", grav: 0 });
+        if (Math.random() < 0.3) particles.push({ x: wz.x + Math.random() * wz.w, y: py + 30, vx: 0, vy: -120, life: 0.4, max: 0.4, size: 1.5, color: "#7ae58288", grav: 0 });
       }
     }
     pvy = Math.max(-430, Math.min(430, pvy));
@@ -1367,10 +1452,11 @@ function step(dt: number): void {
         jumpAnimT = 0;
         burst((tx + 0.5) * T, ty * T, "#ff5c8a", 6, 90);
       } else if (t === Tile.Checkpoint) {
+        lastPodium = { x: (tx + 0.5) * T, y: (ty + 1) * T };
         if (checkpointX !== (tx + 0.5) * T) {
           checkpointX = (tx + 0.5) * T;
           checkpointY = (ty + 0.5) * T;
-          toast("🚩 Checkpoint !");
+          speak(checkpointX, ty * T - 6, pick(CHECKPOINT_QUOTES));
           burst(checkpointX, checkpointY, "#1fc7a8", 8, 80);
         }
       } else if (t === Tile.GravOrb) {
@@ -1380,7 +1466,7 @@ function step(dt: number): void {
         shake = 3;
         freeze = Math.max(freeze, 0.04);
         burst((tx + 0.5) * T, (ty + 0.5) * T, "#63e6be", 14, 120);
-        toast(gdir < 0 ? "🔮 Gravité inversée !" : "🔮 Gravité rétablie !");
+        toast(gdir < 0 ? "🚀 TO THE MOON ! Gravité inversée !" : "📉 Krach ! Gravité rétablie !");
       } else if (t === Tile.Exit) {
         finishLevel(false);
         return;
@@ -1473,6 +1559,18 @@ function drawBackground(b: BiomeDef, biome: Biome): void {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
+  // décor peint du monde, répété en parallaxe douce
+  const bgImg = BGS[biome];
+  if (imgReady(bgImg)) {
+    const s = H / bgImg.naturalHeight;
+    const bw = bgImg.naturalWidth * s;
+    const off = -((camX * zoom * 0.25) % bw);
+    for (let x = off; x < W; x += bw) ctx.drawImage(bgImg, x, 0, bw, H);
+    ctx.fillStyle = "rgba(10, 12, 30, 0.16)";
+    ctx.fillRect(0, 0, W, H);
+    return;
+  }
+
   // soleil / lune
   ctx.fillStyle = biome === "cristal" ? "#e6dbff" : "#fff3c4";
   ctx.beginPath();
@@ -1562,77 +1660,108 @@ function drawTiles(b: BiomeDef): void {
         ctx.fill();
       } else if (t === Tile.Spring) {
         const sq = Math.abs(Math.sin(now * 3 + tx)) * 2;
-        ctx.fillStyle = "#c0392b";
-        ctx.fillRect(x + 2, y + 8 + sq, T - 4, 8 - sq);
-        ctx.fillStyle = "#fffdf4";
-        ctx.fillRect(x + 2, y + 6 + sq, T - 4, 3);
+        if (!drawImgH(PROPS.cap, x + T / 2, y + T, 13 - sq * 0.5)) {
+          ctx.fillStyle = "#c0392b";
+          ctx.fillRect(x + 2, y + 8 + sq, T - 4, 8 - sq);
+          ctx.fillStyle = "#fffdf4";
+          ctx.fillRect(x + 2, y + 6 + sq, T - 4, 3);
+        }
       } else if (t === Tile.Exit) {
-        // drapeau d'arrivée
-        ctx.fillStyle = "#4a445f";
-        ctx.fillRect(x + 6, y - T * 2, 3, T * 3);
-        ctx.fillStyle = "#ffc93c";
-        const wave = Math.sin(now * 4) * 2;
-        ctx.beginPath();
-        ctx.moveTo(x + 9, y - T * 2);
-        ctx.lineTo(x + 9 + 14, y - T * 2 + 5 + wave);
-        ctx.lineTo(x + 9, y - T * 2 + 10);
-        ctx.fill();
+        // drapeau de golf doré
+        if (!drawImgH(PROPS.golfflag, x + T / 2, y + T, 46)) {
+          ctx.fillStyle = "#4a445f";
+          ctx.fillRect(x + 6, y - T * 2, 3, T * 3);
+          ctx.fillStyle = "#ffc93c";
+          const wave = Math.sin(now * 4) * 2;
+          ctx.beginPath();
+          ctx.moveTo(x + 9, y - T * 2);
+          ctx.lineTo(x + 9 + 14, y - T * 2 + 5 + wave);
+          ctx.lineTo(x + 9, y - T * 2 + 10);
+          ctx.fill();
+        }
       } else if (t === Tile.SecretExit) {
         const tw = now * 5;
-        ctx.fillStyle = `rgba(255, 201, 60, ${0.6 + 0.4 * Math.sin(tw)})`;
-        ctx.beginPath();
-        const cx = x + T / 2;
-        const cy = y + T / 2;
-        for (let i = 0; i < 5; i++) {
-          const a = (i * 2 * Math.PI) / 5 - Math.PI / 2 + tw / 8;
-          const r1 = 7;
-          const r2 = 3;
-          ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
-          ctx.lineTo(cx + Math.cos(a + Math.PI / 5) * r2, cy + Math.sin(a + Math.PI / 5) * r2);
+        // halo doré + escalator secret
+        const gg = ctx.createRadialGradient(x + T / 2, y + T / 2, 2, x + T / 2, y + T / 2, 16);
+        gg.addColorStop(0, `rgba(255, 224, 102, ${0.35 + 0.2 * Math.sin(tw)})`);
+        gg.addColorStop(1, "rgba(255, 224, 102, 0)");
+        ctx.fillStyle = gg;
+        ctx.fillRect(x - 10, y - 10, T + 20, T + 20);
+        if (!drawImgH(PROPS.escalator, x + T / 2, y + T, 26)) {
+          ctx.fillStyle = `rgba(255, 201, 60, ${0.6 + 0.4 * Math.sin(tw)})`;
+          ctx.beginPath();
+          const cx = x + T / 2;
+          const cy = y + T / 2;
+          for (let i = 0; i < 5; i++) {
+            const a = (i * 2 * Math.PI) / 5 - Math.PI / 2 + tw / 8;
+            ctx.lineTo(cx + Math.cos(a) * 7, cy + Math.sin(a) * 7);
+            ctx.lineTo(cx + Math.cos(a + Math.PI / 5) * 3, cy + Math.sin(a + Math.PI / 5) * 3);
+          }
+          ctx.fill();
         }
-        ctx.fill();
       } else if (t === Tile.Checkpoint) {
-        ctx.fillStyle = "#4a445f";
-        ctx.fillRect(x + 6, y - T, 2, T * 2);
-        ctx.fillStyle = "#1fc7a8";
-        ctx.beginPath();
-        ctx.moveTo(x + 8, y - T);
-        ctx.lineTo(x + 8 + 10, y - T + 4);
-        ctx.lineTo(x + 8, y - T + 8);
-        ctx.fill();
+        if (!drawImgH(PROPS.podium, x + T / 2, y + T, 24)) {
+          ctx.fillStyle = "#4a445f";
+          ctx.fillRect(x + 6, y - T, 2, T * 2);
+          ctx.fillStyle = "#1fc7a8";
+          ctx.beginPath();
+          ctx.moveTo(x + 8, y - T);
+          ctx.lineTo(x + 8 + 10, y - T + 4);
+          ctx.lineTo(x + 8, y - T + 8);
+          ctx.fill();
+        }
       } else if (t === Tile.GravOrb) {
-        const pulse = 1 + Math.sin(now * 5 + tx) * 0.15;
-        ctx.fillStyle = "#63e6be";
-        ctx.beginPath();
-        ctx.arc(x + T / 2, y + T / 2, 5 * pulse, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#2b8a6e";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(x + T / 2, y + T / 2, 7 * pulse, 0.3, Math.PI * 1.4);
-        ctx.stroke();
+        const pulse = 1 + Math.sin(now * 5 + tx) * 0.12;
+        if (!drawImgH(PROPS.cryptocoin, x + T / 2, y + T / 2 + 8, 16 * pulse)) {
+          ctx.fillStyle = "#63e6be";
+          ctx.beginPath();
+          ctx.arc(x + T / 2, y + T / 2, 5 * pulse, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#2b8a6e";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(x + T / 2, y + T / 2, 7 * pulse, 0.3, Math.PI * 1.4);
+          ctx.stroke();
+        }
       }
     }
   }
 
-  // courants d'air (biome vent)
+  // planche à billets : des dollars montent des fosses (biome vent)
   for (const wz of level.winds) {
     if (wz.x + wz.w < camX || wz.x > camX + W / zoom) continue;
-    ctx.strokeStyle = "rgba(255,255,255,0.35)";
-    ctx.lineWidth = 1.5;
+    ctx.fillStyle = "rgba(122, 229, 130, 0.85)";
+    ctx.font = "8px monospace";
+    ctx.textAlign = "center";
     for (let i = 0; i < 3; i++) {
-      const yy = wz.y + ((now * 90 + i * 40 + wz.x * 3) % wz.h);
-      const wx = wz.x + wz.w / 2 + Math.sin(now * 3 + i) * 3;
-      ctx.beginPath();
-      ctx.moveTo(wx, wz.y + wz.h - (yy - wz.y));
-      ctx.lineTo(wx, wz.y + wz.h - (yy - wz.y) - 8);
-      ctx.stroke();
+      const prog = (now * 55 + i * 41 + wz.x * 5) % wz.h;
+      const wx = wz.x + wz.w / 2 + Math.sin(now * 3 + i + wz.x) * 3;
+      ctx.fillText("$", wx, wz.y + wz.h - prog);
     }
   }
 }
 
 function drawEnemy(e: Enemy, b: BiomeDef): void {
   const now = performance.now() / 1000;
+  // sprites thématiques : télé FAKE, drone-espion, dossier SUBPOENA
+  const sprite = e.kind === "walker" ? PROPS.fakenews : e.kind === "flyer" ? PROPS.drone : PROPS.subpoena;
+  if (imgReady(sprite)) {
+    const h = e.kind === "flyer" ? 18 : 21;
+    const w = (sprite.naturalWidth / sprite.naturalHeight) * h;
+    const bob = e.kind === "flyer" ? Math.sin(now * 9 + e.phase) * 2 : Math.abs(Math.sin(now * 6 + e.phase)) * 1.5;
+    const rot = e.kind === "spiky" ? Math.sin(now * 4 + e.phase) * 0.12 : 0;
+    ctx.save();
+    ctx.translate(Math.round(e.x), Math.round(e.y - bob));
+    if (e.dead > 0) {
+      ctx.scale(1.3, 0.4);
+      ctx.globalAlpha = Math.min(1, e.dead / 0.2);
+    }
+    if (rot !== 0) ctx.rotate(rot);
+    ctx.scale(e.dir < 0 ? -1 : 1, 1);
+    ctx.drawImage(sprite, -w / 2, -h / 2, w, h);
+    ctx.restore();
+    return;
+  }
   ctx.save();
   ctx.translate(Math.round(e.x), Math.round(e.y));
   if (e.dead > 0) {
@@ -1784,6 +1913,44 @@ function drawLevel(): void {
     ctx.fillText(f.txt, f.x, f.y);
   }
   ctx.globalAlpha = 1;
+
+  // bulle de discours du pupitre
+  if (speechT > 0) {
+    ctx.globalAlpha = Math.min(1, speechT / 0.4);
+    ctx.font = "7px 'VT323', monospace";
+    const words = speechTxt.split(" ");
+    const lines: string[] = [];
+    let line = "";
+    for (const w2 of words) {
+      if ((line + " " + w2).trim().length > 26) {
+        lines.push(line.trim());
+        line = w2;
+      } else line = `${line} ${w2}`;
+    }
+    if (line.trim()) lines.push(line.trim());
+    const bw = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 10;
+    const bh = lines.length * 8 + 7;
+    const bx = Math.max(camX + 4, Math.min(camX + W / zoom - bw - 4, speechX - bw / 2));
+    const by = speechY - bh - 6;
+    ctx.fillStyle = "#fffdf4";
+    ctx.strokeStyle = "#17141f";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 3);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(speechX - 3, by + bh);
+    ctx.lineTo(speechX, by + bh + 5);
+    ctx.lineTo(speechX + 3, by + bh);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#17141f";
+    ctx.textAlign = "left";
+    lines.forEach((l, i) => ctx.fillText(l, bx + 5, by + 9 + i * 8));
+    ctx.globalAlpha = 1;
+  }
 
   ctx.restore();
 
