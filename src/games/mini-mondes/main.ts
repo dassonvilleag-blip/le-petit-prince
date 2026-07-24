@@ -225,7 +225,9 @@ function genMap(seed: number): void {
     const row: MapNode[] = [];
     const n = layerCounts[li];
     for (let i = 0; i < n; i++) {
-      const biome = li === 0 ? "prairie" : biomes[Math.min(2, Math.floor((li - 1 + rnd() * 1.4) / 1.4))];
+      const pools: Biome[][] = [["prairie"], ["prairie", "prairie", "vent"], ["prairie", "vent", "cristal"], ["vent", "cristal", "cristal"], ["cristal"]];
+      const biome = pick(pools[Math.min(li, pools.length - 1)]);
+      void biomes;
       row.push({
         id: id++,
         x: (li + 0.5) / layerCounts.length + (rnd() - 0.5) * 0.05,
@@ -275,6 +277,23 @@ function genMap(seed: number): void {
     from.secretTo = bonusNode.id;
     flat.push(bonusNode);
   }
+  // espacement : on écarte les nœuds trop proches pour une carte lisible
+  for (let iter = 0; iter < 60; iter++) {
+    for (const a of flat) {
+      for (const other of flat) {
+        if (a === other) continue;
+        const dx = (a.x - other.x) * 1.7;
+        const dy = a.y - other.y;
+        const d = Math.hypot(dx, dy);
+        if (d < 0.17 && d > 0.0001) {
+          const push = (0.17 - d) / 2;
+          a.y += (dy / d) * push;
+          other.y -= (dy / d) * push;
+        }
+      }
+    }
+    for (const a of flat) a.y = Math.max(0.05, Math.min(0.95, a.y));
+  }
   nodes = flat;
 }
 
@@ -298,173 +317,71 @@ function unlocked(n: MapNode): boolean {
 // légende des chunks : # sol, = plateforme pleine, - plateforme traversable,
 // ^ pique, o pièce, S ressort, w marcheur, f volant, k épineux,
 // C checkpoint, E sortie, X sortie secrète, G orbe de gravité, . vide
+//
+// Conventions de continuité : le sol est praticable en bas de chaque chunk,
+// et la « route haute » a des ancrages vers la ligne 4 près des deux bords,
+// pour qu'on puisse rester en haut d'un chunk à l'autre.
 
-const CHUNK_START = [
+interface Chunk {
+  d: number; // difficulté 1-3
+  rows: string[];
+}
+
+const CHUNK_START: string[] = [
   "....................",
   "....................",
   "....................",
   "....................",
+  "..............=====.",
   "....................",
   "....................",
+  ".......----.........",
   "....................",
-  "....................",
-  "....................",
-  "......o.o...........",
-  "....................",
+  "..........o.o.......",
+  "....----............",
   "....................",
   "....................",
   "####################",
   "####################",
 ];
 
-const CHUNK_END = [
+const CHUNK_END: string[] = [
   "....................",
+  "....................",
+  "....................",
+  "....................",
+  "===.................",
+  "....................",
+  ".....----...........",
   "....................",
   "....................",
   "........o...........",
-  "......-----.........",
-  "....................",
-  "....................",
-  "...o.o..............",
-  "..------............",
-  "....................",
+  "....----............",
   "....................",
   "..................E.",
-  "....................",
   "####################",
   "####################",
 ];
 
-const CHUNKS_MID = [
-  [
-    // routes haute et basse, piques au sol
-    "....................",
-    "....................",
-    "....o..o..o.........",
-    "...=========........",
-    "....................",
-    "................o...",
-    "..............====..",
-    ".....o..............",
-    "....---.......f.....",
-    "....................",
-    "..w........w........",
-    "....................",
-    "......^^^...........",
-    "####################",
-    "####################",
-  ],
-  [
-    // fosse centrale, pont haut
-    "....................",
-    "....................",
-    "......o.o.o.o.......",
-    ".....=========......",
-    "....................",
-    "....................",
-    "...o.............o..",
-    "..---..........---..",
-    "....................",
-    "........f...........",
-    "....................",
-    "..w.................",
-    "......S.............",
-    "######........######",
-    "######........######",
-  ],
-  [
-    // escalier + épineux au sommet
-    "....................",
-    "....................",
-    "....................",
-    "..........o.k.o.....",
-    ".........========...",
-    "....................",
-    "......o.............",
-    ".....====...........",
-    "...o................",
-    "..===...............",
-    "...............w....",
-    "....................",
-    "....................",
-    "####################",
-    "####################",
-  ],
-  [
-    // tunnel à trois étages (plateformes traversables)
-    "....................",
-    "....o...o...o...o...",
-    "..----------------..",
-    "....................",
-    "....................",
-    "..w...........k.....",
-    "..----------------..",
-    "....................",
-    "....................",
-    "......o...o.........",
-    "..----------------..",
-    "....................",
-    "..........w.........",
-    "####################",
-    "####################",
-  ],
-  [
-    // piliers et ressorts
-    "....................",
-    "....................",
-    "....o.....o.....o...",
-    "....................",
-    "...===..............",
-    "..........===.......",
-    "....................",
-    "................===.",
-    "....................",
-    "...S................",
-    "......##......##....",
-    "......##..w...##....",
-    "......##......##....",
-    "######################".slice(0, 20),
-    "####################",
-  ],
-  [
-    // plaine ouverte, plateformes flottantes
-    "....................",
-    "....................",
-    "....................",
-    "........o...........",
-    ".......-----........",
-    "....................",
-    "..o.............o...",
-    "..----.........----.",
-    "..........f.........",
-    "....................",
-    "....................",
-    ".....w.......w......",
-    "....................",
-    "####################",
-    "####################",
-  ],
-];
-
-const CHUNK_CHECKPOINT = [
+const CHUNK_CHECKPOINT: string[] = [
   "....................",
+  "....................",
+  "....................",
+  "....o..........o....",
+  "===.====....===..===",
   "....................",
   "....................",
   "....................",
   "........o.o.........",
-  ".......------.......",
-  "....................",
-  "....................",
+  ".......-----........",
   "....................",
   "....................",
   "..........C.........",
-  "....................",
-  "....^^..............",
   "####################",
   "####################",
 ];
 
-const CHUNK_SECRET = [
+const CHUNK_SECRET: string[] = [
   "..........o.X.......",
   ".........=====......",
   "....................",
@@ -482,60 +399,343 @@ const CHUNK_SECRET = [
   "####################",
 ];
 
-// chunks cristal : sol ET plafond, l'orbe de gravité ouvre la route du haut
-const CHUNKS_CRISTAL = [
-  [
-    "####################",
-    "####################",
-    "......o...o...o.....",
-    "....................",
-    "....................",
-    "....................",
-    "........G...........",
-    "....................",
-    "....................",
-    "..w.......w.........",
-    "....................",
-    "....................",
-    "......^^............",
-    "####################",
-    "####################",
-  ],
-  [
-    "####################",
-    "####################",
-    "...o.............o..",
-    "....................",
-    "..........G.........",
-    "....................",
-    "......o.o.o.........",
-    ".....=======........",
-    "....................",
-    "....................",
-    "............w.......",
-    "....................",
-    "....k...............",
-    "######........######",
-    "######........######",
-  ],
-  [
-    "####################",
-    "####################",
-    ".....o..o..o..o.....",
-    "....................",
-    "....................",
-    "...G............G...",
-    "....................",
-    "....................",
-    "........====........",
-    "....o...........o...",
-    "....................",
-    "..w..........w......",
-    "....................",
-    "####################",
-    "####################",
-  ],
+const CHUNKS_MID: Chunk[] = [
+  {
+    // la pyramide : colline à gravir, coins en arc, route haute continue
+    d: 1,
+    rows: [
+      "....................",
+      "....................",
+      "....................",
+      "....o..........o....",
+      "...=====......=====.",
+      "....................",
+      "........o..o........",
+      ".......o....o.......",
+      "....................",
+      ".........##.........",
+      "........####........",
+      ".......######.......",
+      "..w...########....w.",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // le sous-bois : trois étages traversables, trouées pour grimper
+    d: 1,
+    rows: [
+      "....................",
+      "...o....o....o......",
+      ".------------------.",
+      "....................",
+      "......k.............",
+      ".----------....-----",
+      "..........o.o.......",
+      "....................",
+      "-----....-----------",
+      "...o......o.........",
+      "....................",
+      "..w.........w...----",
+      "....................",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // le gouffre : fosse large, îlot au milieu, pont tout en haut
+    d: 2,
+    rows: [
+      "....................",
+      "....................",
+      ".....o.o.o.o.o......",
+      "....=========.......",
+      "....................",
+      "===..............===",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      ".......f............",
+      "......##............",
+      "....o......o........",
+      "####......##########",
+      "####......##########",
+    ],
+  },
+  {
+    // la tour : échelle de plateformes traversables, gardien épineux
+    d: 2,
+    rows: [
+      "....................",
+      "....................",
+      "......o.o.o.........",
+      ".....------.........",
+      "===...........=====.",
+      ".......k............",
+      "....------..........",
+      "....................",
+      "....................",
+      "......------........",
+      "....................",
+      "....................",
+      "...------......w....",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // les falaises : plateau à escalader, ressort pour remonter
+    d: 2,
+    rows: [
+      "....................",
+      "....................",
+      "....................",
+      "........o.o.o.......",
+      "===..............===",
+      ".........----.......",
+      "....................",
+      "....................",
+      "..........w.........",
+      "........########....",
+      "........########....",
+      "....##..########....",
+      "....##..########.S..",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // le canyon à ressorts : piliers infranchissables sans bondir
+    d: 2,
+    rows: [
+      "....................",
+      "....................",
+      "......o......o......",
+      ".........f..........",
+      "===..............===",
+      "....................",
+      "....##......##......",
+      "....##......##......",
+      "....##..o...##......",
+      "....##......##......",
+      "....##......##......",
+      "....##......##......",
+      "..S.##..S...##..S...",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // le sprint : gouffre trop large pour un saut — dash, vent ou route haute
+    d: 2,
+    rows: [
+      "....................",
+      "....................",
+      "....................",
+      "........o.o.........",
+      "===..............===",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "............o.......",
+      ".........o..........",
+      "#######........#####",
+      "#######........#####",
+    ],
+  },
+  {
+    // le marais : piques au sol, ponts fragiles, route haute salvatrice
+    d: 3,
+    rows: [
+      "....................",
+      "....................",
+      "....o...o...o...o...",
+      "..----------------..",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "..........f.........",
+      "....................",
+      "....................",
+      "....------..------..",
+      "....^^^^......^^^^..",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // les ruines : vestiges flottants, pièces au sommet
+    d: 3,
+    rows: [
+      "....................",
+      "....................",
+      "....................",
+      "..o.o....o.o....o.o.",
+      ".====...====...====.",
+      "....................",
+      "....................",
+      "..........o.........",
+      "........====........",
+      "....................",
+      "....................",
+      "..====......====....",
+      "......k....w........",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // la descente piégée : on entre par le haut, piques en contrebas
+    d: 3,
+    rows: [
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "===........===...===",
+      "....................",
+      "......===...........",
+      "....................",
+      "...===..............",
+      "....................",
+      "..........===.......",
+      "..........w.........",
+      ".....^^^........^^^.",
+      "####################",
+      "####################",
+    ],
+  },
 ];
+
+// chunks cristal : sol ET plafond, les orbes 🔮 font le lien entre les deux.
+// Chaque orbe est atteignable depuis la surface d'où on arrive.
+const CHUNKS_CRISTAL: Chunk[] = [
+  {
+    // le mur : infranchissable au sol, l'orbe ouvre la voie du plafond
+    d: 1,
+    rows: [
+      "####################",
+      "####################",
+      "....o....o....o.....",
+      "....................",
+      "...............G....",
+      "....................",
+      "..........#.........",
+      "..........#.........",
+      "..........#.........",
+      "..........#.........",
+      ".....G....#.........",
+      "..w.......#....w....",
+      "..........#.........",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // le tapis de piques : le sol brûle, le plafond sauve
+    d: 2,
+    rows: [
+      "####################",
+      "####################",
+      "..o..o..o..o..o.....",
+      "....................",
+      "................G...",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "..G.................",
+      "....................",
+      "....^^^^^^^^^^......",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // le tissage : deux orbes, plateformes suspendues au milieu
+    d: 2,
+    rows: [
+      "####################",
+      "####################",
+      "....o..........o....",
+      "...........G........",
+      "....................",
+      ".......====.........",
+      "....o..........o....",
+      "........====........",
+      "....................",
+      ".......G............",
+      "....................",
+      "...w........w.......",
+      "......^^............",
+      "####################",
+      "####################",
+    ],
+  },
+  {
+    // la traversée : fosse au sol, on passe par le plafond
+    d: 3,
+    rows: [
+      "####################",
+      "####################",
+      "...o.o.o.o.o.o......",
+      "....................",
+      "..............G.....",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "....................",
+      "...G................",
+      "....................",
+      "....................",
+      "#####..........#####",
+      "#####..........#####",
+    ],
+  },
+  {
+    // la boucle : pièces des deux côtés du monde
+    d: 1,
+    rows: [
+      "####################",
+      "####################",
+      "...o...o...o...o....",
+      "....................",
+      ".........G..........",
+      "....................",
+      "......=======.......",
+      "....................",
+      "....o...o...o...o...",
+      "....................",
+      "..........G.........",
+      "..w..........w......",
+      "....................",
+      "####################",
+      "####################",
+    ],
+  },
+];
+
+// garde-fou : un chunk mal formé est un bug silencieux pénible à voir en jeu
+for (const [name, rowsList] of [
+  ["start", [CHUNK_START]],
+  ["end", [CHUNK_END]],
+  ["checkpoint", [CHUNK_CHECKPOINT]],
+  ["secret", [CHUNK_SECRET]],
+  ["mid", CHUNKS_MID.map((c) => c.rows)],
+  ["cristal", CHUNKS_CRISTAL.map((c) => c.rows)],
+] as [string, string[][]][]) {
+  for (const rows of rowsList) {
+    if (rows.length !== LEVEL_H) console.error(`chunk ${name}: ${rows.length} lignes au lieu de ${LEVEL_H}`);
+    for (const r of rows) if (r.length !== CHUNK_W) console.error(`chunk ${name}: ligne « ${r} » fait ${r.length} colonnes`);
+  }
+}
 
 const enum Tile {
   Empty = 0,
@@ -608,9 +808,16 @@ function genLevel(node: MapNode, seed: number): Level {
 
   const chunkList: string[][] = [CHUNK_START];
   const mids: string[][] = [];
-  for (let i = 0; i < midCount; i++) mids.push(pick(midPool));
+  for (let i = 0; i < midCount; i++) {
+    // montée en difficulté : début doux, fin qui mord (et mondes suivants plus durs)
+    const ramp = 1 + Math.floor((i / Math.max(1, midCount - 1)) * 2) + Math.floor((saveData.world - 1) / 2);
+    const allowed = midPool.filter((c) => c.d <= ramp);
+    const prev = mids[mids.length - 1];
+    const cands = allowed.filter((c) => c.rows !== prev);
+    mids.push((cands.length ? pick(cands) : pick(allowed)).rows);
+  }
   // un checkpoint au milieu, et la salle secrète quelque part (pas en bonus)
-  mids.splice(Math.floor(midCount / 2), 0, isCristal ? pick(CHUNKS_CRISTAL) : CHUNK_CHECKPOINT);
+  mids.splice(Math.floor(midCount / 2), 0, isCristal ? pick(CHUNKS_CRISTAL).rows : CHUNK_CHECKPOINT);
   const hasSecret = !node.bonus && node.secretTo !== null;
   if (hasSecret) mids.splice(rndInt(1, mids.length - 1), 0, CHUNK_SECRET);
   chunkList.push(...mids, CHUNK_END);
@@ -1598,109 +1805,162 @@ function drawLevel(): void {
 // ---------- rendu de la carte ----------
 
 function mapNodePos(n: MapNode): [number, number] {
-  return [W * 0.08 + n.x * W * 0.84, H * 0.16 + n.y * H * 0.66];
+  return [W * 0.1 + n.x * W * 0.8, H * 0.2 + n.y * H * 0.64];
 }
 
 function drawMap(): void {
-  // fond parchemin nocturne
+  const now = performance.now() / 1000;
+  // océan
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, "#1d2b53");
-  g.addColorStop(1, "#3a2b66");
+  g.addColorStop(0, "#2a7fc2");
+  g.addColorStop(1, "#0e4a86");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
-  const now = performance.now() / 1000;
-  // étoiles
-  for (let i = 0; i < 40; i++) {
-    const sx = hash2(i, 1) * W;
-    const sy = hash2(i, 2) * H * 0.5;
-    ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.5 * Math.abs(Math.sin(now + i))})`;
-    ctx.fillRect(sx, sy, 2, 2);
+  // vaguelettes qui dérivent
+  ctx.strokeStyle = "rgba(255,255,255,0.14)";
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 26; i++) {
+    const wy = hash2(i, 9) * H;
+    const wx = ((hash2(i, 4) * W + now * 12) % (W + 60)) - 30;
+    ctx.beginPath();
+    ctx.arc(wx, wy, 7, Math.PI * 0.15, Math.PI * 0.85);
+    ctx.stroke();
   }
 
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#fffdf4";
-  ctx.font = "bold 26px 'Pixelify Sans', monospace";
-  ctx.fillText(`Monde ${saveData.world}`, W / 2, 44);
-  ctx.font = "15px 'VT323', monospace";
-  ctx.fillStyle = "#c9c3e6";
-  ctx.fillText("←→↑↓ choisir · Entrée / clic jouer · ⭐ = secret trouvé", W / 2, 68);
-
-  // arêtes
+  // routes maritimes en pointillés courbes
   for (const n of nodes) {
+    if (n.bonus && !nodes.some((p) => p.secretTo === n.id && saveData.secrets.includes(p.id))) continue;
     const [x1, y1] = mapNodePos(n);
-    for (const eid of n.edges) {
-      const [x2, y2] = mapNodePos(nodeById(eid));
-      ctx.strokeStyle = saveData.done.includes(n.id) ? "#ffc93c" : "rgba(255,255,255,0.25)";
-      ctx.lineWidth = 3;
-      ctx.setLineDash([6, 6]);
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-    }
-    if (n.secretTo !== null && saveData.secrets.includes(n.id)) {
-      const [x2, y2] = mapNodePos(nodeById(n.secretTo));
-      ctx.strokeStyle = "#ffe066";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([2, 5]);
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
+    const links: { to: MapNode; secret: boolean }[] = n.edges.map((eid) => ({ to: nodeById(eid), secret: false }));
+    if (n.secretTo !== null && saveData.secrets.includes(n.id)) links.push({ to: nodeById(n.secretTo), secret: true });
+    for (const { to, secret } of links) {
+      if (to.bonus && !secret) continue; // l'île bonus n'est reliée que par sa route secrète
+      const [x2, y2] = mapNodePos(to);
+      const mx = (x1 + x2) / 2 - (y2 - y1) * 0.18;
+      const my = (y1 + y2) / 2 + (x2 - x1) * 0.18;
+      const open = saveData.done.includes(n.id) || n.layer === 0 || n.bonus;
+      const steps = Math.max(6, Math.floor(Math.hypot(x2 - x1, y2 - y1) / 24));
+      for (let s = 1; s < steps; s++) {
+        const t = s / steps;
+        const bx = (1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * mx + t * t * x2;
+        const by = (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * my + t * t * y2;
+        ctx.fillStyle = secret ? "#ffe066" : open ? "#ffeec9" : "rgba(255,255,255,0.22)";
+        ctx.beginPath();
+        ctx.arc(bx, by, secret ? 2.5 : 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
-  ctx.setLineDash([]);
 
-  // nœuds
+  // îles
   for (const n of nodes) {
-    if (n.bonus && !nodes.some((p) => p.secretTo === n.id && saveData.secrets.includes(p.id))) continue; // caché tant que non découvert
+    if (n.bonus && !nodes.some((p) => p.secretTo === n.id && saveData.secrets.includes(p.id))) continue;
     const [x, y] = mapNodePos(n);
     const b = BIOMES[n.biome];
     const isUnlocked = unlocked(n);
     const isDone = saveData.done.includes(n.id);
     const isSel = mapSel === n.id;
-    ctx.fillStyle = isUnlocked ? b.top : "#3d3d55";
-    ctx.strokeStyle = isSel ? "#fffdf4" : "#17141f";
-    ctx.lineWidth = isSel ? 4 : 2;
+    const r = n.final ? 36 : 27;
+    if (isSel) {
+      ctx.strokeStyle = `rgba(255,253,244,${0.55 + 0.4 * Math.sin(now * 5)})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(x, y + 6, r + 10, (r + 10) * 0.6, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // plage puis relief du biome
+    ctx.fillStyle = "#e8d5a3";
     ctx.beginPath();
-    if (n.final) {
-      // château final
-      ctx.rect(x - 16, y - 14, 32, 28);
-    } else if (n.bonus) {
-      for (let i = 0; i < 5; i++) {
-        const a = (i * 2 * Math.PI) / 5 - Math.PI / 2;
-        ctx.lineTo(x + Math.cos(a) * 14, y + Math.sin(a) * 14);
-        ctx.lineTo(x + Math.cos(a + Math.PI / 5) * 6, y + Math.sin(a + Math.PI / 5) * 6);
-      }
-      ctx.closePath();
-    } else {
-      ctx.arc(x, y, 13, 0, Math.PI * 2);
-    }
+    ctx.ellipse(x, y + 8, r, r * 0.55, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
+    ctx.fillStyle = isUnlocked ? b.top : "#6d7787";
+    ctx.beginPath();
+    ctx.ellipse(x, y + 2, r * 0.82, r * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (isUnlocked) {
+      if (n.final) {
+        ctx.font = "28px serif";
+        ctx.textAlign = "center";
+        ctx.fillText("🏰", x, y - 2);
+      } else if (n.bonus) {
+        ctx.font = "18px serif";
+        ctx.textAlign = "center";
+        ctx.fillText("⭐", x, y + 2);
+      } else if (n.biome === "prairie") {
+        // petits arbres ronds
+        ctx.fillStyle = "#3e5f2a";
+        ctx.fillRect(x - 9, y - 10, 3, 9);
+        ctx.fillRect(x + 7, y - 7, 3, 7);
+        ctx.fillStyle = "#57c04c";
+        ctx.beginPath();
+        ctx.arc(x - 8, y - 13, 7, 0, Math.PI * 2);
+        ctx.arc(x + 8, y - 9, 5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (n.biome === "vent") {
+        // mesa et cactus
+        ctx.fillStyle = "#b26b2e";
+        ctx.beginPath();
+        ctx.moveTo(x - 13, y + 2);
+        ctx.lineTo(x - 8, y - 12);
+        ctx.lineTo(x - 1, y - 12);
+        ctx.lineTo(x + 3, y + 2);
+        ctx.fill();
+        ctx.fillStyle = "#4f7942";
+        ctx.fillRect(x + 7, y - 9, 4, 11);
+        ctx.fillRect(x + 4, y - 6, 3, 3);
+      } else {
+        // cristaux
+        ctx.fillStyle = "#b79bff";
+        ctx.beginPath();
+        ctx.moveTo(x - 10, y + 2);
+        ctx.lineTo(x - 6, y - 13);
+        ctx.lineTo(x - 2, y + 2);
+        ctx.moveTo(x + 2, y + 2);
+        ctx.lineTo(x + 6, y - 8);
+        ctx.lineTo(x + 10, y + 2);
+        ctx.fill();
+        ctx.fillStyle = "#63e6be";
+        ctx.fillRect(x - 1, y - 4, 2, 2);
+      }
+    } else {
+      ctx.font = "14px serif";
+      ctx.textAlign = "center";
+      ctx.fillText("🔒", x, y + 2);
+    }
     if (isDone) {
-      ctx.fillStyle = "#17141f";
-      ctx.font = "bold 13px monospace";
-      ctx.fillText("✓", x, y + 5);
+      ctx.fillStyle = "#4a445f";
+      ctx.fillRect(x + r * 0.55, y - 18, 2, 15);
+      ctx.fillStyle = "#ffc93c";
+      ctx.beginPath();
+      ctx.moveTo(x + r * 0.55 + 2, y - 18);
+      ctx.lineTo(x + r * 0.55 + 12, y - 14);
+      ctx.lineTo(x + r * 0.55 + 2, y - 10);
+      ctx.fill();
     }
-    if (n.secretTo !== null) {
-      ctx.font = "11px serif";
-      ctx.fillText(saveData.secrets.includes(n.id) ? "⭐" : "?", x + 15, y - 10);
-    }
-    if (n.final) {
-      ctx.font = "16px serif";
-      ctx.fillText("🏰", x, y + 6);
+    if (n.secretTo !== null && !n.bonus) {
+      ctx.font = "13px serif";
+      ctx.textAlign = "center";
+      ctx.fillText(saveData.secrets.includes(n.id) ? "⭐" : "❔", x - r * 0.7, y - 12);
     }
   }
 
-  // jeton du joueur : le héros idle posé sur le nœud courant
+  // bandeau titre
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#fffdf4";
+  ctx.font = "bold 28px 'Pixelify Sans', monospace";
+  ctx.fillText(`Monde ${saveData.world}`, W / 2, 46);
+  ctx.font = "16px 'VT323', monospace";
+  ctx.fillStyle = "#cfe3f7";
+  ctx.fillText("←→↑↓ choisir · Entrée / clic jouer · ❔ secret à trouver · ⭐ trouvé", W / 2, 70);
+
+  // le héros posé sur son île
   const cur = nodeById(saveData.pos);
   const [pxm, pym] = mapNodePos(cur);
   const bob = Math.sin(now * 3) * 3;
   if (ready(SHEETS.idle)) {
-    const h = 42;
-    const w = (SHEETS.idle.cw / SHEETS.idle.ch) * h;
-    ctx.drawImage(SHEETS.idle.img, pxm - w / 2, pym - 24 - h + bob, w, h);
+    const h = 44;
+    const w2 = (SHEETS.idle.cw / SHEETS.idle.ch) * h;
+    ctx.drawImage(SHEETS.idle.img, pxm - w2 / 2, pym - 12 - h + bob, w2, h);
   }
 }
 
