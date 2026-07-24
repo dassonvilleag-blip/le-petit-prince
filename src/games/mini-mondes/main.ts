@@ -157,6 +157,15 @@ const BGS: Record<Biome, HTMLImageElement> = {
   cristal: loadImg("bg-crypto.webp"),
 };
 
+const MAP_IMGS = {
+  ocean: loadImg("map-ocean.webp"),
+  islePrairie: loadImg("isle-golf.png"),
+  isleVent: loadImg("isle-mur.png"),
+  isleCristal: loadImg("isle-crypto.png"),
+  isleFinal: loadImg("isle-maison.png"),
+  isleBonus: loadImg("isle-bonus.png"),
+};
+
 function imgReady(i: HTMLImageElement): boolean {
   return i.complete && i.naturalWidth > 0;
 }
@@ -248,9 +257,19 @@ interface MapNode {
   biome: Biome;
   bonus: boolean;
   final: boolean;
+  name: string;
   edges: number[]; // ids des nœuds suivants
   secretTo: number | null; // arête cachée débloquée par la sortie secrète
 }
+
+// noms satiriques des îles, piochés par biome
+const NODE_NAMES: Record<Biome, string[]> = {
+  prairie: ["Trou n°45", "Le Green diplomatique", "Bunker de sable (le vrai)", "Club-house VIP", "Le 19e trou"],
+  vent: ["Détroit d'Ormuz", "La Douane chinoise", "Chantier du Grand Mur", "Zone de tarifs 145 %", "La Corniche de Téhéran"],
+  cristal: ["Réserve de memecoins", "La Mine $TRUMP", "Coffre-fort offshore", "Grotte des dossiers scellés", "Le Bull Market"],
+};
+const FINAL_NAME = "La Salle de Bal dorée";
+const BONUS_NAME = "La Planque aux dossiers Epstein";
 
 let nodes: MapNode[] = [];
 
@@ -268,6 +287,9 @@ function genMap(seed: number): void {
       const pools: Biome[][] = [["prairie"], ["prairie", "prairie", "vent"], ["prairie", "vent", "cristal"], ["vent", "cristal", "cristal"], ["cristal"]];
       const biome = pick(pools[Math.min(li, pools.length - 1)]);
       void biomes;
+      const isFinal = li === layerCounts.length - 1;
+      const pool = NODE_NAMES[biome];
+      const nodeName = isFinal ? FINAL_NAME : pool[rndInt(0, pool.length - 1)];
       row.push({
         id: id++,
         x: (li + 0.5) / layerCounts.length + (rnd() - 0.5) * 0.05,
@@ -275,7 +297,8 @@ function genMap(seed: number): void {
         layer: li,
         biome,
         bonus: false,
-        final: li === layerCounts.length - 1,
+        final: isFinal,
+        name: nodeName,
         edges: [],
         secretTo: null,
       });
@@ -311,6 +334,7 @@ function genMap(seed: number): void {
       biome: from.biome,
       bonus: true,
       final: false,
+      name: BONUS_NAME,
       edges: from.edges.slice(0, 1), // le bonus permet de continuer la route
       secretTo: null,
     };
@@ -1064,6 +1088,13 @@ const CHECKPOINT_QUOTES = [
   "On fait une pause. Une pause FANTASTIQUE.",
   "Les fake news disent que je suis perdu. FAUX.",
   "Ce niveau ? Je l'ai déjà gagné. Deux fois.",
+  "On m'a mis un carton rouge à la Coupe du Monde. Annulé. Le plus beau recours de l'Histoire.",
+  "Les dossiers Epstein ? Jamais entendu parler. Niveau suivant.",
+  "J'ai fermé le détroit d'Ormuz ce matin. Rouvert pour le déjeuner. Personne d'autre ne fait ça.",
+  "La Chine paie ce niveau. 145 % de tarifs. Merci la Chine.",
+  "Bibi vient d'appeler : il ADORE ce pupitre.",
+  "L'Iran voulait ce checkpoint. C'est non.",
+  "On construit une salle de bal SUBLIME. Les affamés adorent les salles de bal.",
 ];
 const CLEAR_QUOTES = [
   "Personne ne finit les niveaux comme moi. Personne.",
@@ -1071,6 +1102,8 @@ const CLEAR_QUOTES = [
   "On vient de gagner TELLEMENT.",
   "Même le drapeau a voté pour moi.",
   "Un travail incroyable. Le meilleur travail.",
+  "Ce niveau paiera pour le Mur.",
+  "Signé, scellé, annulé — comme mon carton rouge.",
 ];
 let speechTxt = "";
 let speechT = 0;
@@ -1112,11 +1145,12 @@ function showTitle(): void {
   overlay.classList.remove("hidden");
   overlayTitle.textContent = "Les Mini-Mondes du Président";
   overlayText.innerHTML =
-    "Les fake news ont volé sa cravate porte-bonheur et l'ont cachée à la Maison-Blanche dorée.<br />" +
-    "Pour la reprendre, le Président reconquiert l'archipel : du golf de Mar-a-Lago à la Crypto-Grotte,<br />" +
-    "ramasse les billets, écrase les télés menteuses, esquive les SUBPOENA — et trouve les escalators dorés.<br />" +
+    "Les fake news ont volé sa cravate porte-bonheur et l'ont cachée dans la toute nouvelle<br />" +
+    "<strong>Salle de Bal dorée</strong> de la Maison-Blanche (un chantier magnifique — les gens adorent, certains mangent même encore).<br />" +
+    "Du golf de Mar-a-Lago au détroit d'Ormuz : ramasse les billets, écrase les télés menteuses,<br />" +
+    "esquive les dossiers SUBPOENA — et trouve les escalators dorés vers les planques secrètes.<br />" +
     "←→ courir · ↑/espace sauter · Maj/X dash · ↓ près d'un pupitre : discours.<br />" +
-    "Clique pour lancer la campagne.";
+    "Clique pour lancer la tournée de campagne.";
   hud.classList.add("hidden");
   shopEl.classList.add("hidden");
 }
@@ -1153,7 +1187,7 @@ function startLevel(node: MapNode): void {
   checkpointY = py;
   particles = [];
   floaters = [];
-  hudLevel.textContent = `${BIOMES[node.biome].name}${node.bonus ? " ★ bonus" : ""}`;
+  hudLevel.textContent = `${node.name} · ${BIOMES[node.biome].name}`;
   updateHud();
 }
 
@@ -1975,18 +2009,36 @@ function mapNodePos(n: MapNode): [number, number] {
   return [W * 0.1 + n.x * W * 0.8, H * 0.2 + n.y * H * 0.64];
 }
 
+function islandImg(n: MapNode): HTMLImageElement {
+  if (n.final) return MAP_IMGS.isleFinal;
+  if (n.bonus) return MAP_IMGS.isleBonus;
+  return n.biome === "prairie" ? MAP_IMGS.islePrairie : n.biome === "vent" ? MAP_IMGS.isleVent : MAP_IMGS.isleCristal;
+}
+
+function islandH(n: MapNode): number {
+  const base = Math.max(64, Math.min(120, Math.min(W, H) * 0.12));
+  return base * (n.final ? 1.35 : n.bonus ? 0.72 : 1);
+}
+
 function drawMap(): void {
   const now = performance.now() / 1000;
-  // océan
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, "#2a7fc2");
-  g.addColorStop(1, "#0e4a86");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-  // vaguelettes qui dérivent
-  ctx.strokeStyle = "rgba(255,255,255,0.14)";
+  // océan peint, sinon dégradé
+  if (imgReady(MAP_IMGS.ocean)) {
+    const s = Math.max(W / MAP_IMGS.ocean.naturalWidth, H / MAP_IMGS.ocean.naturalHeight);
+    const bw = MAP_IMGS.ocean.naturalWidth * s;
+    const bh = MAP_IMGS.ocean.naturalHeight * s;
+    ctx.drawImage(MAP_IMGS.ocean, (W - bw) / 2, (H - bh) / 2, bw, bh);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#2a7fc2");
+    g.addColorStop(1, "#0e4a86");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+  // reflets animés par-dessus l'océan
+  ctx.strokeStyle = "rgba(255,255,255,0.12)";
   ctx.lineWidth = 2;
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 18; i++) {
     const wy = hash2(i, 9) * H;
     const wx = ((hash2(i, 4) * W + now * 12) % (W + 60)) - 30;
     ctx.beginPath();
@@ -2006,14 +2058,15 @@ function drawMap(): void {
       const mx = (x1 + x2) / 2 - (y2 - y1) * 0.18;
       const my = (y1 + y2) / 2 + (x2 - x1) * 0.18;
       const open = saveData.done.includes(n.id) || n.layer === 0 || n.bonus;
-      const steps = Math.max(6, Math.floor(Math.hypot(x2 - x1, y2 - y1) / 24));
+      const steps = Math.max(6, Math.floor(Math.hypot(x2 - x1, y2 - y1) / 22));
       for (let s = 1; s < steps; s++) {
         const t = s / steps;
         const bx = (1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * mx + t * t * x2;
         const by = (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * my + t * t * y2;
-        ctx.fillStyle = secret ? "#ffe066" : open ? "#ffeec9" : "rgba(255,255,255,0.22)";
+        const glow = open && Math.floor(now * 6) % steps === s;
+        ctx.fillStyle = secret ? "#ffe066" : open ? (glow ? "#ffffff" : "#ffeec9") : "rgba(255,255,255,0.28)";
         ctx.beginPath();
-        ctx.arc(bx, by, secret ? 2.5 : 3, 0, Math.PI * 2);
+        ctx.arc(bx, by, secret ? 2.5 : glow ? 4 : 3, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -2022,112 +2075,89 @@ function drawMap(): void {
   // îles
   for (const n of nodes) {
     if (n.bonus && !nodes.some((p) => p.secretTo === n.id && saveData.secrets.includes(p.id))) continue;
-    const [x, y] = mapNodePos(n);
-    const b = BIOMES[n.biome];
+    const [x, y0] = mapNodePos(n);
+    const bob = Math.sin(now * 1.6 + n.id * 1.7) * 3;
+    const y = y0 + bob;
     const isUnlocked = unlocked(n);
     const isDone = saveData.done.includes(n.id);
     const isSel = mapSel === n.id;
-    const r = n.final ? 36 : 27;
+    const h = islandH(n);
+    const img = islandImg(n);
+
+    // ombre portée sur l'eau
+    ctx.fillStyle = "rgba(10, 30, 60, 0.3)";
+    ctx.beginPath();
+    ctx.ellipse(x, y0 + h * 0.32, h * 0.42, h * 0.12, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // halo de sélection
     if (isSel) {
-      ctx.strokeStyle = `rgba(255,253,244,${0.55 + 0.4 * Math.sin(now * 5)})`;
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = `rgba(255, 224, 102, ${0.55 + 0.4 * Math.sin(now * 5)})`;
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.ellipse(x, y + 6, r + 10, (r + 10) * 0.6, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, y0 + h * 0.3, h * 0.52, h * 0.17, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
-    // plage puis relief du biome
-    ctx.fillStyle = "#e8d5a3";
-    ctx.beginPath();
-    ctx.ellipse(x, y + 8, r, r * 0.55, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = isUnlocked ? b.top : "#6d7787";
-    ctx.beginPath();
-    ctx.ellipse(x, y + 2, r * 0.82, r * 0.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    if (isUnlocked) {
-      if (n.final) {
-        ctx.font = "28px serif";
-        ctx.textAlign = "center";
-        ctx.fillText("🏰", x, y - 2);
-      } else if (n.bonus) {
-        ctx.font = "18px serif";
-        ctx.textAlign = "center";
-        ctx.fillText("⭐", x, y + 2);
-      } else if (n.biome === "prairie") {
-        // petits arbres ronds
-        ctx.fillStyle = "#3e5f2a";
-        ctx.fillRect(x - 9, y - 10, 3, 9);
-        ctx.fillRect(x + 7, y - 7, 3, 7);
-        ctx.fillStyle = "#57c04c";
-        ctx.beginPath();
-        ctx.arc(x - 8, y - 13, 7, 0, Math.PI * 2);
-        ctx.arc(x + 8, y - 9, 5, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (n.biome === "vent") {
-        // mesa et cactus
-        ctx.fillStyle = "#b26b2e";
-        ctx.beginPath();
-        ctx.moveTo(x - 13, y + 2);
-        ctx.lineTo(x - 8, y - 12);
-        ctx.lineTo(x - 1, y - 12);
-        ctx.lineTo(x + 3, y + 2);
-        ctx.fill();
-        ctx.fillStyle = "#4f7942";
-        ctx.fillRect(x + 7, y - 9, 4, 11);
-        ctx.fillRect(x + 4, y - 6, 3, 3);
-      } else {
-        // cristaux
-        ctx.fillStyle = "#b79bff";
-        ctx.beginPath();
-        ctx.moveTo(x - 10, y + 2);
-        ctx.lineTo(x - 6, y - 13);
-        ctx.lineTo(x - 2, y + 2);
-        ctx.moveTo(x + 2, y + 2);
-        ctx.lineTo(x + 6, y - 8);
-        ctx.lineTo(x + 10, y + 2);
-        ctx.fill();
-        ctx.fillStyle = "#63e6be";
-        ctx.fillRect(x - 1, y - 4, 2, 2);
-      }
+
+    if (imgReady(img)) {
+      const w2 = (img.naturalWidth / img.naturalHeight) * h;
+      if (!isUnlocked) ctx.filter = "grayscale(1) brightness(0.72)";
+      ctx.drawImage(img, x - w2 / 2, y - h * 0.62, w2, h);
+      ctx.filter = "none";
     } else {
-      ctx.font = "14px serif";
-      ctx.textAlign = "center";
-      ctx.fillText("🔒", x, y + 2);
-    }
-    if (isDone) {
-      ctx.fillStyle = "#4a445f";
-      ctx.fillRect(x + r * 0.55, y - 18, 2, 15);
-      ctx.fillStyle = "#ffc93c";
+      ctx.fillStyle = isUnlocked ? BIOMES[n.biome].top : "#6d7787";
       ctx.beginPath();
-      ctx.moveTo(x + r * 0.55 + 2, y - 18);
-      ctx.lineTo(x + r * 0.55 + 12, y - 14);
-      ctx.lineTo(x + r * 0.55 + 2, y - 10);
+      ctx.ellipse(x, y, h * 0.4, h * 0.24, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    if (n.secretTo !== null && !n.bonus) {
-      ctx.font = "13px serif";
-      ctx.textAlign = "center";
-      ctx.fillText(saveData.secrets.includes(n.id) ? "⭐" : "❔", x - r * 0.7, y - 12);
+
+    ctx.textAlign = "center";
+    if (!isUnlocked) {
+      ctx.font = `${Math.round(h * 0.24)}px serif`;
+      ctx.fillText("🔒", x, y - h * 0.1);
+    }
+    // drapeau planté sur les îles conquises
+    if (isDone) drawImgH(PROPS.golfflag, x + h * 0.3, y - h * 0.18, h * 0.42);
+    // indice de sortie secrète
+    if (n.secretTo !== null && !n.bonus && isUnlocked) {
+      ctx.font = `${Math.round(h * 0.2)}px serif`;
+      ctx.fillText(saveData.secrets.includes(n.id) ? "⭐" : "❔", x - h * 0.38, y - h * 0.42);
     }
   }
 
   // bandeau titre
   ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(12, 24, 48, 0.55)";
+  ctx.beginPath();
+  ctx.roundRect(W / 2 - 240, 14, 480, 64, 12);
+  ctx.fill();
   ctx.fillStyle = "#fffdf4";
   ctx.font = "bold 28px 'Pixelify Sans', monospace";
-  ctx.fillText(`Monde ${saveData.world}`, W / 2, 46);
+  ctx.fillText(`La Tournée de Campagne — Monde ${saveData.world}`, W / 2, 44);
   ctx.font = "16px 'VT323', monospace";
   ctx.fillStyle = "#cfe3f7";
-  ctx.fillText("←→↑↓ choisir · Entrée / clic jouer · ❔ secret à trouver · ⭐ trouvé", W / 2, 70);
+  ctx.fillText("←→↑↓ choisir · Entrée / clic jouer · ❔ secret à trouver · ⭐ trouvé", W / 2, 68);
+  // nom de l'île sélectionnée
+  const sel = nodeById(mapSel);
+  if (unlocked(sel)) {
+    ctx.fillStyle = "rgba(12, 24, 48, 0.55)";
+    ctx.beginPath();
+    ctx.roundRect(W / 2 - 170, 84, 340, 30, 8);
+    ctx.fill();
+    ctx.fillStyle = "#ffe066";
+    ctx.font = "17px 'VT323', monospace";
+    ctx.fillText(`📍 ${sel.name}`, W / 2, 104);
+  }
 
   // le héros posé sur son île
   const cur = nodeById(saveData.pos);
   const [pxm, pym] = mapNodePos(cur);
-  const bob = Math.sin(now * 3) * 3;
+  const hCur = islandH(cur);
+  const bobT = Math.sin(now * 1.6 + cur.id * 1.7) * 3 + Math.sin(now * 3.1) * 2;
   if (ready(SHEETS.idle)) {
-    const h = 44;
+    const h = hCur * 0.52;
     const w2 = (SHEETS.idle.cw / SHEETS.idle.ch) * h;
-    ctx.drawImage(SHEETS.idle.img, pxm - w2 / 2, pym - 12 - h + bob, w2, h);
+    ctx.drawImage(SHEETS.idle.img, pxm - w2 / 2, pym - hCur * 0.5 - h + bobT, w2, h);
   }
 }
 
@@ -2227,7 +2257,7 @@ canvas.addEventListener("pointerdown", (e) => {
     for (const n of nodes) {
       if (n.bonus && !nodes.some((p) => p.secretTo === n.id && saveData.secrets.includes(p.id))) continue;
       const [x, y] = mapNodePos(n);
-      if (Math.hypot(e.clientX - x, e.clientY - y) < 24) {
+      if (Math.hypot(e.clientX - x, e.clientY - y) < 46) {
         mapSel = n.id;
         mapEnter();
         return;
