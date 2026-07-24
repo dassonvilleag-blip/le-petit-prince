@@ -145,6 +145,8 @@ const PROPS = {
   drone: loadImg("drone.png"),
   subpoena: loadImg("subpoena.png"),
   cap: loadImg("cap.png"),
+  bibi: loadImg("bibi.png"),
+  guide: loadImg("guide.png"),
   golfflag: loadImg("golfflag.png"),
   podium: loadImg("podium.png"),
   escalator: loadImg("escalator.png"),
@@ -474,6 +476,26 @@ const CHUNK_SECRET: string[] = [
 // sa gravité. Nouveaux symboles : ~ eau (noyade), F drapeau déco,
 // U colonne de courant ascendant.
 
+// le Détroit d'Ormuz : un bras de mer traversé grâce aux courants…
+// que le Guide suprême ferme périodiquement depuis son perchoir.
+const CHUNK_ORMUZ: string[] = [
+  "....................",
+  "....................",
+  "....o....o....o.....",
+  "....................",
+  "===..............===",
+  ".................I..",
+  "................===.",
+  "....................",
+  "....................",
+  "....................",
+  "....................",
+  ".......U.....U......",
+  "....---...---.......",
+  "###~~~~~~~~~~~~~~###",
+  "###~~~~~~~~~~~~~~###",
+];
+
 const CHUNKS_PRAIRIE: Chunk[] = [
   {
     // le fairway vallonné : collines à gravir, drapeau au green
@@ -533,7 +555,7 @@ const CHUNKS_PRAIRIE: Chunk[] = [
       "....................",
       "..............====..",
       "....................",
-      ".........w..........",
+      "...N.....w..........",
       "####################",
       "####################",
     ],
@@ -634,7 +656,7 @@ const CHUNKS_VENT: Chunk[] = [
       "....o.....o......o..",
       "....................",
       "===..............===",
-      "....................",
+      "...............N....",
       "..............####..",
       "....................",
       "........####..####..",
@@ -868,6 +890,7 @@ for (const [name, rowsList] of [
   ["end", [CHUNK_END]],
   ["checkpoint", [CHUNK_CHECKPOINT]],
   ["secret", [CHUNK_SECRET]],
+  ["ormuz", [CHUNK_ORMUZ]],
   ["prairie", CHUNKS_PRAIRIE.map((c) => c.rows)],
   ["vent", CHUNKS_VENT.map((c) => c.rows)],
   ["cristal", CHUNKS_CRISTAL.map((c) => c.rows)],
@@ -917,14 +940,40 @@ interface WindZone {
   h: number;
 }
 
+// personnages non-joueurs : Bibi le généreux, et le Guide suprême
+// qui ouvre et ferme le détroit d'Ormuz
+interface Npc {
+  kind: "bibi" | "guide";
+  x: number;
+  y: number;
+  cd: number;
+  gifted: boolean;
+}
+
+const BIBI_LINES = [
+  "Donald ! Encore quelques bombes ? Des grosses.",
+  "Ce niveau est magnifique. On l'annexe ?",
+  "J'ai sécurisé le secteur. De rien.",
+  "Dis à la Cour pénale que je suis en réunion.",
+];
+
 interface Level {
   w: number; // en tuiles
   tiles: Uint8Array;
   enemies: Enemy[];
   coins: CoinEnt[];
   winds: WindZone[];
+  npcs: Npc[];
   biome: Biome;
   hasSecret: boolean;
+  hasGuide: boolean;
+  straitT: number; // horloge d'ouverture/fermeture du détroit
+}
+
+// le Guide a-t-il fermé le détroit ? (coupe tous les courants du niveau)
+function straitClosed(): boolean {
+  if (!level || !level.hasGuide) return false;
+  return level.straitT % 7 > 4.6;
 }
 
 let level: Level | null = null;
@@ -963,6 +1012,9 @@ function genLevel(node: MapNode, seed: number): Level {
   mids.splice(Math.floor(midCount / 2), 0, isCristal ? pick(CHUNKS_CRISTAL).rows : CHUNK_CHECKPOINT);
   const hasSecret = !node.bonus && node.secretTo !== null;
   if (hasSecret) mids.splice(rndInt(1, mids.length - 1), 0, CHUNK_SECRET);
+  // le niveau « Détroit d'Ormuz » contient toujours son détroit gardé
+  const hasGuide = !node.bonus && node.name === "Détroit d'Ormuz";
+  if (hasGuide) mids.splice(rndInt(1, mids.length - 1), 0, CHUNK_ORMUZ);
   chunkList.push(...mids, CHUNK_END);
 
   const w = chunkList.length * CHUNK_W;
@@ -970,6 +1022,7 @@ function genLevel(node: MapNode, seed: number): Level {
   const enemies: Enemy[] = [];
   const coins: CoinEnt[] = [];
   const winds: WindZone[] = [];
+  const npcs: Npc[] = [];
 
   for (let c = 0; c < chunkList.length; c++) {
     const chunk = chunkList[c];
@@ -1029,6 +1082,12 @@ function genLevel(node: MapNode, seed: number): Level {
           case "k":
             enemies.push({ kind: "spiky", x: wx, y: wy, vx: 0, vy: 0, dir: rnd() < 0.5 ? -1 : 1, phase: rnd() * 7, baseY: wy, dead: 0 });
             break;
+          case "N":
+            npcs.push({ kind: "bibi", x: wx, y: wy, cd: 0, gifted: false });
+            break;
+          case "I":
+            npcs.push({ kind: "guide", x: wx, y: wy, cd: 0, gifted: false });
+            break;
         }
       }
     }
@@ -1051,7 +1110,7 @@ function genLevel(node: MapNode, seed: number): Level {
     if (tiles[ty * w + tx] === Tile.Empty) coins.push({ x: (tx + 0.5) * T, y: (ty + 0.5) * T, taken: false });
   }
 
-  // les ennemis terrestres se posent sur le sol le plus proche sous eux
+  // les ennemis terrestres et les PNJ se posent sur le sol sous eux
   for (const e of enemies) {
     if (e.kind === "flyer") continue;
     let ty = Math.floor(e.y / T);
@@ -1062,6 +1121,15 @@ function genLevel(node: MapNode, seed: number): Level {
     }
     e.y = (ty + 1) * T - 8;
     e.baseY = e.y;
+  }
+  for (const n of npcs) {
+    let ty = Math.floor(n.y / T);
+    while (ty < LEVEL_H - 1) {
+      const below = tiles[(ty + 1) * w + Math.floor(n.x / T)];
+      if (below === Tile.Solid || below === Tile.OneWay) break;
+      ty++;
+    }
+    n.y = (ty + 1) * T - 13;
   }
 
   // difficulté : quelques ennemis de plus selon le monde
@@ -1088,7 +1156,7 @@ function genLevel(node: MapNode, seed: number): Level {
     }
   }
 
-  return { w, tiles, enemies, coins, winds, biome, hasSecret };
+  return { w, tiles, enemies, coins, winds, npcs, biome, hasSecret, hasGuide, straitT: 0 };
 }
 
 // ---------- état ----------
@@ -1629,8 +1697,8 @@ function step(dt: number): void {
     if (pvx < target) pvx = Math.min(target, pvx + accel * dt);
     else if (pvx > target) pvx = Math.max(target, pvx - accel * dt);
     pvy += 820 * gdir * dt;
-    // vent ascendant
-    for (const wz of level.winds) {
+    // vent ascendant (sauf si le Guide a fermé le détroit)
+    for (const wz of straitClosed() ? [] : level.winds) {
       if (px > wz.x && px < wz.x + wz.w && py > wz.y && py < wz.y + wz.h) {
         pvy -= 1500 * dt;
         if (Math.random() < 0.3) particles.push({ x: wz.x + Math.random() * wz.w, y: py + 30, vx: 0, vy: -120, life: 0.4, max: 0.4, size: 1.5, color: "#7ae58288", grav: 0 });
@@ -1766,6 +1834,36 @@ function step(dt: number): void {
       } else if (t === Tile.SecretExit) {
         startCelebrate(true);
         return;
+      }
+    }
+  }
+
+  // ---- le Guide suprême ouvre et ferme le détroit ----
+  if (level.hasGuide) {
+    const wasClosed = straitClosed();
+    level.straitT += dt;
+    if (straitClosed() !== wasClosed) {
+      const guide = level.npcs.find((n) => n.kind === "guide");
+      if (guide) speak(guide.x, guide.y - 28, straitClosed() ? "JE FERME LE DÉTROIT !" : "Rouvert. Pour l'instant.");
+    }
+  }
+
+  // ---- PNJ : ils parlent quand on s'approche ----
+  for (const n of level.npcs) {
+    if (n.cd > 0) n.cd -= dt;
+    if (n.cd <= 0 && Math.abs(n.x - px) < 34 && Math.abs(n.y - py) < 42) {
+      n.cd = 8;
+      if (n.kind === "bibi") {
+        speak(n.x, n.y - 24, pick(BIBI_LINES));
+        if (!n.gifted) {
+          n.gifted = true;
+          saveData.coins += 5;
+          save();
+          floaters.push({ x: n.x, y: n.y - 18, txt: "+5", life: 0.9, color: "#ffc93c" });
+          toast("🎁 Aide militaire : +5 💵 (c'est vous qui payez)");
+        }
+      } else {
+        speak(n.x, n.y - 26, straitClosed() ? "Le détroit reste FERMÉ, cow-boy." : "Approche. Je peux tout fermer quand je veux.");
       }
     }
   }
@@ -2086,7 +2184,7 @@ function drawTiles(b: BiomeDef): void {
   }
 
   // planche à billets : des dollars montent des fosses (biome vent)
-  for (const wz of level.winds) {
+  for (const wz of straitClosed() ? [] : level.winds) {
     if (wz.x + wz.w < camX || wz.x > camX + W / zoom) continue;
     ctx.fillStyle = "rgba(122, 229, 130, 0.85)";
     ctx.font = "8px monospace";
@@ -2269,6 +2367,26 @@ function drawLevel(): void {
   for (const e of level.enemies) {
     if (e.x < camX - 30 || e.x > camX + W / zoom + 30) continue;
     drawEnemy(e, b);
+  }
+
+  // PNJ : Bibi qui salue, le Guide qui surveille son détroit
+  for (const n of level.npcs) {
+    if (n.x < camX - 40 || n.x > camX + W / zoom + 40) continue;
+    const img = n.kind === "bibi" ? PROPS.bibi : PROPS.guide;
+    const raised = n.kind === "guide" && straitClosed();
+    const h = (n.kind === "guide" ? 30 : 27) + (raised ? 2 : 0);
+    if (!drawImgH(img, n.x, n.y + 13, h, px < n.x)) {
+      ctx.fillStyle = n.kind === "bibi" ? "#3b5bdb" : "#5c4033";
+      ctx.fillRect(n.x - 5, n.y - 10, 10, 23);
+    }
+    if (raised) {
+      // aura de fermeture
+      ctx.strokeStyle = `rgba(224, 49, 49, ${0.5 + 0.4 * Math.sin(now * 8)})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y - h * 0.3, h * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+    }
   }
 
   drawPlayer();
