@@ -3,10 +3,13 @@ import { PHOTO_CREDITS } from "./photo-credits";
 import { drawRound } from "./pool";
 import { computeRoundScore } from "./scoring";
 import { pickRoundComment, pickClosingComment } from "./comments";
+import { afterDelay, cancelAllReveals, startCountUp, startTypewrite } from "./reveal";
 
 const ROUND_COUNT = 10;
 const RECORD_KEY = "ca-coute-combien-record";
 const SEEN_KEY = "ca-coute-combien-seen";
+const REVEAL_COUNT_DURATION_MS = 800;
+const REVEAL_TYPEWRITE_MS_PER_CHAR = 25;
 
 const screenIntro = document.getElementById("screen-intro")!;
 const screenRound = document.getElementById("screen-round")!;
@@ -72,6 +75,7 @@ function startGame() {
 }
 
 function showRound() {
+  cancelAllReveals();
   const item = round[roundIndex];
   roundIndexEl.textContent = String(roundIndex + 1);
   roundPhotoEl.src = item.photo;
@@ -85,17 +89,32 @@ function showRound() {
 
 function submitGuess(event: SubmitEvent) {
   event.preventDefault();
+  cancelAllReveals();
+
   const item = round[roundIndex];
   const guess = Number(guessInput.value);
   const score = computeRoundScore(guess, item.prix);
   roundScores.push(score);
 
-  roundCommentEl.textContent = pickRoundComment(score);
-  roundPriceEl.textContent = `Prix réel : ${euros.format(item.prix)} (ton estimation : ${euros.format(guess)})`;
-  roundScoreEl.textContent = `${score} / 1000 points`;
-
   guessForm.classList.add("hidden");
   roundResultEl.classList.remove("hidden");
+
+  roundScoreEl.textContent = "";
+  roundPriceEl.textContent = "";
+  roundCommentEl.textContent = "";
+
+  startCountUp(roundScoreEl, 0, score, REVEAL_COUNT_DURATION_MS, (value) => `${Math.round(value)} / 1000 points`);
+  startCountUp(
+    roundPriceEl,
+    0,
+    item.prix,
+    REVEAL_COUNT_DURATION_MS,
+    (value) => `Prix réel : ${euros.format(value)} (ton estimation : ${euros.format(guess)})`,
+  );
+
+  afterDelay(REVEAL_COUNT_DURATION_MS, () => {
+    startTypewrite(roundCommentEl, pickRoundComment(score), REVEAL_TYPEWRITE_MS_PER_CHAR);
+  });
 }
 
 function nextRound() {

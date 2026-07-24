@@ -22,6 +22,11 @@ export function cancelAllReveals(): void {
   activeTimeoutIds = [];
 }
 
+export function afterDelay(durationMs: number, fn: () => void): void {
+  const id = setTimeout(fn, durationMs);
+  activeTimeoutIds.push(id);
+}
+
 export function startCountUp(
   el: HTMLElement,
   from: number,
