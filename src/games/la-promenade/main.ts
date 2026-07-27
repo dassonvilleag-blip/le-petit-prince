@@ -216,6 +216,7 @@ const char = {
   onGround: true,
   walkT: 0,
   idleT: 0,
+  idleSince: 0, // secondes d'immobilité (déclenche la contemplation)
   bubbleT: 0,
 };
 
@@ -252,12 +253,13 @@ interface CharSheet {
   canvas: HTMLCanvasElement;
   frames: { sx: number; sy: number; sw: number; sh: number }[];
   idle: number; // frame la plus étroite = jambes jointes
+  refH: number; // hauteur de référence commune : la taille ne "respire" pas
 }
 const charSheets = new Map<string, CharSheet>();
 
-const loadCharSheet = (id: string): void => {
+const loadSheet = (key: string, file: string, cells: number): void => {
   const img = new Image();
-  img.src = `${BASE}la-promenade/perso-${id}.png`;
+  img.src = `${BASE}la-promenade/${file}`;
   img.onload = () => {
     const cv = document.createElement("canvas");
     cv.width = img.width;
@@ -265,12 +267,12 @@ const loadCharSheet = (id: string): void => {
     const cc = cv.getContext("2d")!;
     cc.drawImage(img, 0, 0);
     // les planches sont déjà nettoyées hors-ligne (fond transparent, cadres
-    // et lignes de sol retirés) : il ne reste qu'à découper les 4 cellules
+    // et lignes de sol retirés) : il ne reste qu'à découper les cellules
     // et recadrer chaque frame sur sa boîte englobante
     const d = cc.getImageData(0, 0, cv.width, cv.height).data;
     const frames: CharSheet["frames"] = [];
-    const cw = Math.floor(cv.width / 4);
-    for (let f = 0; f < 4; f++) {
+    const cw = Math.floor(cv.width / cells);
+    for (let f = 0; f < cells; f++) {
       let minX = cv.width;
       let maxX = 0;
       let minY = cv.height;
@@ -292,28 +294,53 @@ const loadCharSheet = (id: string): void => {
       );
     }
     let idle = 0;
-    for (let f = 1; f < 4; f++) if (frames[f].sw < frames[idle].sw) idle = f;
-    charSheets.set(id, { canvas: cv, frames, idle });
+    let refH = 0;
+    for (let f = 0; f < frames.length; f++) {
+      if (frames[f].sw < frames[idle].sw) idle = f;
+      if (frames[f].sh > refH) refH = frames[f].sh;
+    }
+    charSheets.set(key, { canvas: cv, frames, idle, refH });
   };
 };
-for (const w of WORLDS) loadCharSheet(w.id);
+for (const w of WORLDS) {
+  loadSheet(w.id, `perso-${w.id}.png`, 4);
+  loadSheet(`${w.id}-dos`, `perso-${w.id}-dos.png`, 2);
+}
+
+// hauteur du personnage à l'écran (~11 % de la hauteur, cohérent avec les
+// portes et pontons des décors)
+const CHAR_H = 24;
 
 const drawChar = (c: CanvasRenderingContext2D): void => {
   const w = WORLDS[worldIdx];
-  const sheet = charSheets.get(w.id);
   const s = S();
-  const targetH = 19 * s;
+  const targetH = CHAR_H * s;
+  // immobile depuis un moment : il se tourne vers l'horizon
+  const backSheet = charSheets.get(`${w.id}-dos`);
+  const contemplating = char.idleSince > 2.5 && char.onGround && backSheet;
+  const sheet = contemplating ? backSheet : charSheets.get(w.id);
   const bob = char.walking ? 0 : Math.sin(char.idleT * 2.2) * 0.3 * s;
   c.save();
   c.translate(Math.round(char.x), Math.round(char.y + bob));
-  if (char.facing < 0) c.scale(-1, 1);
+  if (!contemplating && char.facing < 0) c.scale(-1, 1);
   if (sheet) {
-    const fi = char.walking ? Math.floor(char.walkT * 8) % 4 : sheet.idle;
-    const f = sheet.frames[fi];
-    const scale = targetH / f.sh;
+    let fi: number;
+    if (contemplating) {
+      // micro-animation de temps en temps (main en visière, tête levée…)
+      fi = (char.idleSince - 2.5) % 7 > 5.6 ? 1 : 0;
+    } else if (!char.onGround) {
+      fi = 1; // en l'air : jambes en pleine foulée
+    } else if (char.walking) {
+      fi = Math.floor(char.walkT * 8) % 4;
+    } else {
+      fi = sheet.idle;
+    }
+    const f = sheet.frames[Math.min(fi, sheet.frames.length - 1)];
+    const scale = targetH / sheet.refH;
     const dw = f.sw * scale;
+    const dh = f.sh * scale;
     c.imageSmoothingEnabled = false;
-    c.drawImage(sheet.canvas, f.sx, f.sy, f.sw, f.sh, -dw / 2, -targetH, dw, targetH);
+    c.drawImage(sheet.canvas, f.sx, f.sy, f.sw, f.sh, -dw / 2, -dh, dw, dh);
   } else {
     // secours le temps du chargement
     px(c, -3 * s, -16 * s, 6 * s, 16 * s, "rgba(60, 60, 80, 0.5)");
@@ -828,7 +855,7 @@ const addWalker = (r: Rect): void => {
       return x > -30 && x < W + 30;
     },
     draw(c) {
-      const s = S() * 0.85;
+      const s = S() * 1.25;
       const step = Math.sin(t * 7);
       c.globalAlpha = 0.8;
       // silhouette encapuchonnée qui passe, tête baissée
@@ -1024,7 +1051,7 @@ const fisherCatch = (screenX: number, r: Rect): void => {
 };
 
 const drawFisher = (c: CanvasRenderingContext2D, f: Fisher, r: Rect, t: number): void => {
-  const s = S() * 0.9;
+  const s = S() * 1.45;
   const base = imgToScreen(r, f.nx, WORLDS[worldIdx].groundY);
   const waterY = imgToScreen(r, 0, PECHE_WATER_Y).y;
   const x = base.x;
@@ -1191,8 +1218,10 @@ interface MusicStyle {
   pad: OscillatorType;
   padGain: number;
   padFilter: number;
+  padAttack: number; // temps de montée de la nappe (s)
+  bass: "steady" | "pulse" | "bossa" | "drone" | "none";
   drums: "none" | "soft" | "lofi" | "shaker";
-  melodyProb: number;
+  melodyProb: number; // 1 = à chaque mesure
   melodyMul: number; // transposition de la mélodie
   melodyDur: number;
 }
@@ -1211,6 +1240,8 @@ const MUSIC: Record<string, MusicStyle> = {
     pad: "triangle",
     padGain: 0.032,
     padFilter: 850,
+    padAttack: 0.1,
+    bass: "steady",
     drums: "soft",
     melodyProb: 0.5,
     melodyMul: 2,
@@ -1229,8 +1260,10 @@ const MUSIC: Record<string, MusicStyle> = {
     pad: "sine",
     padGain: 0.042,
     padFilter: 600,
+    padAttack: 1.2,
+    bass: "drone",
     drums: "none",
-    melodyProb: 0.3,
+    melodyProb: 0.35,
     melodyMul: 1,
     melodyDur: 2.4,
   },
@@ -1247,8 +1280,10 @@ const MUSIC: Record<string, MusicStyle> = {
     pad: "sine",
     padGain: 0.03,
     padFilter: 500,
+    padAttack: 0.8,
+    bass: "none",
     drums: "none",
-    melodyProb: 0.45,
+    melodyProb: 1,
     melodyMul: 1,
     melodyDur: 3,
   },
@@ -1265,6 +1300,8 @@ const MUSIC: Record<string, MusicStyle> = {
     pad: "triangle",
     padGain: 0.035,
     padFilter: 900,
+    padAttack: 0.05,
+    bass: "pulse",
     drums: "lofi",
     melodyProb: 0.65,
     melodyMul: 2,
@@ -1283,6 +1320,8 @@ const MUSIC: Record<string, MusicStyle> = {
     pad: "triangle",
     padGain: 0.03,
     padFilter: 1000,
+    padAttack: 0.08,
+    bass: "bossa",
     drums: "shaker",
     melodyProb: 0.55,
     melodyMul: 2,
@@ -1359,12 +1398,12 @@ class Lofi {
     f.type = "highpass";
     f.frequency.value = 1800;
     const g = ac.createGain();
-    g.gain.value = 0.05;
+    g.gain.value = 0.016;
     src.connect(f).connect(g).connect(this.musicBus);
     src.start();
   }
 
-  private osc(freq: number, t0: number, dur: number, type: OscillatorType, gain: number, dest: AudioNode, filterHz = 0): void {
+  private osc(freq: number, t0: number, dur: number, type: OscillatorType, gain: number, dest: AudioNode, filterHz = 0, attack = 0.06): void {
     const ac = this.ctx!;
     const o = ac.createOscillator();
     o.type = type;
@@ -1372,7 +1411,7 @@ class Lofi {
     o.detune.value = rnd(-6, 6);
     const g = ac.createGain();
     g.gain.setValueAtTime(0, t0);
-    g.gain.linearRampToValueAtTime(gain, t0 + 0.06);
+    g.gain.linearRampToValueAtTime(gain, t0 + attack);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     let node: AudioNode = g;
     if (filterHz) {
@@ -1401,17 +1440,29 @@ class Lofi {
 
   private scheduleBar(t0: number, bar: number, m: MusicStyle): void {
     const chord = m.chords[bar % m.chords.length];
-    // nappe d'accord, feutrée
-    for (const f of chord) this.osc(f, t0, m.bar * 0.96, m.pad, m.padGain, this.musicBus, m.padFilter);
-    // basse ronde
-    this.osc(chord[0] / 2, t0, m.bar * 0.9, "sine", 0.09, this.musicBus);
+    // nappe d'accord, feutrée (attaque propre au monde)
+    for (const f of chord) this.osc(f, t0, m.bar * 0.96, m.pad, m.padGain, this.musicBus, m.padFilter, m.padAttack);
+    // basse : chaque monde a son motif
+    if (m.bass === "steady") {
+      this.osc(chord[0] / 2, t0, m.bar * 0.9, "sine", 0.09, this.musicBus);
+    } else if (m.bass === "pulse") {
+      this.osc(chord[0] / 2, t0, m.bar * 0.45, "sine", 0.11, this.musicBus);
+      this.osc(chord[2] / 2, t0 + m.bar / 2, m.bar * 0.35, "sine", 0.07, this.musicBus);
+    } else if (m.bass === "bossa") {
+      this.osc(chord[0] / 2, t0, m.bar * 0.3, "sine", 0.1, this.musicBus);
+      this.osc(chord[0] / 2, t0 + m.bar * 0.375, m.bar * 0.12, "sine", 0.07, this.musicBus);
+      this.osc(chord[2] / 2, t0 + m.bar * 0.5, m.bar * 0.3, "sine", 0.08, this.musicBus);
+    } else if (m.bass === "drone") {
+      this.osc(chord[0] / 2, t0, m.bar, "sine", 0.08, this.musicBus, 0, 1.4);
+      this.osc(chord[0] / 4, t0, m.bar, "sine", 0.04, this.musicBus, 0, 1.4);
+    }
     // batterie selon le monde
     if (m.drums === "lofi") {
       for (let b = 0; b < 4; b++) {
         const bt = t0 + (b * m.bar) / 4;
         if (b % 2 === 0) this.kick(bt, 0.16);
-        else this.tickHat(bt, 0.03);
       }
+      for (let b = 0; b < 8; b++) this.tickHat(t0 + (b * m.bar) / 8, b % 2 === 0 ? 0.026 : 0.013);
     } else if (m.drums === "soft") {
       this.kick(t0, 0.09);
     } else if (m.drums === "shaker") {
@@ -1840,6 +1891,8 @@ const frame = (now: number): void => {
         char.walkT += dt;
       }
       char.idleT += dt;
+      if (char.walking || !char.onGround) char.idleSince = 0;
+      else char.idleSince += dt;
       const land = (y: number): void => {
         char.y = y;
         char.vy = 0;
