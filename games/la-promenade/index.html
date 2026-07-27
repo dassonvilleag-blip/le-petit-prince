@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>La Promenade</title>
+    <meta name="description" content="Une balade zen lofi : cinq mondes en pixel art, un petit personnage, et rien à gagner — juste flâner, cliquer, respirer." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏮</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/la-promenade/promenade.css" />
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <a class="back-link" href="../../">← le petit prince</a>
+
+    <div class="hud">
+      <button id="btn-mute" type="button" aria-label="couper le son">🔊</button>
+    </div>
+
+    <div class="world-name" id="world-name"></div>
+
+    <div class="hint" id="hint">
+      <h1>La Promenade</h1>
+      <p>← → ou Q / D pour marcher.<br />
+      Traverse le bord de l'écran pour changer de monde.<br />
+      Clique sur le décor pour te détendre. C'est tout.</p>
+      <p class="hint-go">clique pour commencer</p>
+    </div>
+
+    <script type="module" src="/src/games/la-promenade/main.ts"></script>
+  </body>
+</html>
