@@ -16,7 +16,7 @@ interface Skin {
   pants: string;
   shoes: string;
   accent: string; // détail de tenue : rayure, casque audio, ruban, sac, hublot…
-  style: "bonnet" | "hood" | "straw" | "space" | "diver";
+  style: "marin" | "hood" | "straw" | "space" | "diver";
 }
 
 interface Hotspot {
@@ -32,10 +32,11 @@ interface World {
   name: string;
   file: string;
   groundY: number; // fraction de la hauteur d'image où posent les pieds
-  ambience: "rain" | "city" | "waves" | "space" | "under";
+  ambience: "lake" | "city" | "waves" | "space" | "under";
   skin: Skin;
   gravity: number;
   jumpH: number; // hauteur de saut voulue, en pixels logiques du personnage
+  platforms?: { x1: number; x2: number; y: number }[]; // surfaces d'atterrissage (coords image)
   speed: number; // multiplicateur de vitesse de marche
   hotspots: Hotspot[];
   fallback: (nx: number, ny: number) => string; // effet par défaut selon la zone
@@ -43,24 +44,25 @@ interface World {
 
 const WORLDS: World[] = [
   {
-    id: "foret",
-    name: "la forêt qui goutte",
-    file: "foret.png",
-    groundY: 0.9,
-    ambience: "rain",
-    skin: { hat: "#c9a13b", skin: "#f2c9a0", top: "#e0b23c", pants: "#4a5a52", shoes: "#6b4a35", accent: "#a87c28", style: "bonnet" },
+    id: "peche",
+    name: "le lac des pêcheurs",
+    file: "peche.png",
+    groundY: 0.88,
+    ambience: "lake",
+    skin: { hat: "#e8c56a", skin: "#f2c9a0", top: "#e8e3d8", pants: "#3a4a6b", shoes: "#6b4a35", accent: "#3a4a6b", style: "marin" },
     gravity: 2200,
     jumpH: 45,
     speed: 1,
     hotspots: [
-      { x1: 0.78, y1: 0.55, x2: 1.0, y2: 0.87, effect: "cabin" },
-      { x1: 0.08, y1: 0.34, x2: 0.15, y2: 0.45, effect: "lantern" },
-      { x1: 0.22, y1: 0.39, x2: 0.29, y2: 0.5, effect: "lantern" },
-      { x1: 0.38, y1: 0.26, x2: 0.45, y2: 0.37, effect: "lantern" },
-      { x1: 0.51, y1: 0.36, x2: 0.58, y2: 0.47, effect: "lantern" },
-      { x1: 0.74, y1: 0.34, x2: 0.81, y2: 0.45, effect: "lantern" },
+      { x1: 0.42, y1: 0.68, x2: 0.54, y2: 0.92, effect: "fisher" },
+      { x1: 0.7, y1: 0.68, x2: 0.82, y2: 0.92, effect: "fisher" },
+      { x1: 0.17, y1: 0.58, x2: 0.32, y2: 0.68, effect: "boat" },
+      { x1: 0.31, y1: 0.54, x2: 0.5, y2: 0.62, effect: "boat" },
+      { x1: 0.62, y1: 0.54, x2: 0.71, y2: 0.62, effect: "boat" },
+      { x1: 0.0, y1: 0.24, x2: 0.42, y2: 0.58, effect: "lantern" },
+      { x1: 0.72, y1: 0.45, x2: 1.0, y2: 0.82, effect: "birds" },
     ],
-    fallback: (_nx, ny) => (ny > 0.8 ? "fireflies" : "rainburst"),
+    fallback: (_nx, ny) => (ny > 0.5 && ny < 0.82 ? "ripple" : ny <= 0.5 ? "birds" : "sparkle"),
   },
   {
     id: "ville",
@@ -123,12 +125,27 @@ const WORLDS: World[] = [
     ambience: "under",
     skin: { hat: "#c98d4e", skin: "#f2c9a0", top: "#b0834f", pants: "#7a8ba0", shoes: "#5a4632", accent: "#e8c56a", style: "diver" },
     gravity: 800,
-    jumpH: 35,
+    jumpH: 38,
     speed: 0.7,
     hotspots: [{ x1: 0.57, y1: 0.4, x2: 0.88, y2: 0.86, effect: "porthole" }],
     fallback: (_nx, ny) => (ny > 0.82 ? "sandpuff" : "bubbles"),
+    // remontée vers la sortie en haut à droite (→ la lune), par paliers
+    // réguliers atteignables avec le saut sous-marin
+    platforms: [
+      { x1: 0.2, x2: 0.32, y: 0.81 },
+      { x1: 0.36, x2: 0.46, y: 0.68 },
+      { x1: 0.5, x2: 0.6, y: 0.555 },
+      { x1: 0.63, x2: 0.72, y: 0.43 },
+      { x1: 0.75, x2: 0.83, y: 0.31 },
+      { x1: 0.86, x2: 0.99, y: 0.2 },
+    ],
   },
 ];
+
+// ordre du voyage : pêche → plongée dans l'océan → (en haut à droite) la
+// lune → la ville → la plage → retour au lac
+const ORDER = ["peche", "ocean", "lune", "ville", "plage"];
+WORLDS.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
 
 // ---------------------------------------------------------------------------
 // Canvas & état
@@ -299,9 +316,10 @@ const drawChar = (c: CanvasRenderingContext2D): void => {
   }
 
   // détails propres à chaque tenue
-  if (k.style === "bonnet") {
-    g(5, -1, 2, 1, "#f2e3c2"); // pompon
-    g(1, 2, 10, 1, k.accent); // rayure du bonnet
+  if (k.style === "marin") {
+    g(0, 2, 12, 1, k.hat); // bord du bob de pêcheur
+    g(1, 8, 10, 1, k.accent); // rayures de marinière
+    g(2, 10, 8, 1, k.accent);
   } else if (k.style === "hood") {
     // casque audio par-dessus la capuche
     g(2, 0, 8, 1, k.accent);
@@ -411,64 +429,7 @@ const addGlowPulse = (x: number, y: number, color: string, radius: number): void
   });
 };
 
-const addFirefly = (x: number, y: number): void => {
-  let t = 0;
-  const life = rnd(5, 10);
-  const wob = rnd(1, 2.5);
-  const phase = rnd(0, 10);
-  let vx = rnd(-12, 12);
-  let vy = rnd(-16, -4);
-  particles.push({
-    update(dt) {
-      t += dt;
-      x += (vx + Math.sin(t * wob + phase) * 18) * dt;
-      y += (vy + Math.cos(t * wob * 0.7 + phase) * 10) * dt;
-      return t < life;
-    },
-    draw(c) {
-      const a = Math.min(1, t * 2, (life - t) / 2) * (0.5 + 0.5 * Math.sin(t * 4 + phase));
-      c.save();
-      c.globalCompositeOperation = "lighter";
-      c.globalAlpha = Math.max(0, a);
-      const s = S();
-      px(c, x, y, s, s, "#ffe9a0");
-      c.globalAlpha = Math.max(0, a * 0.35);
-      c.beginPath();
-      c.arc(x + s / 2, y + s / 2, s * 2.4, 0, Math.PI * 2);
-      c.fillStyle = "#ffd76a";
-      c.fill();
-      c.restore();
-    },
-  });
-};
 
-const addRainDrop = (r: Rect): void => {
-  const groundY = imgToScreen(r, 0, WORLDS[worldIdx].groundY).y;
-  let x = rnd(-40, W + 40);
-  let y = rnd(-60, -10);
-  const v = rnd(700, 1000) * (H / 900);
-  particles.push({
-    update(dt) {
-      x -= v * 0.12 * dt;
-      y += v * dt;
-      if (y >= groundY) {
-        addSplash(x, groundY);
-        return false;
-      }
-      return true;
-    },
-    draw(c) {
-      c.globalAlpha = 0.35;
-      c.strokeStyle = "#cfe6e8";
-      c.lineWidth = Math.max(1, S() * 0.4);
-      c.beginPath();
-      c.moveTo(x, y);
-      c.lineTo(x + v * 0.12 * 0.016, y - v * 0.016);
-      c.stroke();
-      c.globalAlpha = 1;
-    },
-  });
-};
 
 const addSplash = (x: number, y: number): void => {
   for (let i = 0; i < 3; i++) {
@@ -770,28 +731,6 @@ const addGull = (): void => {
   });
 };
 
-const addLeaf = (r: Rect): void => {
-  const groundY = imgToScreen(r, 0, WORLDS[worldIdx].groundY).y;
-  let x = rnd(-20, W + 20);
-  let y = rnd(-30, -10);
-  const v = rnd(26, 46) * (H / 900);
-  const sway = rnd(1.2, 2.2);
-  const phase = rnd(0, 10);
-  let t = 0;
-  const col = ["#8aab6a", "#a8c07a", "#c9b25a"][Math.floor(rnd(0, 3))];
-  particles.push({
-    update(dt) {
-      t += dt;
-      y += v * dt;
-      x += Math.sin(t * sway + phase) * 24 * dt;
-      return y < groundY;
-    },
-    draw(c) {
-      const flat = Math.abs(Math.sin(t * sway + phase)); // la feuille "tourne"
-      px(c, x, y, S() * (0.6 + flat * 0.8), S() * 0.6, col);
-    },
-  });
-};
 
 const addSteam = (x: number, y: number): void => {
   let t = 0;
@@ -835,6 +774,178 @@ const addSpark = (x: number, y: number): void => {
       c.globalAlpha = (1 - t / life) * (0.5 + 0.5 * Math.sin(t * 20));
       px(c, sx, sy, S() * 0.5, S() * 0.5, "#ffca6a");
       c.globalAlpha = 1;
+    },
+  });
+};
+
+const addRipple = (x: number, y: number): void => {
+  let t = 0;
+  const life = 1.8;
+  particles.push({
+    update(dt) {
+      t += dt;
+      return t < life;
+    },
+    draw(c) {
+      c.save();
+      c.strokeStyle = "#fff2dc";
+      c.lineWidth = Math.max(1, S() * 0.35);
+      for (const off of [0, 0.5]) {
+        const p = (t - off) / (life - off);
+        if (p < 0 || p > 1) continue;
+        c.globalAlpha = 0.4 * (1 - p);
+        c.beginPath();
+        c.ellipse(x, y, (6 + p * 34) * (S() / 3), (2 + p * 10) * (S() / 3), 0, 0, Math.PI * 2);
+        c.stroke();
+      }
+      c.restore();
+    },
+  });
+};
+
+const addJumpFish = (x: number, waterY: number): void => {
+  const dir = Math.random() < 0.5 ? -1 : 1;
+  let t = 0;
+  const dur = rnd(0.9, 1.3);
+  const height = rnd(26, 46) * (S() / 3);
+  const span = rnd(30, 60) * (S() / 3) * dir;
+  addRipple(x, waterY);
+  particles.push({
+    update(dt) {
+      t += dt;
+      if (t >= dur) {
+        addRipple(x + span, waterY);
+        addSplash(x + span, waterY);
+        return false;
+      }
+      return true;
+    },
+    draw(c) {
+      const p = t / dur;
+      const fx = x + span * p;
+      const fy = waterY - Math.sin(p * Math.PI) * height;
+      const s = S();
+      const climbing = p < 0.5;
+      c.globalAlpha = 0.9;
+      px(c, fx, fy, 2 * s, s, "#c8d8e0");
+      px(c, fx + (climbing ? -1.4 : 1.4) * s * Math.sign(span), fy + (climbing ? 0.6 : -0.6) * s, s, 0.7 * s, "#a8bcc8");
+      c.globalAlpha = 1;
+    },
+  });
+};
+
+const addBirdFlock = (x: number, y: number): void => {
+  const dir = x > W / 2 ? -1 : 1;
+  const n = 3 + Math.floor(rnd(0, 3));
+  for (let i = 0; i < n; i++) {
+    let bx = x + rnd(-20, 20);
+    let by = y + rnd(-14, 14);
+    const v = rnd(50, 80) * dir;
+    const phase = rnd(0, 10);
+    let t = 0;
+    particles.push({
+      update(dt) {
+        t += dt;
+        bx += v * dt;
+        by -= rnd(6, 14) * dt;
+        return bx > -30 && bx < W + 30 && by > -30;
+      },
+      draw(c) {
+        const s = S();
+        const flap = Math.sin(t * 7 + phase) * 1.1 * s;
+        c.strokeStyle = "rgba(70, 60, 70, 0.65)";
+        c.lineWidth = Math.max(1, s * 0.4);
+        c.beginPath();
+        c.moveTo(bx - 1.6 * s, by - flap);
+        c.lineTo(bx, by);
+        c.lineTo(bx + 1.6 * s, by - flap);
+        c.stroke();
+      },
+    });
+  }
+};
+
+const addWalker = (r: Rect): void => {
+  const groundY = imgToScreen(r, 0, WORLDS[worldIdx].groundY).y;
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  let x = dir > 0 ? -20 : W + 20;
+  const v = rnd(26, 40) * (S() / 3) * dir;
+  let t = 0;
+  particles.push({
+    update(dt) {
+      t += dt;
+      x += v * dt;
+      return x > -30 && x < W + 30;
+    },
+    draw(c) {
+      const s = S() * 0.85;
+      const step = Math.sin(t * 7);
+      c.globalAlpha = 0.8;
+      // silhouette encapuchonnée qui passe, tête baissée
+      px(c, x - 2 * s, groundY - 12 * s, 4 * s, 5 * s, "#3a3550");
+      px(c, x - 1.6 * s, groundY - 15 * s, 3.2 * s, 3 * s, "#3a3550");
+      px(c, x - 1.5 * s + step * 0.8 * s, groundY - 7 * s, 1.4 * s, 7 * s, "#2c2840");
+      px(c, x + 0.1 * s - step * 0.8 * s, groundY - 7 * s, 1.4 * s, 7 * s, "#2c2840");
+      c.globalAlpha = 1;
+    },
+  });
+};
+
+const addSailboat = (r: Rect, ny: number): void => {
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  let x = dir > 0 ? -30 : W + 30;
+  const y = imgToScreen(r, 0, ny).y;
+  const v = rnd(8, 14) * (S() / 3) * dir;
+  let t = 0;
+  particles.push({
+    update(dt) {
+      t += dt;
+      x += v * dt;
+      return x > -40 && x < W + 40;
+    },
+    draw(c) {
+      const s = S() * 0.8;
+      const bob = Math.sin(t * 1.1) * 0.5 * s;
+      c.globalAlpha = 0.85;
+      px(c, x - 2.4 * s, y + bob, 4.8 * s, 1.2 * s, "#5a4a52");
+      px(c, x - 0.2 * s, y - 4.6 * s + bob, 0.5 * s, 4.6 * s, "#5a4a52");
+      for (let i = 0; i < 4; i++) px(c, x + 0.3 * s, y - 4.4 * s + i * s + bob, (3.4 - i * 0.7) * s, s, "#f2e8d8");
+      c.globalAlpha = 1;
+    },
+  });
+};
+
+const addWhale = (): void => {
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  let x = dir > 0 ? -220 : W + 220;
+  const y = rnd(H * 0.22, H * 0.42);
+  const v = rnd(16, 24) * (S() / 3) * dir;
+  let t = 0;
+  particles.push({
+    update(dt) {
+      t += dt;
+      x += v * dt;
+      if (Math.random() < dt * 0.4) addBubble(x + dir * 10 * S(), y - 3 * S());
+      return x > -260 && x < W + 260;
+    },
+    draw(c) {
+      const s = S();
+      const bob = Math.sin(t * 0.7) * 2 * s;
+      const tail = Math.sin(t * 1.8) * 1.6 * s;
+      c.save();
+      c.globalAlpha = 0.5;
+      c.fillStyle = "#1f4550";
+      c.beginPath();
+      c.ellipse(x, y + bob, 15 * s, 4.6 * s, 0, 0, Math.PI * 2);
+      c.fill();
+      // queue
+      px(c, x - dir * 15 * s, y + bob - 1.4 * s + tail, 3.6 * s, 1.4 * s, "#1f4550");
+      px(c, x - dir * 17.5 * s, y + bob - 3 * s + tail * 1.4, 2.4 * s, 1.6 * s, "#1f4550");
+      // nageoire + œil
+      px(c, x - dir * 2 * s, y + bob + 3 * s, 3 * s, 1.6 * s, "#183842");
+      c.globalAlpha = 0.8;
+      px(c, x + dir * 10 * s, y + bob - 1.6 * s, 0.9 * s, 0.9 * s, "#0d232a");
+      c.restore();
     },
   });
 };
@@ -933,32 +1044,129 @@ const drawCampfire = (c: CanvasRenderingContext2D, x: number, y: number, t: numb
   glow(c, x, y - 3 * s, 26 * (S() / 3) * (1 + Math.sin(t * 8) * 0.08), "rgba(255, 170, 80, 0.55)", 0.4);
 };
 
-// coordonnées normalisées des éléments animés, par monde
-const FORET_LANTERNS: [number, number][] = [
-  [0.116, 0.397],
-  [0.258, 0.443],
-  [0.417, 0.313],
-  [0.547, 0.419],
-  [0.776, 0.391],
+// --- pêcheurs animés du lac ----------------------------------------------
+
+interface Fisher {
+  nx: number; // position sur le ponton (coord image)
+  coat: string;
+  phase: number;
+  nextCatch: number; // horloge absolue (s) de la prochaine prise
+  catchT: number; // début de la prise en cours (-1 si aucune)
+}
+const FISHERS: Fisher[] = [
+  { nx: 0.48, coat: "#e08a4a", phase: 0, nextCatch: 12, catchT: -1 },
+  { nx: 0.76, coat: "#5a9a9a", phase: 2.3, nextCatch: 24, catchT: -1 },
 ];
-const FORET_CABIN = { win1: [0.821, 0.775], win2: [0.967, 0.781], chimney: [0.955, 0.545], cat: [0.83, 0.875] };
+const PECHE_WATER_Y = 0.77; // ligne d'eau où flottent les bouchons
+const CATCH_DUR = 2.0;
+
+const fisherCatch = (screenX: number, r: Rect): void => {
+  let best: Fisher | null = null;
+  let bestD = Infinity;
+  for (const f of FISHERS) {
+    const d = Math.abs(imgToScreen(r, f.nx, 0).x - screenX);
+    if (d < bestD) {
+      bestD = d;
+      best = f;
+    }
+  }
+  if (best && best.catchT < 0) best.nextCatch = 0; // prise au prochain frame
+};
+
+const drawFisher = (c: CanvasRenderingContext2D, f: Fisher, r: Rect, t: number): void => {
+  const s = S() * 0.9;
+  const base = imgToScreen(r, f.nx, WORLDS[worldIdx].groundY);
+  const waterY = imgToScreen(r, 0, PECHE_WATER_Y).y;
+  const x = base.x;
+  const y = base.y;
+
+  // déclenchement d'une prise
+  if (f.catchT < 0 && t > f.nextCatch) {
+    f.catchT = t;
+    f.nextCatch = t + CATCH_DUR + rnd(16, 34);
+  }
+  const ph = f.catchT >= 0 ? (t - f.catchT) / CATCH_DUR : -1;
+  if (ph > 1) f.catchT = -1;
+  const pulling = ph >= 0 && ph <= 1;
+
+  // bonhomme de profil, face à l'eau (vers la gauche)
+  px(c, x - 1.8 * s, y - 1 * s, 1.6 * s, 1 * s, "#4a3826");
+  px(c, x + 0.2 * s, y - 1 * s, 1.6 * s, 1 * s, "#4a3826");
+  px(c, x - 1.6 * s, y - 5 * s, 3.2 * s, 4 * s, "#3a4a6b");
+  px(c, x - 2 * s, y - 9 * s, 4 * s, 4 * s, f.coat);
+  px(c, x - 1.6 * s, y - 12 * s, 3.2 * s, 3 * s, "#f2c9a0");
+  px(c, x - 2.4 * s, y - 13 * s, 4.8 * s, 1.2 * s, "#c9a13b");
+  px(c, x - 1.8 * s, y - 12.4 * s, 3.6 * s, 0.7 * s, "#c9a13b");
+  px(c, x - 1.5 * s, y - 11.2 * s, 0.7 * s, 0.7 * s, "#2a2622");
+  // bras tendu vers la canne
+  px(c, x - 2.8 * s, y - 8.6 * s + (pulling ? -0.8 * s : 0), 1.6 * s, 1 * s, f.coat);
+
+  // canne (elle se redresse quand ça mord)
+  const lift = pulling ? Math.sin(Math.min(1, ph * 2) * Math.PI * 0.5) * 3 * s : Math.sin(t * 1.6 + f.phase) * 0.5 * s;
+  const tipX = x - 8.5 * s;
+  const tipY = y - 15 * s - lift;
+  c.strokeStyle = "#6b4a35";
+  c.lineWidth = Math.max(1, s * 0.45);
+  c.beginPath();
+  c.moveTo(x - 2.2 * s, y - 8 * s);
+  c.lineTo(tipX, tipY);
+  c.stroke();
+
+  // ligne + bouchon (ou poisson qui remonte)
+  c.strokeStyle = "rgba(255, 255, 255, 0.35)";
+  c.lineWidth = Math.max(1, s * 0.3);
+  if (pulling) {
+    const fy = waterY - (waterY - tipY - 2 * s) * Math.min(1, ph * 1.4);
+    c.beginPath();
+    c.moveTo(tipX, tipY);
+    c.lineTo(tipX, fy);
+    c.stroke();
+    // petit poisson argenté qui frétille au bout
+    const wig = Math.sin(t * 26) * 0.8 * s;
+    px(c, tipX - s + wig, fy, 2 * s, s, "#c8d8e0");
+    px(c, tipX + s + wig, fy + 0.2 * s, 0.8 * s, 0.6 * s, "#a8bcc8");
+    if (ph < 0.05) {
+      addSplash(tipX, waterY);
+      addRipple(tipX, waterY);
+    }
+  } else {
+    const bobY = waterY + Math.sin(t * 1.9 + f.phase) * 1.2 * s;
+    c.beginPath();
+    c.moveTo(tipX, tipY);
+    c.lineTo(tipX, bobY);
+    c.stroke();
+    px(c, tipX - 0.5 * s, bobY - 0.6 * s, s, 0.6 * s, "#e05a4a");
+    px(c, tipX - 0.5 * s, bobY, s, 0.6 * s, "#f2e8d8");
+    if ((t + f.phase * 3) % 6 < 0.04) addRipple(tipX, bobY);
+  }
+};
+
+// coordonnées normalisées des éléments animés du lac (calibrées sur l'image)
+const PECHE_LANTERNS: [number, number][] = [
+  [0.131, 0.475],
+  [0.203, 0.478],
+  [0.24, 0.47],
+  [0.281, 0.487],
+  [0.321, 0.487],
+  [0.38, 0.46],
+];
+const PECHE_CAT: [number, number] = [0.09, 0.88];
 
 const drawFixtures = (c: CanvasRenderingContext2D, r: Rect, t: number): void => {
   const w = WORLDS[worldIdx];
   const at = (nx: number, ny: number): { x: number; y: number } => imgToScreen(r, nx, ny);
   const u = S() / 3; // unité d'échelle des halos
 
-  if (w.id === "foret") {
-    for (let i = 0; i < FORET_LANTERNS.length; i++) {
-      const p = at(FORET_LANTERNS[i][0], FORET_LANTERNS[i][1]);
-      glow(c, p.x, p.y, 30 * u, "rgba(255, 190, 90, 0.8)", 0.16 + Math.sin(t * 1.3 + i * 1.9) * 0.06);
+  if (w.id === "peche") {
+    for (let i = 0; i < PECHE_LANTERNS.length; i++) {
+      const p = at(PECHE_LANTERNS[i][0], PECHE_LANTERNS[i][1]);
+      glow(c, p.x, p.y, 28 * u, "rgba(255, 190, 90, 0.8)", 0.15 + Math.sin(t * 1.3 + i * 1.9) * 0.05);
     }
-    const w1 = at(FORET_CABIN.win1[0], FORET_CABIN.win1[1]);
-    const w2 = at(FORET_CABIN.win2[0], FORET_CABIN.win2[1]);
-    const flick = 0.2 + Math.max(0, Math.sin(t * 6.3) * Math.sin(t * 2.1)) * 0.1;
-    glow(c, w1.x, w1.y, 26 * u, "rgba(255, 200, 110, 0.8)", flick);
-    glow(c, w2.x, w2.y, 26 * u, "rgba(255, 200, 110, 0.8)", flick * 0.9);
-    const cat = at(FORET_CABIN.cat[0], FORET_CABIN.cat[1]);
+    // reflet du soleil levant qui scintille sur le lac
+    const sun = at(0.6, 0.5);
+    glow(c, sun.x, sun.y, 80 * u, "rgba(255, 210, 160, 0.6)", 0.08 + Math.sin(t * 0.6) * 0.02);
+    for (const f of FISHERS) drawFisher(c, f, r, t);
+    const cat = at(PECHE_CAT[0], PECHE_CAT[1]);
     drawSleepingCat(c, cat.x, cat.y, t);
   } else if (w.id === "ville") {
     // néons qui grésillent
@@ -995,6 +1203,28 @@ const drawFixtures = (c: CanvasRenderingContext2D, r: Rect, t: number): void => 
     const p2 = at(0.8, 0.72);
     glow(c, p1.x, p1.y, 30 * u, "rgba(255, 200, 120, 0.8)", 0.16 + Math.sin(t * 2.3) * 0.05);
     glow(c, p2.x, p2.y, 26 * u, "rgba(255, 200, 120, 0.8)", 0.13 + Math.sin(t * 1.7 + 2) * 0.05);
+    // anémones roses qui pulsent doucement
+    for (const [ax, ay, ph] of [
+      [0.09, 0.82, 0],
+      [0.22, 0.85, 2],
+      [0.93, 0.82, 4],
+    ] as [number, number, number][]) {
+      const p = at(ax, ay);
+      glow(c, p.x, p.y, 22 * u, "rgba(232, 150, 190, 0.7)", 0.1 + Math.sin(t * 1.2 + ph) * 0.04);
+    }
+    // plateformes de la remontée : planches d'épave flottantes
+    const s = S();
+    for (const p of w.platforms ?? []) {
+      const a = at(p.x1, p.y);
+      const b = at(p.x2, p.y);
+      const sway = Math.sin(t * 0.9 + p.x1 * 20) * 0.4 * s;
+      px(c, a.x, a.y + sway, b.x - a.x, 1.3 * s, "#8a6a42");
+      px(c, a.x, a.y + sway, b.x - a.x, 0.4 * s, "#b08a5a");
+      for (let nx = a.x + 3 * s; nx < b.x - 2 * s; nx += 6 * s) px(c, nx, a.y + sway + 0.5 * s, 0.5 * s, 0.5 * s, "#5f4830");
+      // brins d'algues accrochés aux extrémités
+      px(c, a.x + 0.5 * s, a.y + sway + 1.3 * s, 0.6 * s, (1.6 + Math.sin(t * 1.4 + p.x1 * 30) * 0.5) * s, "#4a8a6a");
+      px(c, b.x - s, a.y + sway + 1.3 * s, 0.6 * s, (1.2 + Math.cos(t * 1.1 + p.x1 * 30) * 0.5) * s, "#4a8a6a");
+    }
   }
 };
 
@@ -1220,13 +1450,22 @@ class Lofi {
       stops.push(() => (alive = false));
     };
 
-    if (kind === "rain") {
-      loopNoise(false, "bandpass", 900, 0.045);
-      loopNoise(true, "lowpass", 300, 0.02);
-      sporadic(0.4, 1.6, () => {
-        // goutte qui plinke
-        this.osc(rnd(1100, 2400), ac.currentTime, 0.2, "sine", 0.012, gain);
+    if (kind === "lake") {
+      // clapotis très doux + oiseaux du matin + plocs d'eau
+      const g = loopNoise(false, "lowpass", 460, 0.014);
+      const lfo = ac.createOscillator();
+      lfo.frequency.value = 0.07;
+      const lg = ac.createGain();
+      lg.gain.value = 0.011;
+      lfo.connect(lg).connect(g.gain);
+      lfo.start();
+      stops.push(() => lfo.stop());
+      sporadic(3, 9, () => {
+        const f0 = rnd(1700, 2400);
+        this.osc(f0, ac.currentTime, 0.09, "sine", 0.008, gain);
+        this.osc(f0 * rnd(1.15, 1.3), ac.currentTime + 0.13, 0.11, "sine", 0.007, gain);
       });
+      sporadic(6, 15, () => this.osc(rnd(380, 560), ac.currentTime, 0.16, "sine", 0.012, gain));
     } else if (kind === "city") {
       loopNoise(true, "lowpass", 260, 0.028);
       sporadic(9, 22, () => {
@@ -1310,21 +1549,23 @@ const lofi = new Lofi();
 const applyEffect = (effect: string, x: number, y: number, r: Rect): void => {
   const w = WORLDS[worldIdx];
   switch (effect) {
-    case "cabin": {
-      const chimney = imgToScreen(r, FORET_CABIN.chimney[0], FORET_CABIN.chimney[1]);
-      for (let i = 0; i < 4; i++) setTimeout(() => addSmokePuff(chimney.x, chimney.y), i * 350);
-      addGlowPulse(x, y, "rgba(255, 190, 90, 0.8)", 60 * (S() / 3));
-      break;
-    }
     case "lantern":
       addGlowPulse(x, y, "rgba(255, 190, 90, 0.9)", 46 * (S() / 3));
       addSparkle(x, y, "#ffd76a", 5);
       break;
-    case "rainburst":
-      for (let i = 0; i < 10; i++) addSplash(x + rnd(-30, 30), y + rnd(-20, 20));
+    case "ripple":
+      addRipple(x, y);
+      if (Math.random() < 0.4) addJumpFish(x, y);
       break;
-    case "fireflies":
-      for (let i = 0; i < 5; i++) addFirefly(x + rnd(-20, 20), y + rnd(-20, 10));
+    case "fisher":
+      fisherCatch(x, r);
+      break;
+    case "boat":
+      addRipple(x, y + 10 * (S() / 3));
+      addSparkle(x, y, "#ffe8c0", 4);
+      break;
+    case "birds":
+      addBirdFlock(x, y);
       break;
     case "moonpulse":
       addGlowPulse(x, y, "rgba(220, 230, 255, 0.8)", 90 * (S() / 3));
@@ -1424,14 +1665,21 @@ let ambT = 0;
 const spawnAmbience = (dt: number, r: Rect): void => {
   const w = WORLDS[worldIdx];
   ambT += dt;
-  if (w.id === "foret") {
-    for (let i = 0; i < 3; i++) if (Math.random() < 0.9) addRainDrop(r);
-    if (Math.random() < dt * 0.5) addFirefly(rnd(0, W), rnd(H * 0.5, H * 0.85));
-    if (Math.random() < dt * 0.6) addLeaf(r);
-    if (Math.random() < dt * 0.4) {
-      const chimney = imgToScreen(r, FORET_CABIN.chimney[0], FORET_CABIN.chimney[1]);
-      addSmokePuff(chimney.x, chimney.y);
+  if (w.id === "peche") {
+    if (Math.random() < dt * 0.5) {
+      const p = imgToScreen(r, rnd(0.08, 0.92), rnd(PECHE_WATER_Y - 0.16, PECHE_WATER_Y));
+      addRipple(p.x, p.y);
     }
+    if (Math.random() < dt * 0.07) {
+      const p = imgToScreen(r, rnd(0.15, 0.85), PECHE_WATER_Y);
+      addJumpFish(p.x, p.y);
+    }
+    if (Math.random() < dt * 0.4) {
+      const p = imgToScreen(r, rnd(0.1, 0.9), PECHE_WATER_Y - 0.02);
+      addSteam(p.x, p.y); // brume qui s'élève du lac
+    }
+    if (Math.random() < dt * 0.04) addBirdFlock(Math.random() < 0.5 ? 10 : W - 10, rnd(H * 0.1, H * 0.3));
+    if (Math.random() < dt * 0.05) addGull();
   } else if (w.id === "ville") {
     if (Math.random() < dt * 0.05) addShootingStar(rnd(W * 0.1, W * 0.9), rnd(0, H * 0.2));
     if (Math.random() < dt * 2) addSparkle(rnd(0, W), rnd(0, H * 0.25), "#fffbe8", 1);
@@ -1439,12 +1687,15 @@ const spawnAmbience = (dt: number, r: Rect): void => {
       const vent = imgToScreen(r, 0.395, 0.445);
       addSteam(vent.x + rnd(-4, 4), vent.y);
     }
+    if (Math.random() < dt * 0.03) addWalker(r);
   } else if (w.id === "plage") {
     if (Math.random() < dt * 1.6) {
       const p = imgToScreen(r, rnd(0.3, 0.7), rnd(0.5, 0.75));
       addSparkle(p.x, p.y, "#ffe8c0", 1);
     }
     if (Math.random() < dt * 0.05) addGull();
+    if (Math.random() < dt * 0.015) addSailboat(r, 0.55);
+    if (Math.random() < dt * 0.05) addCrab(r, rnd(W * 0.1, W * 0.9));
     const fire = imgToScreen(r, 0.16, 0.865);
     if (Math.random() < dt * 2.2) addSpark(fire.x, fire.y);
     if (Math.random() < dt * 0.5) addSmokePuff(fire.x, fire.y - 10);
@@ -1460,6 +1711,7 @@ const spawnAmbience = (dt: number, r: Rect): void => {
     }
     if (Math.random() < dt * 0.08) addJellyfish();
     if (Math.random() < dt * 0.05) addFishSchool(r, Math.random() < 0.5 ? 0 : W, rnd(H * 0.3, H * 0.7));
+    if (Math.random() < dt * 0.012) addWhale();
   }
 };
 
@@ -1513,6 +1765,11 @@ const frame = (now: number): void => {
 
       // physique du personnage
       const groundY = imgToScreen(r, 0, w.groundY).y;
+      const plats = (w.platforms ?? []).map((p) => ({
+        x1: imgToScreen(r, p.x1, p.y).x,
+        x2: imgToScreen(r, p.x2, p.y).x,
+        y: imgToScreen(r, p.x1, p.y).y,
+      }));
       const spd = 46 * S() * w.speed;
       const left = keys.has("ArrowLeft") || keys.has("KeyA") || keys.has("KeyQ");
       const right = keys.has("ArrowRight") || keys.has("KeyD");
@@ -1523,18 +1780,35 @@ const frame = (now: number): void => {
         char.walkT += dt;
       }
       char.idleT += dt;
+      const land = (y: number): void => {
+        char.y = y;
+        char.vy = 0;
+        char.onGround = true;
+        if (w.id === "lune") addMoonDust(char.x, char.y);
+        if (w.id === "ocean") addBubble(char.x, char.y - 20);
+      };
       if (!char.onGround) {
+        const prevY = char.y;
         char.vy += w.gravity * (S() / 3) * dt;
         char.y += char.vy * dt;
-        if (char.y >= groundY) {
-          char.y = groundY;
-          char.vy = 0;
-          char.onGround = true;
-          if (w.id === "lune") addMoonDust(char.x, char.y);
-          if (w.id === "ocean") addBubble(char.x, char.y - 20);
+        if (char.vy > 0) {
+          for (const p of plats) {
+            if (char.x >= p.x1 && char.x <= p.x2 && prevY <= p.y && char.y >= p.y) {
+              land(p.y);
+              break;
+            }
+          }
         }
+        if (!char.onGround && char.y >= groundY) land(groundY);
       } else {
-        char.y = groundY;
+        // rester sur le support ; tomber si on a marché dans le vide
+        const onPlat = plats.find((p) => Math.abs(char.y - p.y) < 4 && char.x >= p.x1 - 3 && char.x <= p.x2 + 3);
+        if (onPlat) char.y = onPlat.y;
+        else if (char.y >= groundY - 4) char.y = groundY;
+        else {
+          char.onGround = false;
+          char.vy = 0;
+        }
       }
 
       // bulles du scaphandre
@@ -1546,9 +1820,21 @@ const frame = (now: number): void => {
         }
       }
 
-      // traversée des bords → monde suivant / précédent
+      // traversée des bords → monde suivant / précédent. Cas particulier de
+      // l'océan : la sortie de droite est en hauteur (fin de la remontée) ;
+      // en bas, un léger courant bloque le passage.
       if (fade === 0) {
-        if (char.x > W + 20) switchWorld(1);
+        if (w.id === "ocean") {
+          const topExitY = r.y + r.h * 0.32;
+          if (char.x > W - 8 && char.y < topExitY) switchWorld(1);
+          else {
+            if (char.x > W - 6) {
+              char.x = W - 6;
+              if (Math.random() < dt * 6) addBubble(char.x + rnd(-6, 6), char.y - rnd(0, 40));
+            }
+            if (char.x < -20) switchWorld(-1);
+          }
+        } else if (char.x > W + 20) switchWorld(1);
         else if (char.x < -20) switchWorld(-1);
       }
 
@@ -1578,8 +1864,15 @@ const frame = (now: number): void => {
       const nw = WORLDS[worldIdx];
       const nimg = images.get(nw.id)!;
       const nr = nimg.complete ? coverRect(nimg) : { x: 0, y: 0, w: W, h: H };
-      char.x = char.facing > 0 ? -14 : W + 14;
-      char.y = imgToScreen(nr, 0, nw.groundY).y;
+      if (nw.id === "ocean" && char.facing < 0 && nw.platforms) {
+        // on redescend depuis la lune : on réapparaît sur la planche du haut
+        const top = nw.platforms[nw.platforms.length - 1];
+        char.x = imgToScreen(nr, (top.x1 + top.x2) / 2, top.y).x;
+        char.y = imgToScreen(nr, 0, top.y).y;
+      } else {
+        char.x = char.facing > 0 ? -14 : W + 14;
+        char.y = imgToScreen(nr, 0, nw.groundY).y;
+      }
       char.vy = 0;
       char.onGround = true;
       lofi.setAmbience(nw.ambience);
