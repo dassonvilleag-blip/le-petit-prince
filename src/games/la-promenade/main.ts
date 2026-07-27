@@ -10,12 +10,13 @@ const BASE = import.meta.env.BASE_URL;
 // ---------------------------------------------------------------------------
 
 interface Skin {
-  hat: string; // bonnet / capuche / casquette (ou couleur du casque)
+  hat: string; // bonnet / capuche / chapeau / casque
   skin: string;
   top: string;
   pants: string;
   shoes: string;
-  helmet?: boolean; // casque en verre (lune, océan)
+  accent: string; // détail de tenue : rayure, casque audio, ruban, sac, hublot…
+  style: "bonnet" | "hood" | "straw" | "space" | "diver";
 }
 
 interface Hotspot {
@@ -34,7 +35,7 @@ interface World {
   ambience: "rain" | "city" | "waves" | "space" | "under";
   skin: Skin;
   gravity: number;
-  jumpV: number;
+  jumpH: number; // hauteur de saut voulue, en pixels logiques du personnage
   speed: number; // multiplicateur de vitesse de marche
   hotspots: Hotspot[];
   fallback: (nx: number, ny: number) => string; // effet par défaut selon la zone
@@ -47,18 +48,17 @@ const WORLDS: World[] = [
     file: "foret.png",
     groundY: 0.9,
     ambience: "rain",
-    skin: { hat: "#c9a13b", skin: "#f2c9a0", top: "#e0b23c", pants: "#4a5a52", shoes: "#5a4632" },
+    skin: { hat: "#c9a13b", skin: "#f2c9a0", top: "#e0b23c", pants: "#4a5a52", shoes: "#6b4a35", accent: "#a87c28", style: "bonnet" },
     gravity: 2200,
-    jumpV: 620,
+    jumpH: 45,
     speed: 1,
     hotspots: [
-      { x1: 0.53, y1: 0.5, x2: 0.73, y2: 0.76, effect: "cabin" },
-      { x1: 0.02, y1: 0.35, x2: 0.09, y2: 0.5, effect: "lantern" },
-      { x1: 0.26, y1: 0.25, x2: 0.34, y2: 0.4, effect: "lantern" },
-      { x1: 0.4, y1: 0.3, x2: 0.47, y2: 0.42, effect: "lantern" },
-      { x1: 0.51, y1: 0.24, x2: 0.58, y2: 0.35, effect: "lantern" },
-      { x1: 0.79, y1: 0.35, x2: 0.87, y2: 0.5, effect: "lantern" },
-      { x1: 0.88, y1: 0.4, x2: 0.94, y2: 0.5, effect: "lantern" },
+      { x1: 0.78, y1: 0.55, x2: 1.0, y2: 0.87, effect: "cabin" },
+      { x1: 0.08, y1: 0.34, x2: 0.15, y2: 0.45, effect: "lantern" },
+      { x1: 0.22, y1: 0.39, x2: 0.29, y2: 0.5, effect: "lantern" },
+      { x1: 0.38, y1: 0.26, x2: 0.45, y2: 0.37, effect: "lantern" },
+      { x1: 0.51, y1: 0.36, x2: 0.58, y2: 0.47, effect: "lantern" },
+      { x1: 0.74, y1: 0.34, x2: 0.81, y2: 0.45, effect: "lantern" },
     ],
     fallback: (_nx, ny) => (ny > 0.8 ? "fireflies" : "rainburst"),
   },
@@ -68,9 +68,9 @@ const WORLDS: World[] = [
     file: "ville.png",
     groundY: 0.92,
     ambience: "city",
-    skin: { hat: "#9a7bd0", skin: "#e8b48c", top: "#9a7bd0", pants: "#5b6a8c", shoes: "#e8e3d8" },
+    skin: { hat: "#9a7bd0", skin: "#e8b48c", top: "#9a7bd0", pants: "#5b6a8c", shoes: "#e8e3d8", accent: "#2f2a3a", style: "hood" },
     gravity: 2200,
-    jumpV: 620,
+    jumpH: 45,
     speed: 1,
     hotspots: [
       { x1: 0.58, y1: 0.03, x2: 0.72, y2: 0.24, effect: "moonpulse" },
@@ -87,9 +87,9 @@ const WORLDS: World[] = [
     file: "plage.png",
     groundY: 0.93,
     ambience: "waves",
-    skin: { hat: "#6b4a35", skin: "#e8b48c", top: "#ef8a7a", pants: "#f2e3c2", shoes: "#e8b48c" },
+    skin: { hat: "#e8d48a", skin: "#e8b48c", top: "#ef8a7a", pants: "#f2e3c2", shoes: "#c98d6a", accent: "#ef8a7a", style: "straw" },
     gravity: 2200,
-    jumpV: 620,
+    jumpH: 45,
     speed: 1,
     hotspots: [
       { x1: 0.77, y1: 0.28, x2: 0.86, y2: 0.52, effect: "lighthouse" },
@@ -104,9 +104,9 @@ const WORLDS: World[] = [
     file: "lune.png",
     groundY: 0.88,
     ambience: "space",
-    skin: { hat: "#d8dee8", skin: "#f2c9a0", top: "#e8ecf2", pants: "#c8d0dc", shoes: "#8a94a4", helmet: true },
+    skin: { hat: "#e8ecf2", skin: "#f2c9a0", top: "#e8ecf2", pants: "#c8d0dc", shoes: "#8a94a4", accent: "#7ad0e0", style: "space" },
     gravity: 460,
-    jumpV: 400,
+    jumpH: 85,
     speed: 0.82,
     hotspots: [
       { x1: 0.14, y1: 0.07, x2: 0.34, y2: 0.42, effect: "earthpulse" },
@@ -121,9 +121,9 @@ const WORLDS: World[] = [
     file: "ocean.png",
     groundY: 0.94,
     ambience: "under",
-    skin: { hat: "#c98d4e", skin: "#f2c9a0", top: "#b0834f", pants: "#7a8ba0", shoes: "#5a4632", helmet: true },
+    skin: { hat: "#c98d4e", skin: "#f2c9a0", top: "#b0834f", pants: "#7a8ba0", shoes: "#5a4632", accent: "#e8c56a", style: "diver" },
     gravity: 800,
-    jumpV: 330,
+    jumpH: 35,
     speed: 0.7,
     hotspots: [{ x1: 0.57, y1: 0.4, x2: 0.88, y2: 0.86, effect: "porthole" }],
     fallback: (_nx, ny) => (ny > 0.82 ? "sandpuff" : "bubbles"),
@@ -229,7 +229,10 @@ window.addEventListener("keyup", (e) => keys.delete(e.code));
 const jump = (): void => {
   if (!started || !char.onGround) return;
   const w = WORLDS[worldIdx];
-  char.vy = -w.jumpV * S();
+  // impulsion calculée pour atteindre exactement jumpH pixels logiques,
+  // quelle que soit la taille de l'écran (sinon le saut sortait de l'écran)
+  const g = w.gravity * (S() / 3);
+  char.vy = -Math.sqrt(2 * g * w.jumpH * S());
   char.onGround = false;
 };
 
@@ -241,49 +244,111 @@ const px = (c: CanvasRenderingContext2D, x: number, y: number, w: number, h: num
   c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
 };
 
+// Sprite 12×17 en cartes de caractères : H couvre-chef, S peau, E œil,
+// T haut, P pantalon, O chaussures, A accent de tenue. Le corps est commun,
+// seules les jambes changent entre les deux frames de marche.
+const BODY_ROWS = [
+  "..HHHHHHHH..",
+  ".HHHHHHHHHH.",
+  ".HHHHHHHHHH.",
+  ".SSSSSSSSSS.",
+  ".SSSESSSSES.",
+  ".SSSSSSSSSS.",
+  "..SSSSSSSS..",
+  "..TTTTTTTT..",
+  ".TTTTTTTTTT.",
+  ".ATTTTTTTTA.",
+  ".ATTTTTTTTA.",
+  ".S.TTTTTT.S.",
+];
+const LEGS_STAND = ["...PPPPPP...", "...PPPPPP...", "...PP..PP...", "...PP..PP...", "..OOO..OOO.."];
+const LEGS_WALK = ["...PPPPPP...", "..PPP..PPP..", "..PP....PP..", "..PP....PP..", ".OOO....OOO."];
+
 const drawChar = (c: CanvasRenderingContext2D): void => {
   const w = WORLDS[worldIdx];
   const k = w.skin;
   const s = S();
-  const breath = Math.sin(char.idleT * 2.2) * 0.35 * s;
-  const swing = char.walking ? Math.sin(char.walkT * 9) : 0;
+  const walkFrame = char.walking && Math.floor(char.walkT * 7) % 2 === 0;
+  const rows = [...BODY_ROWS, ...(walkFrame ? LEGS_WALK : LEGS_STAND)];
+  const blink = char.idleT % 4.2 > 4.05;
+  const bob = char.walking ? (walkFrame ? -0.6 * s : 0) : Math.sin(char.idleT * 2.2) * 0.3 * s;
+  const colors: Record<string, string> = {
+    H: k.hat,
+    S: k.skin,
+    E: blink ? k.skin : "#2a2622",
+    T: k.top,
+    P: k.pants,
+    O: k.shoes,
+    A: k.accent,
+  };
 
   c.save();
-  c.translate(Math.round(char.x), Math.round(char.y));
+  c.translate(Math.round(char.x), Math.round(char.y + bob));
   if (char.facing < 0) c.scale(-1, 1);
 
-  const legA = swing * 2 * s;
-  const legB = -swing * 2 * s;
-  // jambes
-  px(c, -3 * s + legA * 0.4, -5 * s, 2 * s, 5 * s, k.pants);
-  px(c, 1 * s + legB * 0.4, -5 * s, 2 * s, 5 * s, k.pants);
-  // chaussures
-  px(c, -3 * s + legA * 0.6, -1 * s, 2.6 * s, 1 * s, k.shoes);
-  px(c, 1 * s + legB * 0.6, -1 * s, 2.6 * s, 1 * s, k.shoes);
-  // corps
-  px(c, -4 * s, -11 * s + breath, 8 * s, 6 * s, k.top);
-  // bras (balancement opposé aux jambes)
-  px(c, -5 * s, -10.6 * s + breath - swing * 0.8 * s, 1.6 * s, 4.6 * s, k.top);
-  px(c, 3.4 * s, -10.6 * s + breath + swing * 0.8 * s, 1.6 * s, 4.6 * s, k.top);
-  // tête
-  px(c, -3.5 * s, -17 * s + breath, 7 * s, 6 * s, k.skin);
-  // yeux (côté du regard)
-  px(c, 1.6 * s, -15 * s + breath, 0.9 * s, 1 * s, "#2a2622");
-  px(c, -0.6 * s, -15 * s + breath, 0.9 * s, 1 * s, "#2a2622");
-  // couvre-chef : bonnet / capuche / casquette
-  px(c, -3.8 * s, -18 * s + breath, 7.6 * s, 2.4 * s, k.hat);
-  px(c, -3.8 * s, -16 * s + breath, 1.2 * s, 2 * s, k.hat);
+  // grille : origine du sprite en (-6s, -17s), une case = s
+  const g = (col: number, row: number, wCols: number, hRows: number, color: string): void =>
+    px(c, (col - 6) * s, (row - 17) * s, wCols * s, hRows * s, color);
 
-  if (k.helmet) {
+  for (let row = 0; row < rows.length; row++) {
+    const line = rows[row];
+    for (let col = 0; col < line.length; col++) {
+      const ch = line[col];
+      if (ch !== ".") g(col, row, 1, 1, colors[ch]);
+    }
+  }
+
+  // détails propres à chaque tenue
+  if (k.style === "bonnet") {
+    g(5, -1, 2, 1, "#f2e3c2"); // pompon
+    g(1, 2, 10, 1, k.accent); // rayure du bonnet
+  } else if (k.style === "hood") {
+    // casque audio par-dessus la capuche
+    g(2, 0, 8, 1, k.accent);
+    g(0, 3, 1, 3, k.accent);
+    g(11, 3, 1, 3, k.accent);
+    g(1, 4, 1, 1, k.accent);
+    g(10, 4, 1, 1, k.accent);
+  } else if (k.style === "straw") {
+    g(0, 3, 12, 1, k.hat); // large bord du chapeau de paille
+    g(1, 2, 10, 1, k.accent); // ruban
+  } else if (k.style === "space") {
+    // sac dorsal + antenne (dans le dos, côté opposé au regard)
+    g(-1, 7, 2, 5, "#b8c4d4");
+    g(-1, 8, 1, 3, k.accent);
+    g(-1, 5, 1, 2, "#8a94a4");
+    g(-1, 4, 1, 1, k.accent);
     // bulle de verre
-    c.strokeStyle = "rgba(220, 240, 255, 0.75)";
+    c.strokeStyle = "rgba(220, 240, 255, 0.8)";
     c.lineWidth = Math.max(1, s * 0.6);
     c.beginPath();
-    c.arc(0, -14 * s + breath, 5.4 * s, 0, Math.PI * 2);
+    c.arc(0, -13.5 * s, 5.6 * s, 0, Math.PI * 2);
     c.stroke();
     c.fillStyle = "rgba(200, 235, 255, 0.12)";
     c.fill();
-    px(c, 2 * s, -17.5 * s + breath, 1.4 * s, 1.4 * s, "rgba(255,255,255,0.55)");
+    px(c, 2 * s, -17 * s, 1.4 * s, 1.4 * s, "rgba(255,255,255,0.5)");
+  } else if (k.style === "diver") {
+    // gros casque rond de scaphandrier, avec hublot sur le visage
+    g(2, -1, 8, 1, k.hat);
+    g(1, 0, 10, 3, k.hat);
+    g(1, 3, 3, 4, k.hat);
+    g(8, 3, 3, 4, k.hat);
+    g(1, 6, 10, 1, k.hat);
+    // cadre du hublot + boulons dorés
+    g(4, 2, 4, 1, "#8a5f2e");
+    g(4, 6, 4, 1, "#8a5f2e");
+    g(3, 3, 1, 3, "#8a5f2e");
+    g(8, 3, 1, 3, "#8a5f2e");
+    g(2, 1, 1, 1, k.accent);
+    g(9, 1, 1, 1, k.accent);
+    g(2, 5, 1, 1, k.accent);
+    g(9, 5, 1, 1, k.accent);
+    // les deux yeux, recadrés dans le hublot
+    g(4, 4, 1, 1, k.skin);
+    g(5, 4, 1, 1, colors.E);
+    g(7, 4, 1, 1, colors.E);
+    // reflet du verre
+    px(c, 1.2 * s, -13.8 * s, 0.8 * s, 0.8 * s, "rgba(255,255,255,0.4)");
   }
   c.restore();
 };
@@ -705,6 +770,234 @@ const addGull = (): void => {
   });
 };
 
+const addLeaf = (r: Rect): void => {
+  const groundY = imgToScreen(r, 0, WORLDS[worldIdx].groundY).y;
+  let x = rnd(-20, W + 20);
+  let y = rnd(-30, -10);
+  const v = rnd(26, 46) * (H / 900);
+  const sway = rnd(1.2, 2.2);
+  const phase = rnd(0, 10);
+  let t = 0;
+  const col = ["#8aab6a", "#a8c07a", "#c9b25a"][Math.floor(rnd(0, 3))];
+  particles.push({
+    update(dt) {
+      t += dt;
+      y += v * dt;
+      x += Math.sin(t * sway + phase) * 24 * dt;
+      return y < groundY;
+    },
+    draw(c) {
+      const flat = Math.abs(Math.sin(t * sway + phase)); // la feuille "tourne"
+      px(c, x, y, S() * (0.6 + flat * 0.8), S() * 0.6, col);
+    },
+  });
+};
+
+const addSteam = (x: number, y: number): void => {
+  let t = 0;
+  const life = rnd(1.6, 2.6);
+  let sx = x;
+  let sy = y;
+  const drift = rnd(-4, 10);
+  particles.push({
+    update(dt) {
+      t += dt;
+      sy -= 26 * dt;
+      sx += drift * dt;
+      return t < life;
+    },
+    draw(c) {
+      const p = t / life;
+      c.globalAlpha = 0.16 * (1 - p);
+      c.fillStyle = "#e8e8f0";
+      c.beginPath();
+      c.arc(sx, sy, S() * (0.8 + p * 2.2), 0, Math.PI * 2);
+      c.fill();
+      c.globalAlpha = 1;
+    },
+  });
+};
+
+const addSpark = (x: number, y: number): void => {
+  let sx = x + rnd(-4, 4);
+  let sy = y;
+  let vx = rnd(-14, 14);
+  let t = 0;
+  const life = rnd(0.7, 1.4);
+  particles.push({
+    update(dt) {
+      t += dt;
+      sy -= rnd(40, 70) * dt;
+      sx += vx * dt;
+      return t < life;
+    },
+    draw(c) {
+      c.globalAlpha = (1 - t / life) * (0.5 + 0.5 * Math.sin(t * 20));
+      px(c, sx, sy, S() * 0.5, S() * 0.5, "#ffca6a");
+      c.globalAlpha = 1;
+    },
+  });
+};
+
+const addSatellite = (): void => {
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  let x = dir > 0 ? -20 : W + 20;
+  const y = rnd(H * 0.06, H * 0.22);
+  const v = rnd(26, 40) * dir;
+  particles.push({
+    update(dt) {
+      x += v * dt;
+      return x > -30 && x < W + 30;
+    },
+    draw(c) {
+      const s = S();
+      c.globalAlpha = 0.85;
+      px(c, x, y, s, s, "#e8f0ff");
+      px(c, x - 1.8 * s, y + 0.1 * s, 1.4 * s, 0.7 * s, "#7ad0e0");
+      px(c, x + 1.4 * s, y + 0.1 * s, 1.4 * s, 0.7 * s, "#7ad0e0");
+      c.globalAlpha = 1;
+    },
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Fixtures — petites animations permanentes façon vidéos lofi, ancrées
+// aux coordonnées normalisées de chaque décor
+// ---------------------------------------------------------------------------
+
+const glow = (c: CanvasRenderingContext2D, x: number, y: number, radius: number, color: string, alpha: number): void => {
+  if (alpha <= 0) return;
+  const g = c.createRadialGradient(x, y, 0, x, y, radius);
+  g.addColorStop(0, color);
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  c.save();
+  c.globalCompositeOperation = "lighter";
+  c.globalAlpha = alpha;
+  c.fillStyle = g;
+  c.beginPath();
+  c.arc(x, y, radius, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
+};
+
+const drawSleepingCat = (c: CanvasRenderingContext2D, x: number, y: number, t: number): void => {
+  const s = S() * 0.8;
+  const breath = 1 + Math.sin(t * 1.7) * 0.07;
+  // corps lové
+  px(c, x - 3.4 * s, y - 2.4 * s * breath, 6.4 * s, 2.4 * s * breath, "#d8905a");
+  px(c, x - 2.6 * s, y - 2.9 * s * breath, 4.6 * s, 0.8 * s, "#d8905a");
+  // rayures
+  px(c, x - 1.4 * s, y - 2.4 * s * breath, 0.7 * s, 1.6 * s, "#b06a3c");
+  px(c, x + 0.4 * s, y - 2.4 * s * breath, 0.7 * s, 1.6 * s, "#b06a3c");
+  // tête posée sur le côté
+  px(c, x + 1.8 * s, y - 3.2 * s, 2.4 * s, 2.2 * s, "#d8905a");
+  px(c, x + 1.9 * s, y - 3.9 * s, 0.7 * s, 0.8 * s, "#d8905a");
+  px(c, x + 3.4 * s, y - 3.9 * s, 0.7 * s, 0.8 * s, "#d8905a");
+  // queue qui remue doucement
+  const tip = Math.sin(t * 1.3) * 1.6 * s;
+  px(c, x - 4.2 * s, y - 1.2 * s, 1.4 * s, 0.7 * s, "#b06a3c");
+  px(c, x - 5.2 * s + tip * 0.2, y - 1.6 * s - Math.abs(tip) * 0.3, 1.2 * s, 0.7 * s, "#b06a3c");
+};
+
+const drawSittingCat = (c: CanvasRenderingContext2D, x: number, y: number, t: number): void => {
+  const s = S() * 0.8;
+  // silhouette sombre assise
+  px(c, x - 1.6 * s, y - 3.6 * s, 3.2 * s, 3.6 * s, "#2f2a3a");
+  px(c, x - 1.2 * s, y - 5.6 * s, 2.6 * s, 2.2 * s, "#2f2a3a");
+  px(c, x - 1.2 * s, y - 6.3 * s, 0.7 * s, 0.8 * s, "#2f2a3a");
+  px(c, x + 0.7 * s, y - 6.3 * s, 0.7 * s, 0.8 * s, "#2f2a3a");
+  // queue qui balaie le sol
+  const sw = Math.sin(t * 1.1);
+  px(c, x + 1.6 * s, y - 0.8 * s, 1.6 * s, 0.7 * s, "#2f2a3a");
+  px(c, x + 3.0 * s, y - 0.8 * s - sw * 1.2 * s, 1.2 * s, 0.7 * s, "#2f2a3a");
+  // yeux qui luisent, clignent parfois
+  if (t % 5 < 4.8) {
+    px(c, x - 0.7 * s, y - 5 * s, 0.5 * s, 0.5 * s, "#a8e06a");
+    px(c, x + 0.4 * s, y - 5 * s, 0.5 * s, 0.5 * s, "#a8e06a");
+  }
+};
+
+const drawCampfire = (c: CanvasRenderingContext2D, x: number, y: number, t: number): void => {
+  const s = S();
+  // bûches croisées
+  px(c, x - 3 * s, y - 1 * s, 6 * s, 1 * s, "#5a4632");
+  px(c, x - 2.4 * s, y - 1.8 * s, 4.8 * s, 0.9 * s, "#6b5138");
+  // flammes : colonnes de pixels qui dansent
+  const cols = [-1.5, -0.5, 0.5, 1.5];
+  for (let i = 0; i < cols.length; i++) {
+    const hgt = (2.6 + Math.sin(t * 9 + i * 2.1) * 0.9 + Math.sin(t * 15 + i) * 0.5) * s;
+    const wob = Math.sin(t * 11 + i * 1.7) * 0.4 * s;
+    px(c, x + cols[i] * s + wob, y - 1.8 * s - hgt, s, hgt, i % 2 ? "#ff9a4a" : "#e06a3a");
+    px(c, x + cols[i] * s + wob * 0.6, y - 1.8 * s - hgt * 0.55, s * 0.8, hgt * 0.55, "#ffd98a");
+  }
+  glow(c, x, y - 3 * s, 26 * (S() / 3) * (1 + Math.sin(t * 8) * 0.08), "rgba(255, 170, 80, 0.55)", 0.4);
+};
+
+// coordonnées normalisées des éléments animés, par monde
+const FORET_LANTERNS: [number, number][] = [
+  [0.116, 0.397],
+  [0.258, 0.443],
+  [0.417, 0.313],
+  [0.547, 0.419],
+  [0.776, 0.391],
+];
+const FORET_CABIN = { win1: [0.821, 0.775], win2: [0.967, 0.781], chimney: [0.955, 0.545], cat: [0.83, 0.875] };
+
+const drawFixtures = (c: CanvasRenderingContext2D, r: Rect, t: number): void => {
+  const w = WORLDS[worldIdx];
+  const at = (nx: number, ny: number): { x: number; y: number } => imgToScreen(r, nx, ny);
+  const u = S() / 3; // unité d'échelle des halos
+
+  if (w.id === "foret") {
+    for (let i = 0; i < FORET_LANTERNS.length; i++) {
+      const p = at(FORET_LANTERNS[i][0], FORET_LANTERNS[i][1]);
+      glow(c, p.x, p.y, 30 * u, "rgba(255, 190, 90, 0.8)", 0.16 + Math.sin(t * 1.3 + i * 1.9) * 0.06);
+    }
+    const w1 = at(FORET_CABIN.win1[0], FORET_CABIN.win1[1]);
+    const w2 = at(FORET_CABIN.win2[0], FORET_CABIN.win2[1]);
+    const flick = 0.2 + Math.max(0, Math.sin(t * 6.3) * Math.sin(t * 2.1)) * 0.1;
+    glow(c, w1.x, w1.y, 26 * u, "rgba(255, 200, 110, 0.8)", flick);
+    glow(c, w2.x, w2.y, 26 * u, "rgba(255, 200, 110, 0.8)", flick * 0.9);
+    const cat = at(FORET_CABIN.cat[0], FORET_CABIN.cat[1]);
+    drawSleepingCat(c, cat.x, cat.y, t);
+  } else if (w.id === "ville") {
+    // néons qui grésillent
+    const drop = Math.sin(t * 7.3) + Math.sin(t * 13.7) > 1.85 ? 0.3 : 1;
+    const n1 = at(0.375, 0.515);
+    glow(c, n1.x, n1.y, 60 * u, "rgba(255, 200, 120, 0.7)", 0.16 * drop);
+    const n2 = at(0.268, 0.527);
+    glow(c, n2.x, n2.y, 40 * u, "rgba(255, 140, 200, 0.75)", 0.18 * (drop < 1 ? 1 : 0.9 + Math.sin(t * 3.1) * 0.1));
+    const n3 = at(0.477, 0.57);
+    glow(c, n3.x, n3.y, 44 * u, "rgba(255, 190, 110, 0.7)", 0.15 + Math.sin(t * 2.2) * 0.04);
+    const lant = at(0.235, 0.66);
+    glow(c, lant.x, lant.y, 26 * u, "rgba(255, 120, 90, 0.8)", 0.16 + Math.sin(t * 1.6) * 0.05);
+    const vend = at(0.565, 0.7);
+    glow(c, vend.x, vend.y, 36 * u, "rgba(150, 220, 230, 0.7)", 0.14 + Math.sin(t * 0.9) * 0.04);
+    const cat = at(0.635, 0.905);
+    drawSittingCat(c, cat.x, cat.y, t);
+  } else if (w.id === "plage") {
+    const fire = at(0.16, 0.885);
+    drawCampfire(c, fire.x, fire.y, t);
+    // scintillement du reflet du soleil
+    const sun = at(0.5, 0.47);
+    glow(c, sun.x, sun.y, 70 * u, "rgba(255, 220, 170, 0.6)", 0.1 + Math.sin(t * 0.7) * 0.03);
+  } else if (w.id === "lune") {
+    // balise du module lunaire qui clignote
+    if (t % 1.6 < 0.25) {
+      const b = at(0.363, 0.645);
+      px(c, b.x, b.y, S() * 0.8, S() * 0.8, "#ff6a5a");
+      glow(c, b.x, b.y, 16 * u, "rgba(255, 110, 90, 0.9)", 0.35);
+    }
+    const dome = at(0.777, 0.6);
+    glow(c, dome.x, dome.y, 30 * u, "rgba(255, 200, 110, 0.8)", 0.14 + Math.sin(t * 1.1) * 0.05);
+  } else if (w.id === "ocean") {
+    const p1 = at(0.685, 0.72);
+    const p2 = at(0.8, 0.72);
+    glow(c, p1.x, p1.y, 30 * u, "rgba(255, 200, 120, 0.8)", 0.16 + Math.sin(t * 2.3) * 0.05);
+    glow(c, p2.x, p2.y, 26 * u, "rgba(255, 200, 120, 0.8)", 0.13 + Math.sin(t * 1.7 + 2) * 0.05);
+  }
+};
+
 // ---------------------------------------------------------------------------
 // Audio — lofi génératif + ambiances (WebAudio)
 // ---------------------------------------------------------------------------
@@ -1018,7 +1311,7 @@ const applyEffect = (effect: string, x: number, y: number, r: Rect): void => {
   const w = WORLDS[worldIdx];
   switch (effect) {
     case "cabin": {
-      const chimney = imgToScreen(r, 0.664, 0.5);
+      const chimney = imgToScreen(r, FORET_CABIN.chimney[0], FORET_CABIN.chimney[1]);
       for (let i = 0; i < 4; i++) setTimeout(() => addSmokePuff(chimney.x, chimney.y), i * 350);
       addGlowPulse(x, y, "rgba(255, 190, 90, 0.8)", 60 * (S() / 3));
       break;
@@ -1134,24 +1427,37 @@ const spawnAmbience = (dt: number, r: Rect): void => {
   if (w.id === "foret") {
     for (let i = 0; i < 3; i++) if (Math.random() < 0.9) addRainDrop(r);
     if (Math.random() < dt * 0.5) addFirefly(rnd(0, W), rnd(H * 0.5, H * 0.85));
+    if (Math.random() < dt * 0.6) addLeaf(r);
     if (Math.random() < dt * 0.4) {
-      const chimney = imgToScreen(r, 0.664, 0.5);
+      const chimney = imgToScreen(r, FORET_CABIN.chimney[0], FORET_CABIN.chimney[1]);
       addSmokePuff(chimney.x, chimney.y);
     }
   } else if (w.id === "ville") {
     if (Math.random() < dt * 0.05) addShootingStar(rnd(W * 0.1, W * 0.9), rnd(0, H * 0.2));
     if (Math.random() < dt * 2) addSparkle(rnd(0, W), rnd(0, H * 0.25), "#fffbe8", 1);
+    if (Math.random() < dt * 0.9) {
+      const vent = imgToScreen(r, 0.395, 0.445);
+      addSteam(vent.x + rnd(-4, 4), vent.y);
+    }
   } else if (w.id === "plage") {
     if (Math.random() < dt * 1.6) {
       const p = imgToScreen(r, rnd(0.3, 0.7), rnd(0.5, 0.75));
       addSparkle(p.x, p.y, "#ffe8c0", 1);
     }
     if (Math.random() < dt * 0.05) addGull();
+    const fire = imgToScreen(r, 0.16, 0.865);
+    if (Math.random() < dt * 2.2) addSpark(fire.x, fire.y);
+    if (Math.random() < dt * 0.5) addSmokePuff(fire.x, fire.y - 10);
   } else if (w.id === "lune") {
     if (Math.random() < dt * 1.4) addSparkle(rnd(0, W), rnd(0, H * 0.5), "#e8f2ff", 1);
     if (Math.random() < dt * 0.03) addShootingStar(rnd(0, W), rnd(0, H * 0.25), "#b8e6ff");
+    if (Math.random() < dt * 0.04) addSatellite();
   } else if (w.id === "ocean") {
     if (Math.random() < dt * 1.2) addBubble(rnd(0, W), H + 10);
+    if (Math.random() < dt * 0.4) {
+      const mast = imgToScreen(r, 0.75, 0.55);
+      addBubble(mast.x + rnd(-10, 10), mast.y);
+    }
     if (Math.random() < dt * 0.08) addJellyfish();
     if (Math.random() < dt * 0.05) addFishSchool(r, Math.random() < 0.5 ? 0 : W, rnd(H * 0.3, H * 0.7));
   }
@@ -1202,6 +1508,8 @@ const frame = (now: number): void => {
         }
         ctx.restore();
       }
+
+      drawFixtures(ctx, r, now / 1000);
 
       // physique du personnage
       const groundY = imgToScreen(r, 0, w.groundY).y;
@@ -1254,7 +1562,7 @@ const frame = (now: number): void => {
     // vignette douce pour l'ambiance lofi
     const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.75);
     vg.addColorStop(0, "rgba(0,0,0,0)");
-    vg.addColorStop(1, "rgba(10, 8, 18, 0.32)");
+    vg.addColorStop(1, "rgba(10, 8, 18, 0.18)");
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, W, H);
   }
