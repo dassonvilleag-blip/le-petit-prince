@@ -9,16 +9,6 @@ const BASE = import.meta.env.BASE_URL;
 // Mondes
 // ---------------------------------------------------------------------------
 
-interface Skin {
-  hat: string; // bonnet / capuche / chapeau / casque
-  skin: string;
-  top: string;
-  pants: string;
-  shoes: string;
-  accent: string; // détail de tenue : rayure, casque audio, ruban, sac, hublot…
-  style: "marin" | "hood" | "straw" | "space" | "diver";
-}
-
 interface Hotspot {
   x1: number;
   y1: number;
@@ -33,7 +23,6 @@ interface World {
   file: string;
   groundY: number; // fraction de la hauteur d'image où posent les pieds
   ambience: "lake" | "city" | "waves" | "space" | "under";
-  skin: Skin;
   gravity: number;
   jumpH: number; // hauteur de saut voulue, en pixels logiques du personnage
   platforms?: { x1: number; x2: number; y: number }[]; // surfaces d'atterrissage (coords image)
@@ -49,7 +38,6 @@ const WORLDS: World[] = [
     file: "peche.png",
     groundY: 0.88,
     ambience: "lake",
-    skin: { hat: "#e8c56a", skin: "#f2c9a0", top: "#e8e3d8", pants: "#3a4a6b", shoes: "#6b4a35", accent: "#3a4a6b", style: "marin" },
     gravity: 2200,
     jumpH: 45,
     speed: 1,
@@ -70,7 +58,6 @@ const WORLDS: World[] = [
     file: "ville.png",
     groundY: 0.92,
     ambience: "city",
-    skin: { hat: "#9a7bd0", skin: "#e8b48c", top: "#9a7bd0", pants: "#5b6a8c", shoes: "#e8e3d8", accent: "#2f2a3a", style: "hood" },
     gravity: 2200,
     jumpH: 45,
     speed: 1,
@@ -89,7 +76,6 @@ const WORLDS: World[] = [
     file: "plage.png",
     groundY: 0.93,
     ambience: "waves",
-    skin: { hat: "#e8d48a", skin: "#e8b48c", top: "#ef8a7a", pants: "#f2e3c2", shoes: "#c98d6a", accent: "#ef8a7a", style: "straw" },
     gravity: 2200,
     jumpH: 45,
     speed: 1,
@@ -106,7 +92,6 @@ const WORLDS: World[] = [
     file: "lune.png",
     groundY: 0.88,
     ambience: "space",
-    skin: { hat: "#e8ecf2", skin: "#f2c9a0", top: "#e8ecf2", pants: "#c8d0dc", shoes: "#8a94a4", accent: "#7ad0e0", style: "space" },
     gravity: 460,
     jumpH: 85,
     speed: 0.82,
@@ -123,7 +108,6 @@ const WORLDS: World[] = [
     file: "ocean.png",
     groundY: 0.94,
     ambience: "under",
-    skin: { hat: "#c98d4e", skin: "#f2c9a0", top: "#b0834f", pants: "#7a8ba0", shoes: "#5a4632", accent: "#e8c56a", style: "diver" },
     gravity: 800,
     jumpH: 38,
     speed: 0.7,
@@ -261,112 +245,78 @@ const px = (c: CanvasRenderingContext2D, x: number, y: number, w: number, h: num
   c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
 };
 
-// Sprite 12×17 en cartes de caractères : H couvre-chef, S peau, E œil,
-// T haut, P pantalon, O chaussures, A accent de tenue. Le corps est commun,
-// seules les jambes changent entre les deux frames de marche.
-const BODY_ROWS = [
-  "..HHHHHHHH..",
-  ".HHHHHHHHHH.",
-  ".HHHHHHHHHH.",
-  ".SSSSSSSSSS.",
-  ".SSSESSSSES.",
-  ".SSSSSSSSSS.",
-  "..SSSSSSSS..",
-  "..TTTTTTTT..",
-  ".TTTTTTTTTT.",
-  ".ATTTTTTTTA.",
-  ".ATTTTTTTTA.",
-  ".S.TTTTTT.S.",
-];
-const LEGS_STAND = ["...PPPPPP...", "...PPPPPP...", "...PP..PP...", "...PP..PP...", "..OOO..OOO.."];
-const LEGS_WALK = ["...PPPPPP...", "..PPP..PPP..", "..PP....PP..", "..PP....PP..", ".OOO....OOO."];
+// Personnage : planches de sprites générées (4 frames de marche par monde),
+// fond magenta rendu transparent au chargement, frames recadrées sur leur
+// boîte englobante et ancrées par les pieds.
+interface CharSheet {
+  canvas: HTMLCanvasElement;
+  frames: { sx: number; sy: number; sw: number; sh: number }[];
+  idle: number; // frame la plus étroite = jambes jointes
+}
+const charSheets = new Map<string, CharSheet>();
+
+const loadCharSheet = (id: string): void => {
+  const img = new Image();
+  img.src = `${BASE}la-promenade/perso-${id}.png`;
+  img.onload = () => {
+    const cv = document.createElement("canvas");
+    cv.width = img.width;
+    cv.height = img.height;
+    const cc = cv.getContext("2d")!;
+    cc.drawImage(img, 0, 0);
+    // les planches sont déjà nettoyées hors-ligne (fond transparent, cadres
+    // et lignes de sol retirés) : il ne reste qu'à découper les 4 cellules
+    // et recadrer chaque frame sur sa boîte englobante
+    const d = cc.getImageData(0, 0, cv.width, cv.height).data;
+    const frames: CharSheet["frames"] = [];
+    const cw = Math.floor(cv.width / 4);
+    for (let f = 0; f < 4; f++) {
+      let minX = cv.width;
+      let maxX = 0;
+      let minY = cv.height;
+      let maxY = 0;
+      for (let y = 0; y < cv.height; y++) {
+        for (let x = f * cw; x < (f + 1) * cw; x++) {
+          if (d[(y * cv.width + x) * 4 + 3] > 40) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      frames.push(
+        maxX > minX
+          ? { sx: minX, sy: minY, sw: maxX - minX + 1, sh: maxY - minY + 1 }
+          : { sx: f * cw, sy: 0, sw: cw, sh: cv.height },
+      );
+    }
+    let idle = 0;
+    for (let f = 1; f < 4; f++) if (frames[f].sw < frames[idle].sw) idle = f;
+    charSheets.set(id, { canvas: cv, frames, idle });
+  };
+};
+for (const w of WORLDS) loadCharSheet(w.id);
 
 const drawChar = (c: CanvasRenderingContext2D): void => {
   const w = WORLDS[worldIdx];
-  const k = w.skin;
+  const sheet = charSheets.get(w.id);
   const s = S();
-  const walkFrame = char.walking && Math.floor(char.walkT * 7) % 2 === 0;
-  const rows = [...BODY_ROWS, ...(walkFrame ? LEGS_WALK : LEGS_STAND)];
-  const blink = char.idleT % 4.2 > 4.05;
-  const bob = char.walking ? (walkFrame ? -0.6 * s : 0) : Math.sin(char.idleT * 2.2) * 0.3 * s;
-  const colors: Record<string, string> = {
-    H: k.hat,
-    S: k.skin,
-    E: blink ? k.skin : "#2a2622",
-    T: k.top,
-    P: k.pants,
-    O: k.shoes,
-    A: k.accent,
-  };
-
+  const targetH = 19 * s;
+  const bob = char.walking ? 0 : Math.sin(char.idleT * 2.2) * 0.3 * s;
   c.save();
   c.translate(Math.round(char.x), Math.round(char.y + bob));
   if (char.facing < 0) c.scale(-1, 1);
-
-  // grille : origine du sprite en (-6s, -17s), une case = s
-  const g = (col: number, row: number, wCols: number, hRows: number, color: string): void =>
-    px(c, (col - 6) * s, (row - 17) * s, wCols * s, hRows * s, color);
-
-  for (let row = 0; row < rows.length; row++) {
-    const line = rows[row];
-    for (let col = 0; col < line.length; col++) {
-      const ch = line[col];
-      if (ch !== ".") g(col, row, 1, 1, colors[ch]);
-    }
-  }
-
-  // détails propres à chaque tenue
-  if (k.style === "marin") {
-    g(0, 2, 12, 1, k.hat); // bord du bob de pêcheur
-    g(1, 8, 10, 1, k.accent); // rayures de marinière
-    g(2, 10, 8, 1, k.accent);
-  } else if (k.style === "hood") {
-    // casque audio par-dessus la capuche
-    g(2, 0, 8, 1, k.accent);
-    g(0, 3, 1, 3, k.accent);
-    g(11, 3, 1, 3, k.accent);
-    g(1, 4, 1, 1, k.accent);
-    g(10, 4, 1, 1, k.accent);
-  } else if (k.style === "straw") {
-    g(0, 3, 12, 1, k.hat); // large bord du chapeau de paille
-    g(1, 2, 10, 1, k.accent); // ruban
-  } else if (k.style === "space") {
-    // sac dorsal + antenne (dans le dos, côté opposé au regard)
-    g(-1, 7, 2, 5, "#b8c4d4");
-    g(-1, 8, 1, 3, k.accent);
-    g(-1, 5, 1, 2, "#8a94a4");
-    g(-1, 4, 1, 1, k.accent);
-    // bulle de verre
-    c.strokeStyle = "rgba(220, 240, 255, 0.8)";
-    c.lineWidth = Math.max(1, s * 0.6);
-    c.beginPath();
-    c.arc(0, -13.5 * s, 5.6 * s, 0, Math.PI * 2);
-    c.stroke();
-    c.fillStyle = "rgba(200, 235, 255, 0.12)";
-    c.fill();
-    px(c, 2 * s, -17 * s, 1.4 * s, 1.4 * s, "rgba(255,255,255,0.5)");
-  } else if (k.style === "diver") {
-    // gros casque rond de scaphandrier, avec hublot sur le visage
-    g(2, -1, 8, 1, k.hat);
-    g(1, 0, 10, 3, k.hat);
-    g(1, 3, 3, 4, k.hat);
-    g(8, 3, 3, 4, k.hat);
-    g(1, 6, 10, 1, k.hat);
-    // cadre du hublot + boulons dorés
-    g(4, 2, 4, 1, "#8a5f2e");
-    g(4, 6, 4, 1, "#8a5f2e");
-    g(3, 3, 1, 3, "#8a5f2e");
-    g(8, 3, 1, 3, "#8a5f2e");
-    g(2, 1, 1, 1, k.accent);
-    g(9, 1, 1, 1, k.accent);
-    g(2, 5, 1, 1, k.accent);
-    g(9, 5, 1, 1, k.accent);
-    // les deux yeux, recadrés dans le hublot
-    g(4, 4, 1, 1, k.skin);
-    g(5, 4, 1, 1, colors.E);
-    g(7, 4, 1, 1, colors.E);
-    // reflet du verre
-    px(c, 1.2 * s, -13.8 * s, 0.8 * s, 0.8 * s, "rgba(255,255,255,0.4)");
+  if (sheet) {
+    const fi = char.walking ? Math.floor(char.walkT * 8) % 4 : sheet.idle;
+    const f = sheet.frames[fi];
+    const scale = targetH / f.sh;
+    const dw = f.sw * scale;
+    c.imageSmoothingEnabled = false;
+    c.drawImage(sheet.canvas, f.sx, f.sy, f.sw, f.sh, -dw / 2, -targetH, dw, targetH);
+  } else {
+    // secours le temps du chargement
+    px(c, -3 * s, -16 * s, 6 * s, 16 * s, "rgba(60, 60, 80, 0.5)");
   }
   c.restore();
 };
@@ -1232,14 +1182,113 @@ const drawFixtures = (c: CanvasRenderingContext2D, r: Rect, t: number): void => 
 // Audio — lofi génératif + ambiances (WebAudio)
 // ---------------------------------------------------------------------------
 
-const PENTA = [261.6, 293.7, 329.6, 392, 440, 523.3];
-const CHORDS = [
-  [174.6, 220, 261.6, 329.6], // Fmaj7
-  [164.8, 196, 246.9, 293.7], // Em7
-  [146.8, 174.6, 220, 261.6], // Dm7
-  [130.8, 164.8, 196, 246.9], // Cmaj7
-];
-const BAR = 3.4;
+// Une couleur musicale par monde : accords, tempo, timbre, batterie et
+// gamme des petites notes jouées au clic.
+interface MusicStyle {
+  bar: number; // durée d'une mesure (s)
+  chords: number[][];
+  scale: number[]; // notes de la mélodie et des plucks au clic
+  pad: OscillatorType;
+  padGain: number;
+  padFilter: number;
+  drums: "none" | "soft" | "lofi" | "shaker";
+  melodyProb: number;
+  melodyMul: number; // transposition de la mélodie
+  melodyDur: number;
+}
+
+const MUSIC: Record<string, MusicStyle> = {
+  // aube sur le lac : majeur paisible, presque acoustique
+  peche: {
+    bar: 3.6,
+    chords: [
+      [130.8, 164.8, 196, 246.9], // Cmaj7
+      [110, 164.8, 220, 261.6], // Am7
+      [174.6, 220, 261.6, 329.6], // Fmaj7
+      [196, 246.9, 293.7, 349.2], // G7
+    ],
+    scale: [261.6, 293.7, 329.6, 392, 440, 523.3],
+    pad: "triangle",
+    padGain: 0.032,
+    padFilter: 850,
+    drums: "soft",
+    melodyProb: 0.5,
+    melodyMul: 2,
+    melodyDur: 1.6,
+  },
+  // grands fonds : mineur lent et aquatique, sans batterie
+  ocean: {
+    bar: 4.4,
+    chords: [
+      [146.8, 220, 261.6, 329.6], // Dm9
+      [116.5, 174.6, 220, 293.7], // B♭maj7
+      [98, 146.8, 174.6, 233.1], // Gm7
+      [110, 164.8, 220, 261.6], // Am7
+    ],
+    scale: [293.7, 349.2, 392, 440, 523.3],
+    pad: "sine",
+    padGain: 0.042,
+    padFilter: 600,
+    drums: "none",
+    melodyProb: 0.3,
+    melodyMul: 1,
+    melodyDur: 2.4,
+  },
+  // la lune : quintes ouvertes, cloches lointaines, très lent
+  lune: {
+    bar: 5.2,
+    chords: [
+      [130.8, 196, 293.7], // C–G–D
+      [110, 164.8, 246.9], // A–E–B
+      [87.3, 130.8, 196], // F–C–G
+      [98, 146.8, 220], // G–D–A
+    ],
+    scale: [523.3, 587.3, 659.3, 784, 880],
+    pad: "sine",
+    padGain: 0.03,
+    padFilter: 500,
+    drums: "none",
+    melodyProb: 0.45,
+    melodyMul: 1,
+    melodyDur: 3,
+  },
+  // la ville : le vrai lofi hip-hop, groove feutré
+  ville: {
+    bar: 3.2,
+    chords: [
+      [174.6, 220, 261.6, 329.6], // Fmaj7
+      [164.8, 196, 246.9, 293.7], // Em7
+      [146.8, 174.6, 220, 261.6], // Dm7
+      [130.8, 164.8, 196, 246.9], // Cmaj7
+    ],
+    scale: [261.6, 293.7, 329.6, 392, 440, 523.3],
+    pad: "triangle",
+    padGain: 0.035,
+    padFilter: 900,
+    drums: "lofi",
+    melodyProb: 0.65,
+    melodyMul: 2,
+    melodyDur: 1.4,
+  },
+  // plage au crépuscule : douceur bossa, maracas discrètes
+  plage: {
+    bar: 3.4,
+    chords: [
+      [174.6, 220, 261.6, 329.6], // Fmaj7
+      [196, 246.9, 293.7, 349.2], // G7
+      [164.8, 196, 246.9, 293.7], // Em7
+      [110, 164.8, 220, 261.6], // Am7
+    ],
+    scale: [261.6, 293.7, 329.6, 392, 440, 523.3],
+    pad: "triangle",
+    padGain: 0.03,
+    padFilter: 1000,
+    drums: "shaker",
+    melodyProb: 0.55,
+    melodyMul: 2,
+    melodyDur: 1.5,
+  },
+};
 
 class Lofi {
   ctx: AudioContext | null = null;
@@ -1342,50 +1391,60 @@ class Lofi {
   private tick(): void {
     const ac = this.ctx!;
     while (this.nextBar < ac.currentTime + 0.9) {
-      this.scheduleBar(this.nextBar, this.barIdx);
-      this.nextBar += BAR;
+      // le style peut changer entre deux mesures : chaque monde a sa musique
+      const m = MUSIC[WORLDS[worldIdx].id];
+      this.scheduleBar(this.nextBar, this.barIdx, m);
+      this.nextBar += m.bar;
       this.barIdx++;
     }
   }
 
-  private scheduleBar(t0: number, bar: number): void {
-    const chord = CHORDS[bar % CHORDS.length];
+  private scheduleBar(t0: number, bar: number, m: MusicStyle): void {
+    const chord = m.chords[bar % m.chords.length];
     // nappe d'accord, feutrée
-    for (const f of chord) this.osc(f, t0, BAR * 0.96, "triangle", 0.035, this.musicBus, 900);
+    for (const f of chord) this.osc(f, t0, m.bar * 0.96, m.pad, m.padGain, this.musicBus, m.padFilter);
     // basse ronde
-    this.osc(chord[0] / 2, t0, BAR * 0.9, "sine", 0.09, this.musicBus);
-    // batterie discrète : boum sur 1 et 3, tick feutré sur 2 et 4
-    for (let b = 0; b < 4; b++) {
-      const bt = t0 + (b * BAR) / 4;
-      if (b % 2 === 0) this.kick(bt);
-      else this.tickHat(bt);
+    this.osc(chord[0] / 2, t0, m.bar * 0.9, "sine", 0.09, this.musicBus);
+    // batterie selon le monde
+    if (m.drums === "lofi") {
+      for (let b = 0; b < 4; b++) {
+        const bt = t0 + (b * m.bar) / 4;
+        if (b % 2 === 0) this.kick(bt, 0.16);
+        else this.tickHat(bt, 0.03);
+      }
+    } else if (m.drums === "soft") {
+      this.kick(t0, 0.09);
+    } else if (m.drums === "shaker") {
+      for (let b = 0; b < 8; b++) this.tickHat(t0 + (b * m.bar) / 8, b % 2 === 0 ? 0.016 : 0.009);
+      this.kick(t0, 0.08);
+      this.kick(t0 + m.bar / 2, 0.06);
     }
-    // mélodie clairsemée
-    if (Math.random() < 0.65) {
+    // mélodie clairsemée dans la gamme du monde
+    if (Math.random() < m.melodyProb) {
       const n = 1 + Math.floor(Math.random() * 2);
       for (let i = 0; i < n; i++) {
-        const at = t0 + rnd(0, BAR * 0.7);
-        const f = chord[Math.floor(Math.random() * chord.length)] * 2;
-        this.osc(f, at, 1.4, "triangle", 0.045, this.musicBus, 1600);
+        const at = t0 + rnd(0, m.bar * 0.7);
+        const f = m.scale[Math.floor(Math.random() * m.scale.length)] * m.melodyMul;
+        this.osc(f, at, m.melodyDur, m.pad, 0.045, this.musicBus, 1600);
       }
     }
   }
 
-  private kick(t0: number): void {
+  private kick(t0: number, gain: number): void {
     const ac = this.ctx!;
     const o = ac.createOscillator();
     o.type = "sine";
     o.frequency.setValueAtTime(110, t0);
     o.frequency.exponentialRampToValueAtTime(42, t0 + 0.14);
     const g = ac.createGain();
-    g.gain.setValueAtTime(0.16, t0);
+    g.gain.setValueAtTime(gain, t0);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
     o.connect(g).connect(this.musicBus);
     o.start(t0);
     o.stop(t0 + 0.3);
   }
 
-  private tickHat(t0: number): void {
+  private tickHat(t0: number, gain: number): void {
     const ac = this.ctx!;
     const src = ac.createBufferSource();
     src.buffer = this.noiseBuffer(0.05);
@@ -1393,7 +1452,7 @@ class Lofi {
     f.type = "highpass";
     f.frequency.value = 5000;
     const g = ac.createGain();
-    g.gain.setValueAtTime(0.03, t0);
+    g.gain.setValueAtTime(gain, t0);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
     src.connect(f).connect(g).connect(this.musicBus);
     src.start(t0);
@@ -1401,7 +1460,8 @@ class Lofi {
 
   pluck(): void {
     if (!this.ctx) return;
-    const f = PENTA[Math.floor(Math.random() * PENTA.length)];
+    const m = MUSIC[WORLDS[worldIdx].id];
+    const f = m.scale[Math.floor(Math.random() * m.scale.length)];
     this.osc(f, this.ctx.currentTime, 0.5, "triangle", 0.09, this.master, 1800);
   }
 
