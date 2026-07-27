@@ -99,6 +99,7 @@ export default defineConfig({
         horde: resolve(__dirname, "games/la-horde/index.html"),
         miniMondes: resolve(__dirname, "games/mini-mondes/index.html"),
         caCouteCombien: resolve(__dirname, "games/ca-coute-combien/index.html"),
+        laPromenade: resolve(__dirname, "games/la-promenade/index.html"),
       },
     },
   },
