@@ -18,11 +18,34 @@
         <h1 class="title">Ça coûte combien ?!</h1>
         <p class="subtitle">10 objets et expériences insolites. Devine leur vrai prix, le plus précisément possible.</p>
         <p class="record">Record : <span id="record-value" class="numeric">0</span> / 10 000</p>
-        <button id="btn-start" class="btn-main">Jouer</button>
+        <button id="btn-start" class="btn-main">Jouer en solo</button>
+
+        <div class="multi-box">
+          <h2 class="multi-title">Entre amis — jusqu'à 8 joueurs</h2>
+          <input id="pseudo-input" type="text" maxlength="20" placeholder="Ton pseudo" autocomplete="nickname" />
+          <div class="multi-actions">
+            <button id="btn-create-room" class="btn-multi">Créer un salon</button>
+            <div class="join-row">
+              <input id="code-input" class="numeric" type="text" maxlength="4" placeholder="CODE" autocomplete="off" />
+              <button id="btn-join-room" class="btn-multi">Rejoindre</button>
+            </div>
+          </div>
+          <p id="multi-error" class="multi-error hidden"></p>
+        </div>
+
         <details class="credits">
           <summary>Crédits photos</summary>
           <ul id="photo-credits" class="credits-list"></ul>
         </details>
+      </section>
+
+      <section id="screen-lobby" class="hidden">
+        <h2 class="title">Salon <span id="lobby-code" class="lobby-code numeric"></span></h2>
+        <p class="subtitle">Partage ce code avec tes amis, puis lancez la partie.</p>
+        <ul id="lobby-players" class="lobby-players"></ul>
+        <button id="btn-launch" class="btn-main hidden">Lancer la partie</button>
+        <p id="lobby-wait" class="multi-wait hidden">En attente que l'hôte lance la partie…</p>
+        <button id="btn-leave" class="btn-ghost">Quitter le salon</button>
       </section>
 
       <section id="screen-round" class="hidden">
@@ -36,22 +59,30 @@
           <button type="submit" class="btn-main">Valider</button>
         </form>
 
+        <p id="multi-status" class="multi-wait hidden"></p>
+        <button id="btn-force" class="btn-ghost hidden">Révéler sans attendre</button>
+
         <div id="round-result" class="hidden">
           <p id="round-comment" class="round-comment"></p>
           <p id="round-price" class="round-price numeric"></p>
           <p id="round-score" class="round-score numeric"></p>
+          <ol id="multi-results" class="multi-results hidden"></ol>
           <button id="btn-next" class="btn-main">Manche suivante</button>
+          <p id="multi-next-wait" class="multi-wait hidden">En attente de l'hôte…</p>
         </div>
       </section>
 
       <section id="screen-recap" class="hidden">
         <h2 class="title">Partie terminée !</h2>
         <p id="recap-total" class="recap-total"></p>
+        <ol id="recap-podium" class="multi-results hidden"></ol>
         <p id="recap-best" class="recap-line"></p>
         <p id="recap-worst" class="recap-line"></p>
         <p id="recap-comment" class="recap-comment"></p>
         <p id="recap-record" class="recap-record numeric"></p>
         <button id="btn-replay" class="btn-main">Rejouer</button>
+        <p id="recap-wait" class="multi-wait hidden">L'hôte peut relancer une partie…</p>
+        <button id="btn-recap-leave" class="btn-ghost hidden">Quitter le salon</button>
       </section>
     </main>
 

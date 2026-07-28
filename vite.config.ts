@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from "vite";
 import { resolve } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { createRoomStore } from "./src/games/ca-coute-combien/rooms-server";
 
 // Signalisation minimale pour Le Phare : offre/réponse WebRTC stockées en
 // mémoire quelques minutes, indexées par un code court. Servie par le serveur
@@ -76,9 +77,55 @@ function phareSignaling(): Plugin {
   };
 }
 
+// Salons multijoueurs de « Ça coûte combien ?! » : même philosophie que la
+// signalisation du Phare — état en mémoire dans le serveur, zéro infra.
+function cccRooms(): Plugin {
+  const store = createRoomStore();
+
+  const readBody = (req: IncomingMessage): Promise<string> =>
+    new Promise((done) => {
+      let data = "";
+      req.on("data", (c) => (data += c));
+      req.on("end", () => done(data));
+    });
+
+  const handle = async (req: IncomingMessage, res: ServerResponse, next: () => void): Promise<void> => {
+    const url = (req.url ?? "").split("?")[0];
+    let body: unknown = undefined;
+    if (req.method === "POST") {
+      const raw = await readBody(req);
+      if (raw.length > 10_000) {
+        res.statusCode = 413;
+        res.end("{}");
+        return;
+      }
+      try {
+        body = raw ? JSON.parse(raw) : {};
+      } catch {
+        body = {};
+      }
+    }
+    const out = store.handle(req.method ?? "GET", url, body);
+    if (out.status === 404 && (out.body as { error?: string }).error === "route inconnue") return next();
+    res.statusCode = out.status;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify(out.body));
+  };
+
+  return {
+    name: "ccc-rooms",
+    configureServer(server) {
+      server.middlewares.use("/api/ccc", (req, res, next) => void handle(req, res, next));
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use("/api/ccc", (req, res, next) => void handle(req, res, next));
+    },
+  };
+}
+
 export default defineConfig({
   base: process.env.GITHUB_PAGES ? "/le-petit-prince/" : "/",
-  plugins: [phareSignaling()],
+  plugins: [phareSignaling(), cccRooms()],
   server: {
     // le tunnel Cloudflare présente ce hostname au serveur de dev
     allowedHosts: ["leptitprince.simptom.fr"],
