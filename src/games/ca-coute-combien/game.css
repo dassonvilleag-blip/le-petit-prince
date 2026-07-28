@@ -185,3 +185,168 @@ main {
   color: var(--purple);
   margin: 14px 0;
 }
+
+/* --- multijoueur : salon, attente, classement ---------------------------- */
+
+.multi-box {
+  margin: 28px auto 0;
+  max-width: 420px;
+  padding: 18px 20px 20px;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 4px 4px 0 var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.multi-title {
+  font-size: 20px;
+  color: var(--purple);
+}
+
+.multi-box input {
+  font-family: inherit;
+  font-size: 17px;
+  padding: 9px 12px;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.multi-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.join-row {
+  display: flex;
+  gap: 10px;
+}
+
+.join-row input {
+  width: 92px;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 3px;
+}
+
+.btn-multi {
+  flex: 1;
+  font-family: inherit;
+  font-size: 17px;
+  padding: 10px 14px;
+  background: var(--teal);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.btn-multi:hover {
+  box-shadow: 5px 5px 0 var(--purple);
+  transform: translate(-1px, -1px);
+}
+
+.btn-ghost {
+  font-family: inherit;
+  font-size: 15px;
+  margin-top: 14px;
+  padding: 7px 12px;
+  background: transparent;
+  color: var(--ink);
+  border: 2px dashed var(--ink);
+  border-radius: 10px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.btn-ghost:hover {
+  opacity: 1;
+}
+
+.multi-error {
+  color: var(--pink);
+  font-size: 15px;
+}
+
+.multi-wait {
+  color: var(--purple);
+  font-size: 17px;
+  margin-top: 10px;
+}
+
+.lobby-code {
+  color: var(--pink);
+  letter-spacing: 6px;
+}
+
+.lobby-players {
+  list-style: none;
+  margin: 18px auto;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lobby-players li {
+  padding: 9px 14px;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 18px;
+}
+
+.lobby-players li .host-tag {
+  color: var(--purple);
+  font-size: 14px;
+}
+
+.multi-results {
+  list-style: none;
+  margin: 14px auto;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  text-align: left;
+}
+
+.multi-results li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 13px;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  font-size: 17px;
+}
+
+.multi-results li.me {
+  background: var(--yellow);
+}
+
+.multi-results .mr-pseudo {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.multi-results .mr-guess {
+  color: var(--purple);
+  font-size: 15px;
+}
+
+.multi-results .mr-pts {
+  color: var(--pink);
+  min-width: 74px;
+  text-align: right;
+}

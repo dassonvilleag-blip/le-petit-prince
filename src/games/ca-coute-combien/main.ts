@@ -4,6 +4,8 @@ import { drawRound } from "./pool";
 import { computeRoundScore } from "./scoring";
 import { pickRoundComment, pickClosingComment } from "./comments";
 import { afterDelay, cancelAllReveals, startCountUp, startTypewrite } from "./reveal";
+import type { Room } from "./rooms-server";
+import * as rc from "./room-client";
 
 const ROUND_COUNT = 10;
 const RECORD_KEY = "ca-coute-combien-record";
@@ -12,6 +14,7 @@ const REVEAL_COUNT_DURATION_MS = 800;
 const REVEAL_TYPEWRITE_MS_PER_CHAR = 25;
 
 const screenIntro = document.getElementById("screen-intro")!;
+const screenLobby = document.getElementById("screen-lobby")!;
 const screenRound = document.getElementById("screen-round")!;
 const screenRecap = document.getElementById("screen-recap")!;
 
@@ -51,7 +54,7 @@ let roundIndex = 0;
 let roundScores: number[] = [];
 
 function showScreen(screen: HTMLElement) {
-  for (const s of [screenIntro, screenRound, screenRecap]) {
+  for (const s of [screenIntro, screenLobby, screenRound, screenRecap]) {
     s.classList.toggle("hidden", s !== screen);
   }
 }
@@ -94,6 +97,10 @@ function showRound() {
 
 function submitGuess(event: SubmitEvent) {
   event.preventDefault();
+  if (multi) {
+    void multiSubmitGuess();
+    return;
+  }
   cancelAllReveals();
 
   const item = round[roundIndex];
@@ -123,6 +130,10 @@ function submitGuess(event: SubmitEvent) {
 }
 
 function nextRound() {
+  if (multi) {
+    void rc.nextRound(multi.code, multi.playerId).catch(showMultiError);
+    return;
+  }
   roundIndex += 1;
   if (roundIndex >= ROUND_COUNT) {
     finishGame();
@@ -153,9 +164,312 @@ function finishGame() {
 btnStart.addEventListener("click", startGame);
 guessForm.addEventListener("submit", submitGuess);
 btnNext.addEventListener("click", nextRound);
-btnReplay.addEventListener("click", startGame);
+btnReplay.addEventListener("click", () => {
+  if (multi) {
+    void rc.replayRoom(multi.code, multi.playerId).catch(showMultiError);
+    return;
+  }
+  startGame();
+});
 
 recordValueEl.textContent = String(record);
 renderCredits();
+
+// ---------------------------------------------------------------------------
+// Multijoueur — salons jusqu'à 8 joueurs, manches synchronisées, classement.
+// L'état de référence vit sur le serveur (voir rooms-server.ts) ; le client
+// ne fait que refléter le salon reçu par polling.
+// ---------------------------------------------------------------------------
+
+const pseudoInput = document.getElementById("pseudo-input") as HTMLInputElement;
+const codeInput = document.getElementById("code-input") as HTMLInputElement;
+const btnCreateRoom = document.getElementById("btn-create-room")!;
+const btnJoinRoom = document.getElementById("btn-join-room")!;
+const multiErrorEl = document.getElementById("multi-error")!;
+const lobbyCodeEl = document.getElementById("lobby-code")!;
+const lobbyPlayersEl = document.getElementById("lobby-players")!;
+const btnLaunch = document.getElementById("btn-launch")!;
+const lobbyWaitEl = document.getElementById("lobby-wait")!;
+const btnLeave = document.getElementById("btn-leave")!;
+const multiStatusEl = document.getElementById("multi-status")!;
+const btnForce = document.getElementById("btn-force")!;
+const multiResultsEl = document.getElementById("multi-results")!;
+const multiNextWaitEl = document.getElementById("multi-next-wait")!;
+const recapPodiumEl = document.getElementById("recap-podium")!;
+const recapWaitEl = document.getElementById("recap-wait")!;
+const btnRecapLeave = document.getElementById("btn-recap-leave")!;
+
+const ITEMS_BY_ID = new Map(ITEMS.map((item) => [item.id, item]));
+const PSEUDO_KEY = "ca-coute-combien-pseudo";
+
+interface MultiSession {
+  code: string;
+  playerId: string;
+  stop: () => void;
+}
+
+let multi: MultiSession | null = null;
+let multiShownRound = -1; // dernière manche affichée (pour ne pas re-render)
+let multiRevealed = false;
+
+const isHost = (room: Room) => multi !== null && room.hostId === multi.playerId;
+const myGuess = (room: Room) => (multi ? room.guesses[room.roundIdx]?.[multi.playerId] : undefined);
+
+function showMultiError(e: unknown) {
+  multiErrorEl.textContent = e instanceof Error ? e.message : String(e);
+  multiErrorEl.classList.remove("hidden");
+}
+
+function multiTotals(room: Room): Map<string, number> {
+  const totals = new Map<string, number>(room.players.map((p) => [p.id, 0]));
+  for (let i = 0; i < room.itemIds.length; i++) {
+    // la manche en cours ne compte qu'une fois révélée
+    if (i > room.roundIdx || (i === room.roundIdx && room.phase === "guess")) break;
+    const item = ITEMS_BY_ID.get(room.itemIds[i]);
+    if (!item) continue;
+    for (const p of room.players) {
+      const g = room.guesses[i]?.[p.id];
+      if (g !== undefined) totals.set(p.id, (totals.get(p.id) ?? 0) + computeRoundScore(g, item.prix));
+    }
+  }
+  return totals;
+}
+
+function renderResultRow(rank: string, pseudo: string, mine: boolean, guessTxt: string, ptsTxt: string): string {
+  return `<li${mine ? ' class="me"' : ""}><span>${rank}</span><span class="mr-pseudo">${escapeHtml(pseudo)}</span><span class="mr-guess">${guessTxt}</span><span class="mr-pts numeric">${ptsTxt}</span></li>`;
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
+function onRoomUpdate(room: Room) {
+  if (!multi) return;
+  multiErrorEl.classList.add("hidden");
+
+  if (room.phase === "lobby") {
+    multiShownRound = -1;
+    multiRevealed = false;
+    lobbyCodeEl.textContent = room.code;
+    lobbyPlayersEl.innerHTML = room.players
+      .map(
+        (p) =>
+          `<li>${escapeHtml(p.pseudo)}${p.id === room.hostId ? ' <span class="host-tag">(hôte)</span>' : ""}${multi && p.id === multi.playerId ? " ← toi" : ""}</li>`,
+      )
+      .join("");
+    btnLaunch.classList.toggle("hidden", !isHost(room));
+    lobbyWaitEl.classList.toggle("hidden", isHost(room));
+    showScreen(screenLobby);
+    return;
+  }
+
+  if (room.phase === "guess" || room.phase === "reveal") {
+    round = room.itemIds.map((id) => ITEMS_BY_ID.get(id)).filter((i): i is Item => i !== undefined);
+    if (room.roundIdx !== multiShownRound) {
+      multiShownRound = room.roundIdx;
+      multiRevealed = false;
+      roundIndex = room.roundIdx;
+      showRound();
+      showScreen(screenRound);
+    }
+
+    if (room.phase === "guess") {
+      const answered = room.players.filter((p) => room.guesses[room.roundIdx]?.[p.id] !== undefined).length;
+      const iAnswered = myGuess(room) !== undefined;
+      guessForm.classList.toggle("hidden", iAnswered);
+      multiStatusEl.textContent = `${answered} / ${room.players.length} ont répondu…`;
+      multiStatusEl.classList.remove("hidden");
+      btnForce.classList.toggle("hidden", !(isHost(room) && iAnswered && answered < room.players.length));
+      roundResultEl.classList.add("hidden");
+    } else {
+      multiRenderReveal(room);
+    }
+    return;
+  }
+
+  if (room.phase === "end") {
+    multiRenderEnd(room);
+  }
+}
+
+function multiRenderReveal(room: Room) {
+  if (multiRevealed) return;
+  multiRevealed = true;
+
+  const item = round[room.roundIdx];
+  const mine = myGuess(room);
+  const myScore = mine !== undefined ? computeRoundScore(mine, item.prix) : 0;
+
+  guessForm.classList.add("hidden");
+  multiStatusEl.classList.add("hidden");
+  btnForce.classList.add("hidden");
+  roundResultEl.classList.remove("hidden");
+
+  cancelAllReveals();
+  roundScoreEl.textContent = "";
+  roundPriceEl.textContent = "";
+  roundCommentEl.textContent = "";
+  startCountUp(roundScoreEl, 0, myScore, REVEAL_COUNT_DURATION_MS, (value) => `${Math.round(value)} / 1000 points`);
+  startCountUp(roundPriceEl, 0, item.prix, REVEAL_COUNT_DURATION_MS, (value) =>
+    mine !== undefined
+      ? `Prix réel : ${euros.format(value)} (ton estimation : ${euros.format(mine)})`
+      : `Prix réel : ${euros.format(value)}`,
+  );
+  afterDelay(REVEAL_COUNT_DURATION_MS, () => {
+    startTypewrite(roundCommentEl, pickRoundComment(myScore), REVEAL_TYPEWRITE_MS_PER_CHAR);
+  });
+
+  // classement de la manche + totaux
+  const totals = multiTotals(room);
+  const rows = room.players
+    .map((p) => {
+      const g = room.guesses[room.roundIdx]?.[p.id];
+      return {
+        pseudo: p.pseudo,
+        mine: multi !== null && p.id === multi.playerId,
+        guess: g,
+        pts: g !== undefined ? computeRoundScore(g, item.prix) : 0,
+        total: totals.get(p.id) ?? 0,
+      };
+    })
+    .sort((a, b) => b.pts - a.pts);
+  multiResultsEl.innerHTML = rows
+    .map((r, i) =>
+      renderResultRow(
+        `${i + 1}.`,
+        r.pseudo,
+        r.mine,
+        r.guess !== undefined ? euros.format(r.guess) : "—",
+        `+${r.pts} (${r.total})`,
+      ),
+    )
+    .join("");
+  multiResultsEl.classList.remove("hidden");
+
+  const lastRound = room.roundIdx + 1 >= room.itemIds.length;
+  btnNext.textContent = lastRound ? "Voir le classement final" : "Objet suivant";
+  btnNext.classList.toggle("hidden", !isHost(room));
+  multiNextWaitEl.classList.toggle("hidden", isHost(room));
+}
+
+function multiRenderEnd(room: Room) {
+  const totals = multiTotals(room);
+  const standing = [...room.players]
+    .map((p) => ({ pseudo: p.pseudo, mine: multi !== null && p.id === multi.playerId, total: totals.get(p.id) ?? 0 }))
+    .sort((a, b) => b.total - a.total);
+  const medals = ["🥇", "🥈", "🥉"];
+  recapPodiumEl.innerHTML = standing
+    .map((s, i) => renderResultRow(medals[i] ?? `${i + 1}.`, s.pseudo, s.mine, "", `${s.total}`))
+    .join("");
+  recapPodiumEl.classList.remove("hidden");
+
+  const myRank = standing.findIndex((s) => s.mine) + 1;
+  const myTotal = standing.find((s) => s.mine)?.total ?? 0;
+  recapTotalEl.textContent = `Ton score : ${myTotal} / ${room.itemIds.length * 1000} — ${myRank === 1 ? "1ᵉʳ" : `${myRank}ᵉ`} sur ${standing.length}`;
+  recapBestEl.textContent = "";
+  recapWorstEl.textContent = "";
+  recapCommentEl.textContent = pickClosingComment(myTotal);
+
+  if (room.itemIds.length === ROUND_COUNT && myTotal > record) {
+    record = myTotal;
+    localStorage.setItem(RECORD_KEY, String(record));
+  }
+  recapRecordEl.textContent = `Record : ${record} / 10 000`;
+
+  btnReplay.textContent = "Rejouer ensemble";
+  btnReplay.classList.toggle("hidden", !isHost(room));
+  recapWaitEl.classList.toggle("hidden", isHost(room));
+  btnRecapLeave.classList.remove("hidden");
+  showScreen(screenRecap);
+}
+
+async function multiSubmitGuess() {
+  if (!multi) return;
+  const guess = Number(guessInput.value);
+  if (!Number.isFinite(guess) || guess < 0) return;
+  guessForm.classList.add("hidden");
+  try {
+    const { room } = await rc.sendGuess(multi.code, multi.playerId, guess);
+    onRoomUpdate(room);
+  } catch (e) {
+    guessForm.classList.remove("hidden");
+    showMultiError(e);
+  }
+}
+
+function enterMulti(code: string, playerId: string) {
+  multi = {
+    code,
+    playerId,
+    stop: rc.pollRoom(code, onRoomUpdate, showMultiError),
+  };
+  multiShownRound = -1;
+  multiRevealed = false;
+}
+
+function leaveMulti() {
+  multi?.stop();
+  multi = null;
+  multiResultsEl.classList.add("hidden");
+  multiStatusEl.classList.add("hidden");
+  multiNextWaitEl.classList.add("hidden");
+  recapPodiumEl.classList.add("hidden");
+  recapWaitEl.classList.add("hidden");
+  btnRecapLeave.classList.add("hidden");
+  btnForce.classList.add("hidden");
+  btnNext.classList.remove("hidden");
+  btnReplay.classList.remove("hidden");
+  btnReplay.textContent = "Rejouer";
+  btnNext.textContent = "Manche suivante";
+  showScreen(screenIntro);
+}
+
+function savedPseudo(): string | null {
+  const pseudo = pseudoInput.value.trim().slice(0, 20);
+  if (!pseudo) {
+    showMultiError(new Error("choisis un pseudo d'abord"));
+    pseudoInput.focus();
+    return null;
+  }
+  localStorage.setItem(PSEUDO_KEY, pseudo);
+  return pseudo;
+}
+
+btnCreateRoom.addEventListener("click", () => {
+  const pseudo = savedPseudo();
+  if (!pseudo) return;
+  rc.createRoom(pseudo)
+    .then(({ room, playerId }) => enterMulti(room.code, playerId!))
+    .catch(showMultiError);
+});
+
+btnJoinRoom.addEventListener("click", () => {
+  const pseudo = savedPseudo();
+  if (!pseudo) return;
+  const code = codeInput.value.trim().toUpperCase();
+  if (code.length !== 4) {
+    showMultiError(new Error("code à 4 lettres"));
+    codeInput.focus();
+    return;
+  }
+  rc.joinRoom(code, pseudo)
+    .then(({ room, playerId }) => enterMulti(room.code, playerId!))
+    .catch(showMultiError);
+});
+
+btnLaunch.addEventListener("click", () => {
+  if (!multi) return;
+  const itemIds = drawRound(ITEMS, [], ROUND_COUNT).round.map((item) => item.id);
+  rc.startRoom(multi.code, multi.playerId, itemIds).catch(showMultiError);
+});
+
+btnForce.addEventListener("click", () => {
+  if (multi) rc.forceReveal(multi.code, multi.playerId).catch(showMultiError);
+});
+
+btnLeave.addEventListener("click", leaveMulti);
+btnRecapLeave.addEventListener("click", leaveMulti);
+
+pseudoInput.value = localStorage.getItem(PSEUDO_KEY) ?? "";
 
 export {};
