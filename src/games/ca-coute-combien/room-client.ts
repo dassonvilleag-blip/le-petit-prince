@@ -6,7 +6,7 @@ import type { Room } from "./rooms-server";
 const API = "/api/ccc";
 // URL du Worker Cloudflare (workers/ccc-rooms) : utilisée automatiquement
 // quand le site est servi en statique (GitHub Pages) et n'a donc pas d'API.
-const REMOTE_API = "";
+const REMOTE_API = "https://ccc-rooms.le-petit-prince.workers.dev/api/ccc";
 const POLL_MS = 1500;
 
 export class RoomError extends Error {}
