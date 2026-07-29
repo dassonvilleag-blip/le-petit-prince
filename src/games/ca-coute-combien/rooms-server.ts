@@ -135,6 +135,7 @@ export function createRoomStore(now: () => number = Date.now) {
       const guess = typeof b.guess === "number" && Number.isFinite(b.guess) ? Math.max(0, b.guess) : null;
       if (guess === null) return err(400, "estimation invalide");
       const roundGuesses = (room.guesses[room.roundIdx] ??= {});
+      if (roundGuesses[playerId] !== undefined) return err(409, "tu as déjà validé pour cette manche");
       roundGuesses[playerId] = guess;
       if (room.players.every((p) => roundGuesses[p.id] !== undefined)) room.phase = "reveal";
       touch(room);
