@@ -3,6 +3,8 @@ export interface Item {
   nom: string;
   photo: string;
   prix: number;
+  /** petite explication du prix (haut ou bas), affichée à la révélation */
+  anecdote?: string;
 }
 
 const BASE = import.meta.env.BASE_URL;
@@ -37,30 +39,35 @@ export const ITEMS: Item[] = [
     nom: "Un café en terrasse sur la Piazza San Marco, à Venise",
     photo: `${BASE}photos/ca-coute-combien/san-marco-cafe.webp`,
     prix: 13,
+    anecdote: "Le café ne vaut pas grand-chose : on paie la place, l'orchestre et cinq siècles de vue sur la basilique.",
   },
   {
     id: "icehotel",
     nom: "Une nuit dans une chambre de glace à l'Icehotel, en Suède",
     photo: `${BASE}photos/ca-coute-combien/icehotel.webp`,
     prix: 400,
+    anecdote: "L'hôtel fond chaque printemps et se reconstruit chaque hiver, sculpté dans la glace de la rivière Torne.",
   },
   {
     id: "monaco-gp-tribune",
     nom: "Une place en tribune pour les 3 jours du Grand Prix de Monaco",
     photo: `${BASE}photos/ca-coute-combien/monaco-gp-tribune.webp`,
     prix: 990,
+    anecdote: "Un circuit en pleine ville, le plus court du calendrier : très peu de tribunes, énormément de demande.",
   },
   {
     id: "truffe-alba",
     nom: "Une truffe blanche d'Alba, les 100 grammes en pleine saison",
     photo: `${BASE}photos/ca-coute-combien/truffe-alba.webp`,
     prix: 450,
+    anecdote: "La truffe blanche ne se cultive pas : elle se trouve, au flair des chiens truffiers, quelques semaines par an.",
   },
   {
     id: "burj-al-arab",
     nom: "Une nuit dans la suite la moins chère du Burj Al Arab, à Dubaï",
     photo: `${BASE}photos/ca-coute-combien/burj-al-arab.webp`,
     prix: 1900,
+    anecdote: "Il n'y a que des suites en duplex, avec majordome 24 h/24 — le fameux « 7 étoiles » est né du marketing.",
   },
   {
     id: "yacht-saint-tropez",
@@ -79,6 +86,7 @@ export const ITEMS: Item[] = [
     nom: "Une portion de bœuf de Kobe (200 g), au restaurant",
     photo: `${BASE}photos/ca-coute-combien/boeuf-kobe.webp`,
     prix: 180,
+    anecdote: "L'appellation Kobe est ultra-protégée : quelques milliers de bêtes certifiées par an dans le monde.",
   },
   {
     id: "capsule-hotel-tokyo",
@@ -103,6 +111,7 @@ export const ITEMS: Item[] = [
     nom: "Une bouteille de champagne Dom Pérignon",
     photo: `${BASE}photos/ca-coute-combien/champagne-dom-perignon.webp`,
     prix: 190,
+    anecdote: "Dom Pérignon n'existe qu'en millésime : seules les meilleures années, après huit ans de cave minimum.",
   },
   {
     id: "wimbledon-centre-court",
@@ -121,6 +130,7 @@ export const ITEMS: Item[] = [
     nom: "Une montre Rolex Submariner, neuve en boutique",
     photo: `${BASE}photos/ca-coute-combien/rolex-submariner.webp`,
     prix: 9200,
+    anecdote: "Le prix boutique est presque théorique : la production est limitée et les listes d'attente durent des années.",
   },
   {
     id: "colisee-rome",
@@ -145,18 +155,21 @@ export const ITEMS: Item[] = [
     nom: "Un tour en hélicoptère de 15 minutes au-dessus de Manhattan",
     photo: `${BASE}photos/ca-coute-combien/helico-manhattan.webp`,
     prix: 230,
+    anecdote: "L'heure de vol d'un hélicoptère coûte plus de 1 500 € : les 15 minutes se partagent entre passagers.",
   },
   {
     id: "cronut-nyc",
     nom: "Un cronut, à la boulangerie originale de New York",
     photo: `${BASE}photos/ca-coute-combien/cronut-nyc.webp`,
     prix: 6.5,
+    anecdote: "Mi-croissant mi-donut, viral en 2013 : file d'attente dès l'aube et quota de deux par personne.",
   },
   {
     id: "sneakers-air-jordan",
     nom: "Une paire de sneakers Air Jordan 1, prix boutique",
     photo: `${BASE}photos/ca-coute-combien/sneakers-air-jordan.webp`,
     prix: 180,
+    anecdote: "Le prix boutique est volontairement contenu : la rareté organisée fait exploser la revente, pas l'étiquette.",
   },
   {
     id: "plein-gpl",
@@ -181,6 +194,7 @@ export const ITEMS: Item[] = [
     nom: "Une place en crèche, un mois",
     photo: `${BASE}photos/ca-coute-combien/place-creche-mois.webp`,
     prix: 800,
+    anecdote: "Une place coûte en réalité plus de 2 000 € par mois : collectivités et CAF absorbent la différence.",
   },
   {
     id: "defile-mode-place",
@@ -241,6 +255,7 @@ export const ITEMS: Item[] = [
     nom: "Un forfait complet de conduite accompagnée",
     photo: `${BASE}photos/ca-coute-combien/conduite-accompagnee-forfait.webp`,
     prix: 1200,
+    anecdote: "Une vingtaine d'heures avec moniteur et voiture à double commande : c'est de la main-d'œuvre, surtout.",
   },
   {
     id: "parking-sous-sol-mensuel",
@@ -271,6 +286,7 @@ export const ITEMS: Item[] = [
     nom: "Une amende pour stationnement gênant",
     photo: `${BASE}photos/ca-coute-combien/amende-stationnement-genant.webp`,
     prix: 135,
+    anecdote: "Montant fixé par décret, identique dans toute la France — pas de négociation possible.",
   },
   {
     id: "sac-pellets-poele",
@@ -493,6 +509,7 @@ export const ITEMS: Item[] = [
     nom: "Un billet complet pour un vol touristique Blue Origin",
     photo: `${BASE}photos/ca-coute-combien/billet-blue-origin.webp`,
     prix: 450000,
+    anecdote: "Environ dix minutes de vol pour trois minutes d'apesanteur — le prix de la minute est vertigineux.",
   },
   {
     id: "yacht-voile-americas-cup",
@@ -601,12 +618,14 @@ export const ITEMS: Item[] = [
     nom: "Un piano à queue de concert",
     photo: `${BASE}photos/ca-coute-combien/piano-queue-concert.webp`,
     prix: 80000,
+    anecdote: "Près d'un an de fabrication artisanale et 12 000 pièces assemblées à la main.",
   },
   {
     id: "caviar-beluga",
     nom: "Un caviar béluga, les 30 grammes",
     photo: `${BASE}photos/ca-coute-combien/caviar-beluga.webp`,
     prix: 280,
+    anecdote: "L'esturgeon béluga met quinze à vingt ans avant de produire ses premiers œufs.",
   },
   {
     id: "foie-gras-entier",
@@ -625,24 +644,28 @@ export const ITEMS: Item[] = [
     nom: "Un gramme de safran en filaments",
     photo: `${BASE}photos/ca-coute-combien/safran-gramme.webp`,
     prix: 12,
+    anecdote: "Il faut cueillir à la main environ 150 fleurs de crocus pour un seul gramme : l'épice la plus chère du monde.",
   },
   {
     id: "vanille-madagascar",
     nom: "100 grammes de gousses de vanille de Madagascar",
     photo: `${BASE}photos/ca-coute-combien/vanille-madagascar.webp`,
     prix: 120,
+    anecdote: "Chaque fleur de vanillier est pollinisée à la main, une par une, puis la gousse sèche pendant des mois.",
   },
   {
     id: "melon-yubari",
     nom: "Une caisse de melons Yubari King, prix courant au Japon",
     photo: `${BASE}photos/ca-coute-combien/melon-yubari.webp`,
     prix: 130,
+    anecdote: "Au Japon, c'est un fruit-cadeau : calibrage parfait, peau immaculée — les plus beaux partent aux enchères.",
   },
   {
     id: "mangue-miyazaki",
     nom: 'Une mangue Miyazaki "Taiyo no Tamago", la pièce',
     photo: `${BASE}photos/ca-coute-combien/mangue-miyazaki.webp`,
     prix: 45,
+    anecdote: "Cultivée en serre, suspendue dans un filet pour mûrir sans toucher quoi que ce soit.",
   },
   {
     id: "the-matcha-ceremonial",
@@ -655,12 +678,14 @@ export const ITEMS: Item[] = [
     nom: "100 grammes de café Kopi Luwak",
     photo: `${BASE}photos/ca-coute-combien/cafe-kopi-luwak.webp`,
     prix: 80,
+    anecdote: "Les grains sont digérés puis rejetés par une civette : rareté réelle, éthique très discutée.",
   },
   {
     id: "cognac-louis-xiii",
     nom: "Une bouteille de cognac Louis XIII de Rémy Martin",
     photo: `${BASE}photos/ca-coute-combien/cognac-louis-xiii.webp`,
     prix: 3000,
+    anecdote: "Un assemblage d'eaux-de-vie dont certaines ont un siècle, servi dans une carafe en cristal.",
   },
   {
     id: "sake-junmai-premium",
@@ -691,6 +716,7 @@ export const ITEMS: Item[] = [
     nom: "500 grammes de fleur de sel de Guérande AOP",
     photo: `${BASE}photos/ca-coute-combien/fleur-sel-guerande.webp`,
     prix: 15,
+    anecdote: "Cueillie à la main, à la surface de l'eau, seulement les jours où le vent et le soleil le permettent.",
   },
   {
     id: "champagne-krug-millesime",
@@ -757,6 +783,7 @@ export const ITEMS: Item[] = [
     nom: "Un billet en cabine simple à bord du Venice Simplon-Orient-Express, Londres-Venise",
     photo: `${BASE}photos/ca-coute-combien/orient-express-venise-londres.webp`,
     prix: 3200,
+    anecdote: "Des voitures des années 1920 restaurées au millimètre — smoking et robe de soirée exigés au dîner.",
   },
   {
     id: "croisiere-antarctique-semaine",
@@ -769,6 +796,7 @@ export const ITEMS: Item[] = [
     nom: "Une nuit dans la suite sous-marine The Muraka, au Conrad Maldives Rangali Island",
     photo: `${BASE}photos/ca-coute-combien/suite-sous-marine-muraka.webp`,
     prix: 50000,
+    anecdote: "La première chambre sous-marine au monde : on dort à cinq mètres sous l'océan Indien, entouré de requins.",
   },
   {
     id: "safari-masai-mara-semaine",
@@ -841,12 +869,14 @@ export const ITEMS: Item[] = [
     nom: "Un vol parabolique en apesanteur, façon entraînement d'astronaute",
     photo: `${BASE}photos/ca-coute-combien/vol-parabolique-apesanteur.webp`,
     prix: 6000,
+    anecdote: "Un avion de ligne entier dédié à la manœuvre, pour environ 22 secondes d'apesanteur par parabole.",
   },
   {
     id: "expedition-brise-glace-pole-nord",
     nom: "Une expédition en brise-glace jusqu'au Pôle Nord géographique",
     photo: `${BASE}photos/ca-coute-combien/expedition-brise-glace-pole-nord.webp`,
     prix: 30000,
+    anecdote: "Le seul brise-glace nucléaire au monde à embarquer des touristes jusqu'au pôle Nord géographique.",
   },
   {
     id: "trek-patagonie-torres-del-paine",
@@ -865,6 +895,7 @@ export const ITEMS: Item[] = [
     nom: "Un permis de trek pour observer les gorilles des montagnes, dans le massif des Virunga",
     photo: `${BASE}photos/ca-coute-combien/trek-gorilles-virunga.webp`,
     prix: 1500,
+    anecdote: "Le permis donne droit à une heure exactement avec les gorilles : c'est lui qui finance leur protection.",
   },
   {
     id: "hydravion-fjords-alaska",
@@ -907,12 +938,14 @@ export const ITEMS: Item[] = [
     nom: "Un tableau de la série des Meules de Claude Monet, vente aux enchères",
     photo: `${BASE}photos/ca-coute-combien/tableau-monet-meules.webp`,
     prix: 110700000,
+    anecdote: "Adjugé en huit minutes d'enchères en 2019 : record absolu pour Monet.",
   },
   {
     id: "piece-double-eagle-1933",
     nom: "Une pièce d'or 1933 Double Eagle, vente aux enchères",
     photo: `${BASE}photos/ca-coute-combien/piece-double-eagle-1933.webp`,
     prix: 18900000,
+    anecdote: "Frappée puis jamais mise en circulation : en posséder une a longtemps été illégal aux États-Unis.",
   },
   {
     id: "manuscrit-codex-leicester",
@@ -925,12 +958,14 @@ export const ITEMS: Item[] = [
     nom: "Une Bible de Gutenberg complète, l'un des livres les plus rares au monde",
     photo: `${BASE}photos/ca-coute-combien/bible-gutenberg.webp`,
     prix: 5400000,
+    anecdote: "Le premier grand livre imprimé d'Occident : il en subsiste moins de cinquante exemplaires.",
   },
   {
     id: "violon-stradivarius-lady-blunt",
     nom: 'Le violon Stradivarius "Lady Blunt" de 1721, vente aux enchères',
     photo: `${BASE}photos/ca-coute-combien/violon-stradivarius-lady-blunt.webp`,
     prix: 15900000,
+    anecdote: "Vendu en 2011 au profit des sinistrés du tsunami japonais — un Stradivarius quasi neuf de 1721.",
   },
   {
     id: "diamant-hope",
@@ -949,6 +984,7 @@ export const ITEMS: Item[] = [
     nom: "Une Ferrari 250 GTO de 1962, vente privée entre collectionneurs",
     photo: `${BASE}photos/ca-coute-combien/ferrari-250-gto.webp`,
     prix: 70000000,
+    anecdote: "Trente-six exemplaires construits : c'est simplement la voiture la plus chère du monde.",
   },
   {
     id: "montre-poche-tiffany-ancienne",
@@ -973,12 +1009,14 @@ export const ITEMS: Item[] = [
     nom: "Un squelette de Tyrannosaurus rex quasi complet, vente aux enchères",
     photo: `${BASE}photos/ca-coute-combien/squelette-trex-stan.webp`,
     prix: 31800000,
+    anecdote: "« Stan » est le fossile le plus cher jamais vendu — parti aux enchères en 2020, direction Abou Dhabi.",
   },
   {
     id: "meteorite-martienne",
     nom: "Un fragment de météorite martienne rare, vente aux enchères",
     photo: `${BASE}photos/ca-coute-combien/meteorite-martienne.webp`,
     prix: 612500,
+    anecdote: "Au gramme, plus chère que l'or : un morceau de Mars arraché par un impact, tombé sur Terre.",
   },
   {
     id: "tapis-persan-safavide",
@@ -1057,6 +1095,7 @@ export const ITEMS: Item[] = [
     nom: "Une puce Nvidia H100, processeur graphique pour l'intelligence artificielle",
     photo: `${BASE}photos/ca-coute-combien/puce-nvidia-h100.webp`,
     prix: 30000,
+    anecdote: "La ruée vers l'IA en a fait l'objet de toutes les pénuries : elle s'est revendue bien au-dessus du tarif.",
   },
   {
     id: "ordinateur-quantique-ibm",
@@ -1075,6 +1114,7 @@ export const ITEMS: Item[] = [
     nom: "Le tout premier iPhone (2007), prix de lancement du modèle 8 Go",
     photo: `${BASE}photos/ca-coute-combien/premier-iphone-2007.webp`,
     prix: 599,
+    anecdote: "C'est son prix de lancement en 2007 — scellé en boîte, il s'arrache aujourd'hui à plus de 50 000 €.",
   },
   {
     id: "ibm-pc-5150",
@@ -1087,12 +1127,14 @@ export const ITEMS: Item[] = [
     nom: "Une machine Enigma allemande de la Seconde Guerre mondiale, vente aux enchères",
     photo: `${BASE}photos/ca-coute-combien/machine-enigma-encheres.webp`,
     prix: 437000,
+    anecdote: "La machine de chiffrement du IIIᵉ Reich : la plupart ont été détruites, chaque survivante est un trésor.",
   },
   {
     id: "apple-1-carte-mere",
     nom: "Une carte-mère Apple I fonctionnelle de 1976, vente aux enchères",
     photo: `${BASE}photos/ca-coute-combien/apple-1-carte-mere.webp`,
     prix: 400000,
+    anecdote: "Environ deux cents exemplaires, assemblés à la main par Steve Wozniak dans un garage.",
   },
   {
     id: "robot-chien-aibo",
@@ -1123,6 +1165,7 @@ export const ITEMS: Item[] = [
     nom: "Un scanner IRM (imagerie par résonance magnétique) hospitalier",
     photo: `${BASE}photos/ca-coute-combien/scanner-irm-hospitalier.webp`,
     prix: 1500000,
+    anecdote: "Le cœur de la machine est un aimant supraconducteur baigné d'hélium liquide à -269 °C.",
   },
   {
     id: "microscope-electronique-balayage",
@@ -1195,6 +1238,7 @@ export const ITEMS: Item[] = [
     nom: "Un premier étage réutilisable de fusée Falcon 9, coût de fabrication",
     photo: `${BASE}photos/ca-coute-combien/falcon9-premier-etage-reutilisable.webp`,
     prix: 15000000,
+    anecdote: "Réutilisable une vingtaine de fois : c'est cette fusée qui a cassé les prix de l'accès à l'espace.",
   },
   {
     id: "robot-quadrupede-securite",
@@ -1207,12 +1251,14 @@ export const ITEMS: Item[] = [
     nom: "La robe blanche portée par Marilyn Monroe dans Sept Ans de réflexion, vente aux enchères",
     photo: `${BASE}photos/ca-coute-combien/robe-marilyn-monroe-seven-year-itch.webp`,
     prix: 5520000,
+    anecdote: "LA robe blanche du métro new-yorkais — l'un des costumes les plus chers jamais adjugés.",
   },
   {
     id: "chaussures-rubis-dorothy-oz",
     nom: "Les escarpins rubis portés par Judy Garland dans Le Magicien d'Oz, vente aux enchères",
     photo: `${BASE}photos/ca-coute-combien/chaussures-rubis-dorothy-oz.webp`,
     prix: 28000000,
+    anecdote: "Les souliers du « Magicien d'Oz » : record absolu pour un objet de cinéma, volés puis retrouvés en 2018.",
   },
   {
     id: "sac-hermes-birkin-himalaya-diamants",
@@ -1237,6 +1283,7 @@ export const ITEMS: Item[] = [
     nom: "Le gant pailleté porté par Michael Jackson lors de sa performance du moonwalk, vente aux enchères",
     photo: `${BASE}photos/ca-coute-combien/gant-michael-jackson-moonwalk.webp`,
     prix: 420000,
+    anecdote: "Le gant blanc du tout premier moonwalk, en 1983 — un seul gant, brodé de strass.",
   },
   {
     id: "robe-mariee-haute-couture-elie-saab",
@@ -1333,6 +1380,7 @@ export const ITEMS: Item[] = [
     nom: "Un authentique chapeau Panama Montecristi, tissage fin",
     photo: `${BASE}photos/ca-coute-combien/chapeau-panama-montecristi.webp`,
     prix: 2000,
+    anecdote: "Plusieurs mois de tissage à la main : la finesse se compte en nombre de points par pouce.",
   },
   {
     id: "ensemble-smoking-ysl-musee",

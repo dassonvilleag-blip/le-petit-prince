@@ -31,6 +31,7 @@ const roundResultEl = document.getElementById("round-result")!;
 const roundCommentEl = document.getElementById("round-comment")!;
 const roundPriceEl = document.getElementById("round-price")!;
 const roundScoreEl = document.getElementById("round-score")!;
+const roundAnecdoteEl = document.getElementById("round-anecdote")!;
 const btnNext = document.getElementById("btn-next")!;
 
 const recapTotalEl = document.getElementById("recap-total")!;
@@ -91,8 +92,19 @@ function showRound() {
 
   guessInput.value = "";
   roundResultEl.classList.add("hidden");
+  roundAnecdoteEl.classList.add("hidden");
   guessForm.classList.remove("hidden");
   guessInput.focus();
+}
+
+// la petite explication du prix, pour les objets qui en valent la peine
+function revealAnecdote(item: Item) {
+  if (!item.anecdote) return;
+  roundAnecdoteEl.textContent = "";
+  roundAnecdoteEl.classList.remove("hidden");
+  afterDelay(REVEAL_COUNT_DURATION_MS + 900, () => {
+    startTypewrite(roundAnecdoteEl, item.anecdote!, REVEAL_TYPEWRITE_MS_PER_CHAR);
+  });
 }
 
 function submitGuess(event: SubmitEvent) {
@@ -127,6 +139,7 @@ function submitGuess(event: SubmitEvent) {
   afterDelay(REVEAL_COUNT_DURATION_MS, () => {
     startTypewrite(roundCommentEl, pickRoundComment(score), REVEAL_TYPEWRITE_MS_PER_CHAR);
   });
+  revealAnecdote(item);
 }
 
 function nextRound() {
@@ -211,6 +224,7 @@ interface MultiSession {
 let multi: MultiSession | null = null;
 let multiShownRound = -1; // dernière manche affichée (pour ne pas re-render)
 let multiRevealed = false;
+let guessSentRound = -1; // manche pour laquelle j'ai déjà validé (verrou local)
 
 const isHost = (room: Room) => multi !== null && room.hostId === multi.playerId;
 const myGuess = (room: Room) => (multi ? room.guesses[room.roundIdx]?.[multi.playerId] : undefined);
@@ -275,7 +289,7 @@ function onRoomUpdate(room: Room) {
 
     if (room.phase === "guess") {
       const answered = room.players.filter((p) => room.guesses[room.roundIdx]?.[p.id] !== undefined).length;
-      const iAnswered = myGuess(room) !== undefined;
+      const iAnswered = myGuess(room) !== undefined || guessSentRound === room.roundIdx;
       guessForm.classList.toggle("hidden", iAnswered);
       multiStatusEl.textContent = `${answered} / ${room.players.length} ont répondu…`;
       multiStatusEl.classList.remove("hidden");
@@ -318,6 +332,7 @@ function multiRenderReveal(room: Room) {
   afterDelay(REVEAL_COUNT_DURATION_MS, () => {
     startTypewrite(roundCommentEl, pickRoundComment(myScore), REVEAL_TYPEWRITE_MS_PER_CHAR);
   });
+  revealAnecdote(item);
 
   // classement de la manche + totaux
   const totals = multiTotals(room);
@@ -384,16 +399,21 @@ function multiRenderEnd(room: Room) {
 }
 
 async function multiSubmitGuess() {
-  if (!multi) return;
+  if (!multi || guessSentRound === multiShownRound) return;
   const guess = Number(guessInput.value);
   if (!Number.isFinite(guess) || guess < 0) return;
+  guessSentRound = multiShownRound;
   guessForm.classList.add("hidden");
   try {
     const { room } = await rc.sendGuess(multi.code, multi.playerId, guess);
     onRoomUpdate(room);
   } catch (e) {
-    guessForm.classList.remove("hidden");
-    showMultiError(e);
+    // « déjà validé » n'est pas une raison de ré-ouvrir le formulaire
+    if (!(e instanceof rc.RoomError && e.message.includes("déjà validé"))) {
+      guessSentRound = -1;
+      guessForm.classList.remove("hidden");
+      showMultiError(e);
+    }
   }
 }
 
@@ -405,6 +425,7 @@ function enterMulti(code: string, playerId: string) {
   };
   multiShownRound = -1;
   multiRevealed = false;
+  guessSentRound = -1;
 }
 
 function leaveMulti() {

@@ -92,6 +92,16 @@ test("replay ramène tout le monde au lobby, prêt pour une nouvelle partie", ()
   assert.equal(room.players.length, 2);
 });
 
+test("la première estimation est définitive : re-valider est refusé", () => {
+  const { store, code, players } = setup(2);
+  call(store, "POST", `/rooms/${code}/start`, { playerId: players[0], itemIds: ["a"] });
+  call(store, "POST", `/rooms/${code}/guess`, { playerId: players[0], guess: 10 });
+  const res = call(store, "POST", `/rooms/${code}/guess`, { playerId: players[0], guess: 999 });
+  assert.equal(res.status, 409);
+  const room = call(store, "GET", `/rooms/${code}`).body.room!;
+  assert.equal(room.guesses[0][players[0]], 10);
+});
+
 test("une estimation hors phase ou invalide est rejetée", () => {
   const { store, code, players } = setup(2);
   assert.equal(call(store, "POST", `/rooms/${code}/guess`, { playerId: players[0], guess: 5 }).status, 409);

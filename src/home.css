@@ -176,3 +176,12 @@ img.tile-art {
   color: var(--soft);
   font-size: 1.3rem;
 }
+
+
+/* --- curseur maison : l'emblème de l'univers suit la souris -------------- */
+
+*:not(input):not(textarea):not(select) {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Ctext y='21' font-size='20'%3E%F0%9F%AA%90%3C/text%3E%3C/svg%3E") 4 4,
+    auto;
+}
