@@ -399,6 +399,29 @@ function wireChannel(channel: RTCDataChannel): void {
 
 let pollTimer = 0;
 
+// Signalisation : on tente l'API same-origin (serveur vite / tunnel), et on
+// bascule automatiquement sur le Worker Cloudflare quand le site est servi
+// en statique (GitHub Pages) — reconnaissable à ses 404/405 non-JSON.
+const SIGNAL_REMOTE = "https://ccc-rooms.le-petit-prince.workers.dev";
+let signalBase = "";
+
+async function signalFetch(path: string, init?: RequestInit): Promise<Response> {
+  if (signalBase === "") {
+    let res: Response | null = null;
+    try {
+      res = await fetch(path, init);
+    } catch {
+      res = null;
+    }
+    const isStatic =
+      res === null ||
+      ((res.status === 404 || res.status === 405) && !(res.headers.get("Content-Type") ?? "").includes("json"));
+    if (!isStatic) return res!;
+    signalBase = SIGNAL_REMOTE;
+  }
+  return fetch(signalBase + path, init);
+}
+
 async function hostGame(): Promise<void> {
   role = "gardien";
   lobbyChoice.classList.add("hidden");
@@ -409,13 +432,13 @@ async function hostGame(): Promise<void> {
     wireChannel(pc.createDataChannel("phare"));
     await pc.setLocalDescription(await pc.createOffer());
     await iceComplete(pc);
-    const r = await fetch("/api/phare/rooms", { method: "POST", body: encodeDesc(pc.localDescription) });
+    const r = await signalFetch("/api/phare/rooms", { method: "POST", body: encodeDesc(pc.localDescription) });
     const { code } = await r.json();
     document.getElementById("room-code")!.textContent = code;
     statusEl.textContent = "en attente du matelot…";
     pollTimer = window.setInterval(async () => {
       try {
-        const res = await fetch(`/api/phare/rooms/${code}/answer`);
+        const res = await signalFetch(`/api/phare/rooms/${code}/answer`);
         const { answer } = await res.json();
         if (answer && pc && pc.signalingState === "have-local-offer") {
           window.clearInterval(pollTimer);
@@ -445,7 +468,7 @@ async function joinWithCode(code: string): Promise<void> {
   joining = true;
   statusEl.textContent = "recherche de la partie…";
   try {
-    const res = await fetch(`/api/phare/rooms/${code}`);
+    const res = await signalFetch(`/api/phare/rooms/${code}`);
     if (!res.ok) {
       joining = false;
       statusEl.textContent = "";
@@ -458,7 +481,7 @@ async function joinWithCode(code: string): Promise<void> {
     await pc.setRemoteDescription(decodeDesc(offer));
     await pc.setLocalDescription(await pc.createAnswer());
     await iceComplete(pc);
-    await fetch(`/api/phare/rooms/${code}/answer`, { method: "POST", body: encodeDesc(pc.localDescription) });
+    await signalFetch(`/api/phare/rooms/${code}/answer`, { method: "POST", body: encodeDesc(pc.localDescription) });
     statusEl.textContent = "connexion…";
   } catch {
     joining = false;
