@@ -197,28 +197,7 @@ body {
   background: var(--teal);
 }
 
-.touch-ui {
-  display: none;
-}
 
-.touch-ui.visible {
-  display: block;
-}
-
-#btn-dash {
-  position: fixed;
-  z-index: 20;
-  right: 22px;
-  bottom: 26px;
-  width: 74px;
-  height: 74px;
-  font-size: 2rem;
-  background: var(--purple);
-  border: 3px solid var(--ink);
-  border-radius: 50%;
-  box-shadow: 4px 4px 0 var(--ink);
-  touch-action: none;
-}
 
 .phone {
   position: fixed;
@@ -308,4 +287,18 @@ body {
   cursor:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Ctext y='21' font-size='20'%3E%F0%9F%97%BA%EF%B8%8F%3C/text%3E%3C/svg%3E") 4 4,
     auto;
+}
+
+/* --- mobile ---------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .phone {
+    width: min(260px, calc(100vw - 32px));
+    right: 16px;
+    bottom: 96px;
+  }
+
+  .shop-items button {
+    width: 100%;
+  }
 }
