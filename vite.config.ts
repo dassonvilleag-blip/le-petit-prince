@@ -147,6 +147,7 @@ export default defineConfig({
         miniMondes: resolve(__dirname, "games/mini-mondes/index.html"),
         caCouteCombien: resolve(__dirname, "games/ca-coute-combien/index.html"),
         laPromenade: resolve(__dirname, "games/la-promenade/index.html"),
+        aquarium: resolve(__dirname, "games/aquarium/index.html"),
       },
     },
   },

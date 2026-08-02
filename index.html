@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>le petit prince</title>
     <meta name="description" content="Des expériences interactives inspirées du Petit Prince." />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪐</text></svg>" />
@@ -12,103 +12,169 @@
     <link rel="stylesheet" href="/src/home.css" />
   </head>
   <body>
-    <header class="site-header">
-      <h1 class="logo">le petit <span class="logo-dot">prince</span></h1>
-      <p class="tagline">« On ne voit bien qu'avec le cœur. » — des petites expériences interactives entre les étoiles.</p>
-    </header>
+    <!-- écran d'accueil : deux mondes, on choisit où entrer -->
+    <div id="hall" class="hall">
+      <header class="hall-header">
+        <h1 class="logo">le petit <span class="logo-dot">prince</span></h1>
+        <p class="tagline">choisis ton monde</p>
+      </header>
 
-    <main class="sections">
-      <section class="zone zone-test">
-        <h2 class="zone-title"><span class="blink-arrow">▶</span> JEUX À TESTER <span class="blink-arrow">◀</span></h2>
-        <p class="zone-sub">Prêts pour vos retours — jouez, cassez, racontez.</p>
-
-        <div class="grid grid-featured">
-          <a class="tile tile-featured" href="games/peche-abyssale/">
-            <span class="badge badge-test">🎮 TESTE-MOI</span>
-            <img class="tile-art" src="/tiles/peche.webp" alt="" />
-            <div class="tile-caption">
-              <h2 class="tile-name">La pêche abyssale</h2>
-              <p class="tile-pitch">Descends, ferre, pousse ta chance… et remonte avant que ça casse.</p>
-            </div>
-          </a>
-
-          <a class="tile tile-featured" href="games/ca-coute-combien/">
-            <span class="badge badge-test">🎮 TESTE-MOI</span>
-            <span class="badge-multi">👥 2–8 joueurs</span>
-            <img class="tile-art" src="/tiles/prix.webp" alt="" />
-            <div class="tile-caption">
-              <h2 class="tile-name">Ça coûte combien ?!</h2>
-              <p class="tile-pitch">Devine les vrais prix, seul ou en salon jusqu'à 8 — qui a le meilleur flair ?</p>
-            </div>
-          </a>
+      <a class="door door-arcade" href="#arcade">
+        <div class="door-bg" style="background-image: url('/mondes/arcade.webp')"></div>
+        <div class="door-veil"></div>
+        <div class="door-label">
+          <span class="door-neon">▶ SALLE D'ARCADE</span>
+          <h2>Jeux à tester</h2>
+          <p>Prêts pour vos retours — entrez, jouez, cassez tout.</p>
+          <span class="door-cta">ENTRER</span>
         </div>
-      </section>
+      </a>
 
-      <section class="zone zone-dev">
-        <div class="stripe" aria-hidden="true"></div>
-        <h2 class="zone-title">🚧 EN DÉVELOPPEMENT</h2>
-        <p class="zone-sub">Chantiers ouverts — ça bouge encore, pardon pour la peinture fraîche.</p>
+      <a class="door door-atelier" href="#atelier">
+        <div class="door-bg" style="background-image: url('/mondes/atelier.webp')"></div>
+        <div class="door-veil"></div>
+        <div class="door-label">
+          <span class="door-stripe"></span>
+          <h2>L'Atelier</h2>
+          <p>Jeux en développement — peinture fraîche et sciure.</p>
+          <span class="door-cta">ENTRER</span>
+        </div>
+      </a>
+    </div>
 
-        <div class="grid grid-dev">
-          <a class="tile tile-dev" href="games/la-promenade/">
-            <span class="tape">EN CHANTIER</span>
-            <img class="tile-art" src="/tiles/promenade.webp" alt="" />
-            <h2 class="tile-name">La Promenade</h2>
-          </a>
+    <!-- monde 1 : la salle d'arcade (jeux à tester) -->
+    <section id="arcade" class="world world-arcade hidden">
+      <div class="world-bg" style="background-image: url('/mondes/arcade.webp')"></div>
+      <a class="world-exit" href="#">← sortir</a>
+      <h2 class="world-title neon-title">▶ SALLE D'ARCADE ◀</h2>
+      <p class="world-sub">Deux bornes allumées — jouez et racontez-nous.</p>
 
-          <a class="tile tile-dev" href="games/mini-mondes/">
-            <span class="tape">EN CHANTIER</span>
-            <img class="tile-art" src="/tiles/mini-mondes.webp" alt="" />
-            <h2 class="tile-name">Les Mini-Mondes</h2>
-          </a>
-
-          <a class="tile tile-dev" href="games/la-horde/">
-            <span class="tape">EN CHANTIER</span>
-            <img class="tile-art" src="/tiles/horde.webp" alt="" />
-            <h2 class="tile-name">La Horde de Minuit</h2>
-          </a>
-
-          <a class="tile tile-dev" href="games/le-phare/">
-            <span class="tape">EN CHANTIER</span>
-            <span class="badge-multi">👥 à deux</span>
-            <img class="tile-art" src="/tiles/phare.webp" alt="" />
-            <h2 class="tile-name">Le Phare — à deux</h2>
-          </a>
-
-          <a class="tile tile-dev" href="games/juke-box/">
-            <span class="tape">EN CHANTIER</span>
-            <img class="tile-art" src="/tiles/jukebox.webp" alt="" />
-            <h2 class="tile-name">Le juke-box cassé</h2>
-          </a>
-
-          <a class="tile tile-dev" href="games/jardin-infini/">
-            <span class="tape">EN CHANTIER</span>
-            <img class="tile-art" src="/tiles/jardin.webp" alt="" />
-            <h2 class="tile-name">Le jardin infini</h2>
-          </a>
-
-          <a class="tile tile-dev" href="games/petites-orbites/">
-            <span class="tape">EN CHANTIER</span>
-            <img class="tile-art" src="/tiles/orbites.webp" alt="" />
-            <h2 class="tile-name">Petites Orbites</h2>
-          </a>
-
-          <a class="tile tile-dev" href="games/echelle-du-temps/">
-            <span class="tape">EN CHANTIER</span>
-            <img class="tile-art" src="/tiles/echelle.webp" alt="" />
-            <h2 class="tile-name">Une échelle de temps</h2>
-          </a>
-
-          <div class="tile tile-incoming">
-            <div class="tile-art" aria-hidden="true">+</div>
-            <h2 class="tile-name">incoming…</h2>
+      <div class="cabinets">
+        <a class="cabinet" href="games/aquarium/">
+          <div class="cab-marquee">L'AQUARIUM ABYSSAL</div>
+          <div class="cab-screen">
+            <img src="/tiles/aquarium.webp" alt="" />
           </div>
-        </div>
-      </section>
-    </main>
+          <div class="cab-panel">
+            <span class="cab-coin">◉ INSERT COIN</span>
+            <p>Fusionne les créatures, vise la baleine 🐋</p>
+          </div>
+        </a>
 
-    <footer class="site-footer">
+        <a class="cabinet" href="games/ca-coute-combien/">
+          <div class="cab-marquee">ÇA COÛTE COMBIEN ?!</div>
+          <div class="cab-screen">
+            <img src="/tiles/prix.webp" alt="" />
+          </div>
+          <div class="cab-panel">
+            <span class="cab-coin">◉ INSERT COIN</span>
+            <p>Devine les vrais prix — seul ou en salon à 8 👥</p>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- monde 2 : l'atelier (jeux en développement) -->
+    <section id="atelier" class="world world-atelier hidden">
+      <div class="world-bg" style="background-image: url('/mondes/atelier.webp')"></div>
+      <a class="world-exit" href="#">← sortir</a>
+      <h2 class="world-title wood-title">🚧 L'ATELIER</h2>
+      <p class="world-sub">Chantiers ouverts — tout bouge encore, entrez à vos risques.</p>
+
+      <div class="blueprints">
+        <a class="blueprint" href="games/peche-abyssale/">
+          <span class="bp-tape"></span>
+          <img src="/tiles/peche.webp" alt="" />
+          <h3>La pêche abyssale</h3>
+          <span class="bp-note">refonte gameplay</span>
+        </a>
+
+        <a class="blueprint" href="games/la-promenade/">
+          <span class="bp-tape"></span>
+          <img src="/tiles/promenade.webp" alt="" />
+          <h3>La Promenade</h3>
+          <span class="bp-note">balade zen</span>
+        </a>
+
+        <a class="blueprint" href="games/mini-mondes/">
+          <span class="bp-tape"></span>
+          <img src="/tiles/mini-mondes.webp" alt="" />
+          <h3>Les Mini-Mondes</h3>
+          <span class="bp-note">plateforme</span>
+        </a>
+
+        <a class="blueprint" href="games/la-horde/">
+          <span class="bp-tape"></span>
+          <img src="/tiles/horde.webp" alt="" />
+          <h3>La Horde de Minuit</h3>
+          <span class="bp-note">survival</span>
+        </a>
+
+        <a class="blueprint" href="games/le-phare/">
+          <span class="bp-tape"></span>
+          <img src="/tiles/phare.webp" alt="" />
+          <h3>Le Phare</h3>
+          <span class="bp-note">coop à deux 👥</span>
+        </a>
+
+        <a class="blueprint" href="games/juke-box/">
+          <span class="bp-tape"></span>
+          <img src="/tiles/jukebox.webp" alt="" />
+          <h3>Le juke-box cassé</h3>
+          <span class="bp-note">séquenceur</span>
+        </a>
+
+        <a class="blueprint" href="games/jardin-infini/">
+          <span class="bp-tape"></span>
+          <img src="/tiles/jardin.webp" alt="" />
+          <h3>Le jardin infini</h3>
+          <span class="bp-note">jouet zen</span>
+        </a>
+
+        <a class="blueprint" href="games/petites-orbites/">
+          <span class="bp-tape"></span>
+          <img src="/tiles/orbites.webp" alt="" />
+          <h3>Petites Orbites</h3>
+          <span class="bp-note">gravité</span>
+        </a>
+
+        <a class="blueprint" href="games/echelle-du-temps/">
+          <span class="bp-tape"></span>
+          <img src="/tiles/echelle.webp" alt="" />
+          <h3>Une échelle de temps</h3>
+          <span class="bp-note">frise</span>
+        </a>
+
+        <div class="blueprint bp-empty">
+          <span class="bp-tape"></span>
+          <div class="bp-plus">+</div>
+          <h3>incoming…</h3>
+        </div>
+      </div>
+    </section>
+
+    <footer class="site-footer" id="hall-footer">
       <p>Fait avec ☕, une rose 🌹 et beaucoup trop de gravité.</p>
     </footer>
+
+    <script>
+      // navigation par hash : #arcade / #atelier = on entre dans un monde
+      const hall = document.getElementById("hall");
+      const footer = document.getElementById("hall-footer");
+      const worlds = { arcade: document.getElementById("arcade"), atelier: document.getElementById("atelier") };
+      function route() {
+        const h = location.hash.replace("#", "");
+        const inWorld = h === "arcade" || h === "atelier";
+        hall.classList.toggle("hidden", inWorld);
+        footer.classList.toggle("hidden", inWorld);
+        for (const [name, el] of Object.entries(worlds)) {
+          el.classList.toggle("hidden", h !== name);
+          if (h === name) el.classList.add("entering");
+        }
+        window.scrollTo(0, 0);
+      }
+      window.addEventListener("hashchange", route);
+      route();
+    </script>
   </body>
 </html>

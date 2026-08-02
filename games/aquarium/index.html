@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>L'Aquarium abyssal</title>
+    <meta name="description" content="Laisse tomber des créatures dans l'aquarium : deux identiques fusionnent en l'espèce supérieure. Jusqu'où ira ta baleine ?" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🫧</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/aquarium/aquarium.css" />
+  </head>
+  <body>
+    <canvas id="tank"></canvas>
+
+    <a class="back-link" href="../../">← le petit prince</a>
+
+    <div class="hud">
+      <div class="hud-line">score : <span id="hud-score" class="numeric">0</span></div>
+      <div class="hud-line hud-record">record : <span id="hud-record" class="numeric">0</span></div>
+    </div>
+
+    <button id="btn-sound" type="button">🔊</button>
+
+    <div class="overlay" id="overlay">
+      <h1 id="overlay-title">L'Aquarium abyssal</h1>
+      <p id="overlay-text">Laisse tomber les créatures dans l'aquarium.<br />
+      Deux identiques qui se touchent fusionnent en l'espèce supérieure.<br />
+      Si l'aquarium déborde, c'est fini. Vise la baleine 🐋<br /><br />
+      Glisse pour viser, relâche (ou tape) pour lâcher.</p>
+      <p class="overlay-go">clique pour jouer</p>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script type="module" src="/src/games/aquarium/main.ts"></script>
+  </body>
+</html>
