@@ -3,6 +3,8 @@
 // effets d'ambiance et les interactions au clic sont dessinés par-dessus
 // sur le canvas, pour garder des animations fluides et fiables.
 
+import { installTouchControls, isTouchDevice } from "../touch-controls";
+
 const BASE = import.meta.env.BASE_URL;
 
 // ---------------------------------------------------------------------------
@@ -2005,6 +2007,18 @@ requestAnimationFrame(frame);
 // ---------------------------------------------------------------------------
 // Démarrage
 // ---------------------------------------------------------------------------
+
+installTouchControls({
+  left: [
+    { code: "ArrowLeft", label: "◀" },
+    { code: "ArrowRight", label: "▶" },
+  ],
+  right: [{ code: "Space", label: "⭡", wide: true }],
+});
+if (isTouchDevice()) {
+  const p = hintEl.querySelector("p");
+  if (p) p.innerHTML = "◀ ▶ pour marcher, ⭡ pour sauter.<br />Traverse le bord de l'écran pour changer de monde.<br />Au fond de l'océan, grimpe les planches jusqu'en haut à droite…<br />Touche le décor pour te détendre. C'est tout.";
+}
 
 hintEl.addEventListener("click", () => {
   if (started) return;

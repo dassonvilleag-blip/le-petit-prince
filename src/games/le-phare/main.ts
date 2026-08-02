@@ -946,6 +946,23 @@ canvas.addEventListener(
   },
   { passive: false },
 );
+
+// au tactile, pas de molette : un slider règle la largeur du faisceau
+if (window.matchMedia("(pointer: coarse)").matches) {
+  const wrap = document.createElement("label");
+  wrap.className = "beam-slider hidden";
+  wrap.innerHTML = '🔦 <input type="range" min="0.16" max="0.6" step="0.01" />';
+  document.body.appendChild(wrap);
+  const slider = wrap.querySelector("input")!;
+  slider.addEventListener("input", () => {
+    beamW = Number(slider.value);
+  });
+  window.setInterval(() => {
+    const show = role === "gardien" && playing;
+    wrap.classList.toggle("hidden", !show);
+    if (show && document.activeElement !== slider) slider.value = String(beamW);
+  }, 400);
+}
 window.addEventListener("keydown", (e) => {
   if (e.code.startsWith("Arrow")) e.preventDefault();
   keys.add(e.code);

@@ -59,6 +59,8 @@ export const sendGuess = (code: string, playerId: string, guess: number) =>
 export const forceReveal = (code: string, playerId: string) => call("POST", `/rooms/${code}/reveal`, { playerId });
 export const nextRound = (code: string, playerId: string) => call("POST", `/rooms/${code}/next`, { playerId });
 export const replayRoom = (code: string, playerId: string) => call("POST", `/rooms/${code}/replay`, { playerId });
+export const kickPlayer = (code: string, playerId: string, targetId: string) =>
+  call("POST", `/rooms/${code}/kick`, { playerId, targetId });
 
 /** Poll le salon tant que stop() n'est pas appelé ; notifie à chaque changement de version. */
 export function pollRoom(code: string, onUpdate: (room: Room) => void, onError: (e: RoomError) => void): () => void {

@@ -1,3 +1,4 @@
+import { installTouchControls } from "../touch-controls";
 // Les Mini-Mondes — plateforme à la Mario : des niveaux procéduraux
 // assemblés par morceaux avec plusieurs routes (haute/basse, sorties
 // secrètes), une carte de monde à embranchements, et un biome = une
@@ -91,8 +92,6 @@ const shopItems = document.getElementById("shop-items")!;
 const toastEl = document.getElementById("toast")!;
 const btnShop = document.getElementById("btn-shop")!;
 const btnCloseShop = document.getElementById("btn-close-shop")!;
-const touchUi = document.getElementById("touch-ui")!;
-const btnDash = document.getElementById("btn-dash")!;
 
 let toastTimer = 0;
 function toast(message: string): void {
@@ -1286,7 +1285,6 @@ function speak(x: number, y: number, txt: string): void {
 }
 
 const keys = new Set<string>();
-let touchDir = 0;
 let paused = false;
 
 // sélection sur la carte
@@ -1318,7 +1316,9 @@ function showTitle(): void {
     "<strong>Salle de Bal dorée</strong> de la Maison-Blanche (un chantier magnifique — les gens adorent, certains mangent même encore).<br />" +
     "Du golf de Mar-a-Lago au détroit d'Ormuz : ramasse les billets, écrase les télés menteuses,<br />" +
     "esquive les dossiers SUBPOENA — et trouve les escalators dorés vers les planques secrètes.<br />" +
-    "←→ courir · ↑/espace sauter · Maj/X dash · ↓ près d'un pupitre : discours.<br />" +
+    (window.matchMedia("(pointer: coarse)").matches
+      ? "◀ ▶ courir · ⭡ sauter · 💨 dash · ▼ près d'un pupitre : discours.<br />"
+      : "←→ courir · ↑/espace sauter · Maj/X dash · ↓ près d'un pupitre : discours.<br />") +
     "Clique pour lancer la tournée de campagne.";
   hud.classList.add("hidden");
   shopEl.classList.add("hidden");
@@ -1683,7 +1683,6 @@ function step(dt: number): void {
   let dir = 0;
   if (keys.has("ArrowLeft") || keys.has("KeyA") || keys.has("KeyQ")) dir = -1;
   if (keys.has("ArrowRight") || keys.has("KeyD")) dir = 1;
-  if (dir === 0) dir = touchDir;
   if (dir !== 0 && dashT <= 0) facing = dir;
 
   // ---- vitesse ----
@@ -2762,7 +2761,6 @@ window.addEventListener("keyup", (e) => {
 
 function autoPause(): void {
   keys.clear();
-  touchDir = 0;
   if (state === "play") paused = true;
 }
 window.addEventListener("blur", autoPause);
@@ -2792,15 +2790,6 @@ canvas.addEventListener("pointerdown", (e) => {
     }
     return;
   }
-  if (state !== "play") return;
-  if (e.pointerType === "touch") {
-    touchUi.classList.add("visible");
-    if (e.clientY < H * 0.45) tryJump();
-    else touchDir = e.clientX < W / 2 ? -1 : 1;
-  }
-});
-canvas.addEventListener("pointerup", () => {
-  touchDir = 0;
 });
 
 // survol des îles sur la carte
@@ -2823,9 +2812,17 @@ canvas.addEventListener("pointermove", (e) => {
   }
   canvas.style.cursor = mapHover >= 0 ? "pointer" : "default";
 });
-btnDash.addEventListener("pointerdown", (e) => {
-  e.preventDefault();
-  tryDash();
+
+installTouchControls({
+  left: [
+    { code: "ArrowLeft", label: "\u25c0" },
+    { code: "ArrowRight", label: "\u25b6" },
+  ],
+  right: [
+    { code: "ArrowDown", label: "\u25bc" },
+    { code: "ShiftLeft", label: "\ud83d\udca8" },
+    { code: "Space", label: "\u2b61", wide: true },
+  ],
 });
 
 window.addEventListener("resize", resize);

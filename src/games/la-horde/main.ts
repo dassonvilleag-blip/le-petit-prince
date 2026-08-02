@@ -241,7 +241,9 @@ try {
 }
 
 const keys = new Set<string>();
-let touch: { x: number; y: number } | null = null;
+// joystick relatif : l'origine est le point posé, la direction le glissement
+// (le doigt peut rester dans un coin, il ne masque plus le personnage)
+let touch: { ox: number; oy: number; x: number; y: number } | null = null;
 let paused = false;
 
 // ---------- helpers ----------
@@ -619,10 +621,12 @@ function step(dt: number): void {
   if (keys.has("ArrowUp") || keys.has("KeyW") || keys.has("KeyZ")) my -= 1;
   if (keys.has("ArrowDown") || keys.has("KeyS")) my += 1;
   if (mx === 0 && my === 0 && touch) {
-    const d = Math.hypot(touch.x - px, touch.y - py);
-    if (d > 14) {
-      mx = (touch.x - px) / d;
-      my = (touch.y - py) / d;
+    const dx = touch.x - touch.ox;
+    const dy = touch.y - touch.oy;
+    const d = Math.hypot(dx, dy);
+    if (d > 12) {
+      mx = dx / d;
+      my = dy / d;
     }
   }
   const mn = Math.hypot(mx, my);
@@ -956,10 +960,13 @@ canvas.addEventListener("pointerdown", (e) => {
     startRun();
     return;
   }
-  touch = { x: e.clientX, y: e.clientY };
+  touch = { ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY };
 });
 canvas.addEventListener("pointermove", (e) => {
-  if (touch) touch = { x: e.clientX, y: e.clientY };
+  if (touch) {
+    touch.x = e.clientX;
+    touch.y = e.clientY;
+  }
 });
 canvas.addEventListener("pointerup", () => {
   touch = null;

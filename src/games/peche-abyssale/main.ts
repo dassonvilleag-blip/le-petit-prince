@@ -634,6 +634,15 @@ canvas.addEventListener("pointerdown", (e) => {
   if (state === "surface") startDive();
 });
 
+// au tactile, lever le doigt ne doit pas laisser l'hameçon viser l'ancienne
+// position : on coupe le suivi (l'amorti ramène la vitesse à zéro)
+canvas.addEventListener("pointerup", (e) => {
+  if (e.pointerType === "touch") mouseX = null;
+});
+canvas.addEventListener("pointercancel", () => {
+  mouseX = null;
+});
+
 document.getElementById("btn-up")!.addEventListener("click", () => {
   if (state !== "descend") return;
   toast("Remontée à vide… courageux 🐔");

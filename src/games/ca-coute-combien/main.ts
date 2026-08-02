@@ -261,18 +261,26 @@ function onRoomUpdate(room: Room) {
   if (!multi) return;
   multiErrorEl.classList.add("hidden");
 
+  // exclu par l'hôte : retour à l'accueil
+  if (!room.players.some((p) => multi && p.id === multi.playerId)) {
+    leaveMulti();
+    showMultiError(new Error("tu as été exclu du salon par l'hôte"));
+    return;
+  }
+
   if (room.phase === "lobby") {
     multiShownRound = -1;
     multiRevealed = false;
     lobbyCodeEl.textContent = room.code;
+    const host = isHost(room);
     lobbyPlayersEl.innerHTML = room.players
       .map(
         (p) =>
-          `<li>${escapeHtml(p.pseudo)}${p.id === room.hostId ? ' <span class="host-tag">(hôte)</span>' : ""}${multi && p.id === multi.playerId ? " ← toi" : ""}</li>`,
+          `<li>${escapeHtml(p.pseudo)}${p.id === room.hostId ? ' <span class="host-tag">(hôte)</span>' : ""}${multi && p.id === multi.playerId ? " ← toi" : ""}${host && p.id !== room.hostId ? `<button type="button" class="btn-kick" data-kick="${p.id}" aria-label="exclure ${escapeHtml(p.pseudo)}">✕</button>` : ""}</li>`,
       )
       .join("");
-    btnLaunch.classList.toggle("hidden", !isHost(room));
-    lobbyWaitEl.classList.toggle("hidden", isHost(room));
+    btnLaunch.classList.toggle("hidden", !host);
+    lobbyWaitEl.classList.toggle("hidden", host);
     showScreen(screenLobby);
     return;
   }
@@ -490,6 +498,14 @@ btnForce.addEventListener("click", () => {
 
 btnLeave.addEventListener("click", leaveMulti);
 btnRecapLeave.addEventListener("click", leaveMulti);
+
+lobbyPlayersEl.addEventListener("click", (e) => {
+  const btn = (e.target as HTMLElement).closest("[data-kick]");
+  if (!btn || !multi) return;
+  rc.kickPlayer(multi.code, multi.playerId, (btn as HTMLElement).dataset.kick!)
+    .then((r) => onRoomUpdate(r.room))
+    .catch(showMultiError);
+});
 
 pseudoInput.value = localStorage.getItem(PSEUDO_KEY) ?? "";
 

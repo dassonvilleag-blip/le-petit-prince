@@ -92,6 +92,21 @@ test("replay ramène tout le monde au lobby, prêt pour une nouvelle partie", ()
   assert.equal(room.players.length, 2);
 });
 
+test("l'hôte peut exclure un joueur au lobby, mais pas lui-même ni en partie", () => {
+  const { store, code, players } = setup(3);
+  // un joueur ne peut pas exclure
+  assert.equal(call(store, "POST", `/rooms/${code}/kick`, { playerId: players[1], targetId: players[2] }).status, 403);
+  // l'hôte ne peut pas s'exclure
+  assert.equal(call(store, "POST", `/rooms/${code}/kick`, { playerId: players[0], targetId: players[0] }).status, 400);
+  // exclusion normale
+  const res = call(store, "POST", `/rooms/${code}/kick`, { playerId: players[0], targetId: players[1] });
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body.room!.players.map((p) => p.id), [players[0], players[2]]);
+  // plus possible une fois la partie lancée
+  call(store, "POST", `/rooms/${code}/start`, { playerId: players[0], itemIds: ["a"] });
+  assert.equal(call(store, "POST", `/rooms/${code}/kick`, { playerId: players[0], targetId: players[2] }).status, 409);
+});
+
 test("la première estimation est définitive : re-valider est refusé", () => {
   const { store, code, players } = setup(2);
   call(store, "POST", `/rooms/${code}/start`, { playerId: players[0], itemIds: ["a"] });
