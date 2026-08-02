@@ -117,6 +117,18 @@ export function createRoomStore(now: () => number = Date.now) {
     if (!player) return err(403, "joueur inconnu dans ce salon");
     const isHost = playerId === room.hostId;
 
+    if (action === "kick") {
+      if (!isHost) return err(403, "seul l'hôte peut exclure un joueur");
+      if (room.phase !== "lobby") return err(409, "exclusion possible seulement dans le salon");
+      const targetId = typeof b.targetId === "string" ? b.targetId : "";
+      if (targetId === room.hostId) return err(400, "l'hôte ne peut pas s'exclure");
+      const idx = room.players.findIndex((p) => p.id === targetId);
+      if (idx < 0) return err(404, "joueur introuvable");
+      room.players.splice(idx, 1);
+      touch(room);
+      return ok({ room });
+    }
+
     if (action === "start") {
       if (!isHost) return err(403, "seul l'hôte peut lancer la partie");
       if (room.phase !== "lobby") return err(409, "déjà lancée");
