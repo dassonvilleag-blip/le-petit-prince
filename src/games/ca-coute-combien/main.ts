@@ -93,8 +93,10 @@ function showRound() {
   guessInput.value = "";
   roundResultEl.classList.add("hidden");
   roundAnecdoteEl.classList.add("hidden");
+  multiSentEl.classList.add("hidden");
   guessForm.classList.remove("hidden");
   guessInput.focus();
+  if (!multi) startGuessTimer(Date.now() + GUESS_MS);
 }
 
 // la petite explication du prix, pour les objets qui en valent la peine
@@ -113,10 +115,14 @@ function submitGuess(event: SubmitEvent) {
     void multiSubmitGuess();
     return;
   }
+  soloReveal(Number(guessInput.value), false);
+}
+
+function soloReveal(guess: number, timedOut: boolean) {
   cancelAllReveals();
+  stopGuessTimer();
 
   const item = round[roundIndex];
-  const guess = Number(guessInput.value);
   const score = computeRoundScore(guess, item.prix);
   roundScores.push(score);
 
@@ -137,7 +143,7 @@ function submitGuess(event: SubmitEvent) {
   );
 
   afterDelay(REVEAL_COUNT_DURATION_MS, () => {
-    startTypewrite(roundCommentEl, pickRoundComment(score), REVEAL_TYPEWRITE_MS_PER_CHAR);
+    startTypewrite(roundCommentEl, (timedOut ? "⏰ Temps écoulé ! " : "") + pickRoundComment(score), REVEAL_TYPEWRITE_MS_PER_CHAR);
   });
   revealAnecdote(item);
 }
@@ -156,6 +162,7 @@ function nextRound() {
 }
 
 function finishGame() {
+  stopGuessTimer();
   const total = roundScores.reduce((sum, s) => sum + s, 0);
   const bestIndex = roundScores.indexOf(Math.max(...roundScores));
   const worstIndex = roundScores.indexOf(Math.min(...roundScores));
@@ -212,6 +219,70 @@ const recapPodiumEl = document.getElementById("recap-podium")!;
 const recapWaitEl = document.getElementById("recap-wait")!;
 const btnRecapLeave = document.getElementById("btn-recap-leave")!;
 
+const roundTimerEl = document.getElementById("round-timer")!;
+const timerRing = document.getElementById("timer-ring")!;
+const timerNum = document.getElementById("timer-num")!;
+const multiSentEl = document.getElementById("multi-sent")!;
+const sentValueEl = document.getElementById("sent-value")!;
+const sentCheckEl = multiSentEl.querySelector(".sent-check") as HTMLElement;
+
+// ---------------------------------------------------------------------------
+// Timer de manche — le même anneau en solo et en ligne. En ligne, l'échéance
+// vient de l'horodatage serveur : tous les joueurs voient le même compte.
+// ---------------------------------------------------------------------------
+
+const GUESS_MS = 30_000;
+let timerDeadline = 0;
+let timerTick = 0;
+let timerFired = false;
+
+function startGuessTimer(deadline: number): void {
+  if (Math.abs(timerDeadline - deadline) < 600) return; // même échéance, on ne repart pas
+  timerDeadline = deadline;
+  timerFired = false;
+  roundTimerEl.classList.remove("hidden");
+  window.clearInterval(timerTick);
+  timerTick = window.setInterval(updateTimer, 100);
+  updateTimer();
+}
+
+function stopGuessTimer(): void {
+  window.clearInterval(timerTick);
+  timerDeadline = 0;
+  roundTimerEl.classList.add("hidden");
+}
+
+function updateTimer(): void {
+  const left = timerDeadline - Date.now();
+  timerNum.textContent = String(Math.max(0, Math.ceil(left / 1000)));
+  const pct = Math.max(0, Math.min(1, left / GUESS_MS));
+  const color = pct > 0.5 ? "var(--teal)" : pct > 0.2 ? "var(--yellow)" : "var(--pink)";
+  timerRing.style.background = `conic-gradient(${color} ${pct * 360}deg, rgba(23, 23, 27, 0.12) 0deg)`;
+  timerRing.classList.toggle("urgent", left <= 5500 && left > 0);
+  if (left <= 0 && !timerFired) {
+    timerFired = true;
+    onTimerExpired();
+  }
+}
+
+function onTimerExpired(): void {
+  if (multi) {
+    // en ligne : plus de saisie possible ; le client de l'hôte déclenche la
+    // révélation pour tout le monde (les absents marquent 0)
+    guessForm.classList.add("hidden");
+    multiSentEl.classList.remove("hidden");
+    multiStatusEl.textContent = "⏰ Temps écoulé — révélation…";
+    if (lastRoom && isHost(lastRoom) && lastRoom.phase === "guess") {
+      void rc.forceReveal(multi.code, multi.playerId).catch(() => {
+        /* la révélation automatique de quelqu'un d'autre a pu passer avant */
+      });
+    }
+  } else {
+    // en solo : on valide ce qu'il y a dans le champ (rien = 0)
+    soloReveal(Number(guessInput.value) || 0, true);
+  }
+}
+
 const ITEMS_BY_ID = new Map(ITEMS.map((item) => [item.id, item]));
 const PSEUDO_KEY = "ca-coute-combien-pseudo";
 
@@ -222,6 +293,8 @@ interface MultiSession {
 }
 
 let multi: MultiSession | null = null;
+let lastRoom: Room | null = null;
+let lastSentGuess = 0;
 let multiShownRound = -1; // dernière manche affichée (pour ne pas re-render)
 let multiRevealed = false;
 let guessSentRound = -1; // manche pour laquelle j'ai déjà validé (verrou local)
@@ -259,6 +332,7 @@ function escapeHtml(s: string): string {
 
 function onRoomUpdate(room: Room) {
   if (!multi) return;
+  lastRoom = room;
   multiErrorEl.classList.add("hidden");
 
   // exclu par l'hôte : retour à l'accueil
@@ -269,6 +343,7 @@ function onRoomUpdate(room: Room) {
   }
 
   if (room.phase === "lobby") {
+    stopGuessTimer();
     multiShownRound = -1;
     multiRevealed = false;
     lobbyCodeEl.textContent = room.code;
@@ -296,20 +371,32 @@ function onRoomUpdate(room: Room) {
     }
 
     if (room.phase === "guess") {
+      // le même timer chez tous : l'échéance découle de l'horodatage serveur
+      startGuessTimer(rc.serverToLocal(room.phaseAt) + GUESS_MS);
       const answered = room.players.filter((p) => room.guesses[room.roundIdx]?.[p.id] !== undefined).length;
       const iAnswered = myGuess(room) !== undefined || guessSentRound === room.roundIdx;
-      guessForm.classList.toggle("hidden", iAnswered);
-      multiStatusEl.textContent = `${answered} / ${room.players.length} ont répondu…`;
-      multiStatusEl.classList.remove("hidden");
-      btnForce.classList.toggle("hidden", !(isHost(room) && iAnswered && answered < room.players.length));
+      const expired = timerFired;
+      // un seul état visible à la fois : le formulaire OU la carte « envoyé »
+      guessForm.classList.toggle("hidden", iAnswered || expired);
+      multiSentEl.classList.toggle("hidden", !(iAnswered || expired));
+      sentCheckEl.classList.toggle("hidden", !iAnswered);
+      const mine = myGuess(room);
+      if (mine !== undefined || iAnswered) sentValueEl.textContent = euros.format(mine ?? lastSentGuess);
+      multiStatusEl.textContent = expired
+        ? "⏰ Temps écoulé — révélation…"
+        : `${answered} / ${room.players.length} ont répondu…`;
+      // seul l'hôte, ayant déjà répondu, peut couper court aux retardataires
+      btnForce.classList.toggle("hidden", !(isHost(room) && iAnswered && !expired && answered < room.players.length));
       roundResultEl.classList.add("hidden");
     } else {
+      stopGuessTimer();
       multiRenderReveal(room);
     }
     return;
   }
 
   if (room.phase === "end") {
+    stopGuessTimer();
     multiRenderEnd(room);
   }
 }
@@ -323,7 +410,7 @@ function multiRenderReveal(room: Room) {
   const myScore = mine !== undefined ? computeRoundScore(mine, item.prix) : 0;
 
   guessForm.classList.add("hidden");
-  multiStatusEl.classList.add("hidden");
+  multiSentEl.classList.add("hidden");
   btnForce.classList.add("hidden");
   roundResultEl.classList.remove("hidden");
 
@@ -411,7 +498,11 @@ async function multiSubmitGuess() {
   const guess = Number(guessInput.value);
   if (!Number.isFinite(guess) || guess < 0) return;
   guessSentRound = multiShownRound;
+  lastSentGuess = guess;
   guessForm.classList.add("hidden");
+  sentValueEl.textContent = euros.format(guess);
+  sentCheckEl.classList.remove("hidden");
+  multiSentEl.classList.remove("hidden");
   try {
     const { room } = await rc.sendGuess(multi.code, multi.playerId, guess);
     onRoomUpdate(room);
@@ -439,6 +530,9 @@ function enterMulti(code: string, playerId: string) {
 function leaveMulti() {
   multi?.stop();
   multi = null;
+  lastRoom = null;
+  stopGuessTimer();
+  multiSentEl.classList.add("hidden");
   multiResultsEl.classList.add("hidden");
   multiStatusEl.classList.add("hidden");
   multiNextWaitEl.classList.add("hidden");

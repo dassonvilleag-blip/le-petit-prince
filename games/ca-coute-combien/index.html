@@ -49,6 +49,9 @@
       </section>
 
       <section id="screen-round" class="hidden">
+        <div id="round-timer" class="round-timer hidden" aria-hidden="true">
+          <div class="timer-ring" id="timer-ring"><span id="timer-num" class="numeric">30</span></div>
+        </div>
         <p class="round-counter">Manche <span id="round-index" class="numeric">1</span> / 10</p>
         <img id="round-photo" class="round-photo" src="" alt="" />
         <h2 id="round-name" class="round-name"></h2>
@@ -59,8 +62,12 @@
           <button type="submit" class="btn-main">Valider</button>
         </form>
 
-        <p id="multi-status" class="multi-wait hidden"></p>
-        <button id="btn-force" class="btn-ghost hidden">Révéler sans attendre</button>
+        <div id="multi-sent" class="multi-sent hidden">
+          <p class="sent-check">✓ Réponse envoyée : <span id="sent-value" class="numeric"></span></p>
+          <p id="multi-status" class="multi-wait"></p>
+          <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+        </div>
+        <button id="btn-force" class="btn-ghost hidden">👑 Révéler sans attendre les retardataires</button>
 
         <div id="round-result" class="hidden">
           <p id="round-comment" class="round-comment"></p>
@@ -69,7 +76,7 @@
           <p id="round-anecdote" class="round-anecdote hidden"></p>
           <ol id="multi-results" class="multi-results hidden"></ol>
           <button id="btn-next" class="btn-main">Manche suivante</button>
-          <p id="multi-next-wait" class="multi-wait hidden">En attente de l'hôte…</p>
+          <p id="multi-next-wait" class="multi-wait hidden">👑 L'hôte enchaîne quand tout le monde a lu…</p>
         </div>
       </section>
 
