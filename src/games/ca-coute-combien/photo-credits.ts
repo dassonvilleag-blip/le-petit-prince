@@ -1405,4 +1405,10 @@ export const PHOTO_CREDITS: PhotoCredit[] = [
     sourceUrl:
       "https://commons.wikimedia.org/wiki/File:1971_evening_dress_by_Yves_Saint_Laurent_for_Marie-H%C3%A9l%C3%A8ne_de_Rothschild_with_Le_Smoking_suit_from_1988_(mus%C3%A9e_d%27Orsay,_Paris).jpg",
   },
+  {
+    id: "serie-illustrations",
+    author: "Nouveaux objets : illustrations originales générées pour le jeu",
+    license: "création maison",
+    sourceUrl: "https://higgsfield.ai",
+  },
 ];

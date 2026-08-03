@@ -231,7 +231,7 @@ const sentCheckEl = multiSentEl.querySelector(".sent-check") as HTMLElement;
 // vient de l'horodatage serveur : tous les joueurs voient le même compte.
 // ---------------------------------------------------------------------------
 
-const GUESS_MS = 30_000;
+const GUESS_MS = 20_000;
 let timerDeadline = 0;
 let timerTick = 0;
 let timerFired = false;
