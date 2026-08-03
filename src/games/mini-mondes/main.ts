@@ -1228,6 +1228,10 @@ interface Particle {
 }
 let particles: Particle[] = [];
 
+// fantômes du dash et cadence de la poussière de course
+let ghosts: { x: number; y: number; flip: boolean; t: number }[] = [];
+let lastDustT = 0;
+
 function burst(x: number, y: number, color: string, count: number, speed = 90, grav = 260): void {
   for (let i = 0; i < count; i++) {
     const a = Math.random() * Math.PI * 2;
@@ -1967,21 +1971,37 @@ function drawBackground(b: BiomeDef, biome: Biome): void {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
-  // soleil / lune, quasi fixe
-  ctx.fillStyle = biome === "cristal" ? "#e6dbff" : "#fff3c4";
+  // soleil / lune avec halo doux
+  const sunX = W * 0.82 - ((camX * zoom * 0.02) % 40);
+  const sunY = H * 0.14;
+  const sunColor = biome === "cristal" ? "#e6dbff" : "#fff3c4";
+  const halo = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 90);
+  halo.addColorStop(0, biome === "cristal" ? "rgba(230, 219, 255, 0.5)" : "rgba(255, 243, 196, 0.55)");
+  halo.addColorStop(1, "rgba(255, 243, 196, 0)");
+  ctx.fillStyle = halo;
   ctx.beginPath();
-  ctx.arc(W * 0.82 - ((camX * zoom * 0.02) % 40), H * 0.14, 26, 0, Math.PI * 2);
+  ctx.arc(sunX, sunY, 90, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = sunColor;
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, 26, 0, Math.PI * 2);
   ctx.fill();
 
-  // nuages, très lents
+  // nuages moelleux : trois bosses arrondies et un ventre plat
   ctx.save();
   ctx.translate(-((camX * zoom * 0.06) % (W + 230)), 0);
-  ctx.fillStyle = "rgba(255,255,255,0.7)";
   for (let i = -1; i < 7; i++) {
     const cx = i * 230 + 60;
     const cy = 34 + (((i % 3) + 3) % 3) * 30;
-    ctx.fillRect(cx, cy, 54, 12);
-    ctx.fillRect(cx + 10, cy - 8, 30, 8);
+    const s = 0.8 + (((i % 4) + 4) % 4) * 0.15;
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    ctx.beginPath();
+    ctx.arc(cx + 14 * s, cy + 4, 11 * s, 0, Math.PI * 2);
+    ctx.arc(cx + 30 * s, cy - 3, 14 * s, 0, Math.PI * 2);
+    ctx.arc(cx + 48 * s, cy + 3, 10 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(200, 214, 235, 0.35)";
+    ctx.fillRect(cx + 4 * s, cy + 9, 54 * s, 3);
   }
   ctx.restore();
 
@@ -1992,7 +2012,7 @@ function drawBackground(b: BiomeDef, biome: Biome): void {
 
   // silhouettes intermédiaires procédurales (vitesse moyenne)
   ctx.save();
-  ctx.globalAlpha = 0.45;
+  ctx.globalAlpha = 0.3;
   ctx.translate(-((camX * zoom * 0.28) % (W + 300)), 0);
   ctx.fillStyle = biome === "prairie" ? "#7cc576" : biome === "vent" ? "#e0b072" : "#55418a";
   for (let i = -1; i < 6; i++) {
@@ -2019,6 +2039,13 @@ function drawBackground(b: BiomeDef, biome: Biome): void {
     }
   }
   ctx.restore();
+
+  // brume d'horizon : fond et décor se rejoignent en douceur
+  const haze = ctx.createLinearGradient(0, groundY - H * 0.22, 0, groundY);
+  haze.addColorStop(0, "rgba(255, 255, 255, 0)");
+  haze.addColorStop(1, biome === "cristal" ? "rgba(60, 45, 100, 0.4)" : "rgba(255, 250, 235, 0.32)");
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, groundY - H * 0.22, W, H * 0.22);
 
   // couche proche : décor de premier plan (rapide)
   drawStrip(NEAR[biome], 0.5, 0.3, groundY + 10, 0.96);
@@ -2070,6 +2097,17 @@ function drawTiles(b: BiomeDef): void {
               ctx.fillRect(x + 3 + Math.floor(hash2(tx, 3) * 9), y - 2, 2, 2);
             }
           }
+        }
+        // faces exposées : contour sombre + liseré lumineux au sommet —
+        // les blocs se détachent enfin du fond
+        const leftFree = tileAt(tx - 1, ty) !== Tile.Solid;
+        const rightFree = tileAt(tx + 1, ty) !== Tile.Solid;
+        ctx.fillStyle = "rgba(18, 10, 24, 0.3)";
+        if (leftFree) ctx.fillRect(x, y, 1.5, T);
+        if (rightFree) ctx.fillRect(x + T - 1.5, y, 1.5, T);
+        if (topFree) {
+          ctx.fillStyle = "rgba(255, 255, 255, 0.38)";
+          ctx.fillRect(x, y, T, 1.3);
         }
         // le bas d'un bloc suspendu est plus sombre
         if (tileAt(tx, ty + 1) !== Tile.Solid) {
@@ -2200,6 +2238,13 @@ function drawEnemy(e: Enemy, b: BiomeDef): void {
   const now = performance.now() / 1000;
   // sprites thématiques : télé FAKE, drone-espion, dossier SUBPOENA
   const sprite = e.kind === "walker" ? PROPS.fakenews : e.kind === "flyer" ? PROPS.drone : PROPS.subpoena;
+  // ombre au sol : les ennemis terrestres sont ancrés dans le décor
+  if (e.kind !== "flyer" && e.dead === 0) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+    ctx.beginPath();
+    ctx.ellipse(Math.round(e.x), Math.round(e.y) + 10, 8, 2.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
   if (imgReady(sprite)) {
     const h = e.kind === "flyer" ? 18 : 21;
     const w = (sprite.naturalWidth / sprite.naturalHeight) * h;
@@ -2272,7 +2317,7 @@ function drawPlayer(): void {
       const fi = 6;
       const sx = (fi % s.cols) * s.cw;
       const sy = Math.floor(fi / s.cols) * s.ch;
-      const h = 34;
+      const h = 41;
       const w = (s.cw / s.ch) * h;
       ctx.save();
       ctx.translate(Math.round(px), Math.round(py));
@@ -2284,13 +2329,41 @@ function drawPlayer(): void {
   }
   if (iframes > 0 && state === "play" && Math.floor(performance.now() / 90) % 2 === 1) return;
   const footY = py + (PH / 2) * gdir;
-  const hVis = 34;
+  const hVis = 41;
   const flip = facing < 0;
+  const nowS = performance.now() / 1000;
+
+  // ombre au sol
+  if (onGround && gdir > 0) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
+    ctx.beginPath();
+    ctx.ellipse(Math.round(px), footY + 1.5, 8, 2.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // poussière de course
+  if (onGround && Math.abs(pvx) > 90 && nowS - lastDustT > 0.09) {
+    lastDustT = nowS;
+    burst(px - facing * 5, footY - 1 * gdir, "rgba(240, 234, 214, 0.7)", 1, 26, 140);
+  }
+
+  // traînée de dash : images fantômes derrière le sprint
+  if (dashT > 0) ghosts.push({ x: px, y: gdir > 0 ? footY : py + PH / 2, flip, t: performance.now() });
 
   ctx.save();
   if (gdir < 0) {
     ctx.translate(0, Math.round(py) * 2);
     ctx.scale(1, -1);
+  }
+
+  // squash & stretch : écrasé à l'atterrissage, étiré en pleine chute
+  if (gdir > 0) {
+    const squash = landT > 0 ? Math.max(0.84, 1 - landT * 1.3) : 1;
+    const stretch = !onGround ? 1 + Math.min(0.09, Math.abs(pvy) / 3600) : 1;
+    const sy2 = squash * stretch;
+    ctx.translate(px, footY);
+    ctx.scale(1 / sy2, sy2);
+    ctx.translate(-px, -footY);
   }
 
   let drawn = false;
@@ -2353,15 +2426,42 @@ function drawLevel(): void {
   for (const c of level.coins) {
     if (c.taken) continue;
     if (c.x < camX - 20 || c.x > camX + W / zoom + 20) continue;
-    const spin = Math.abs(Math.sin(now * 4 + c.x * 0.13));
-    ctx.fillStyle = "#ffc93c";
-    ctx.beginPath();
-    ctx.ellipse(c.x, c.y + Math.sin(now * 3 + c.x) * 1.5, Math.max(1.2, 5 * spin), 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#b8860b";
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    const spin = Math.sin(now * 4 + c.x * 0.13);
+    const cy2 = c.y + Math.sin(now * 3 + c.x) * 1.5;
+    if (imgReady(PROPS.cryptocoin)) {
+      const glow = ctx.createRadialGradient(c.x, cy2, 1, c.x, cy2, 9);
+      glow.addColorStop(0, "rgba(255, 201, 60, 0.4)");
+      glow.addColorStop(1, "rgba(255, 201, 60, 0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(c.x, cy2, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.translate(c.x, cy2);
+      ctx.scale(Math.max(0.18, Math.abs(spin)), 1);
+      const h = 11;
+      const w = (PROPS.cryptocoin.naturalWidth / PROPS.cryptocoin.naturalHeight) * h;
+      ctx.drawImage(PROPS.cryptocoin, -w / 2, -h / 2, w, h);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = "#ffc93c";
+      ctx.beginPath();
+      ctx.ellipse(c.x, cy2, Math.max(1.2, 5 * Math.abs(spin)), 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#b8860b";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
   }
+
+  // fantômes du dash (dessinés sous le joueur et les ennemis)
+  const nowMs = performance.now();
+  ghosts = ghosts.filter((g) => nowMs - g.t < 170);
+  for (const g of ghosts) {
+    ctx.globalAlpha = (1 - (nowMs - g.t) / 170) * 0.3;
+    drawSheetFrame(SHEETS.dash, 5, g.x, g.y, 41, g.flip);
+  }
+  ctx.globalAlpha = 1;
 
   for (const e of level.enemies) {
     if (e.x < camX - 30 || e.x > camX + W / zoom + 30) continue;
@@ -2449,15 +2549,29 @@ function drawLevel(): void {
   // jauge de dash
   if (state === "play") {
     const dashReady = dashCd <= 0;
-    ctx.fillStyle = "rgba(20,16,32,0.55)";
-    ctx.fillRect(18, H - 34, 90, 14);
-    ctx.fillStyle = dashReady ? "#1fc7a8" : "#6c63ff";
     const frac = dashReady ? 1 : 1 - dashCd / dashCooldown();
-    ctx.fillRect(20, H - 32, 86 * frac, 10);
+    ctx.fillStyle = "rgba(12, 24, 48, 0.62)";
+    ctx.beginPath();
+    ctx.roundRect(16, H - 38, 108, 20, 10);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255, 253, 244, 0.35)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = dashReady ? "#1fc7a8" : "#6c63ff";
+    ctx.beginPath();
+    ctx.roundRect(20, H - 34, 76 * frac, 12, 6);
+    ctx.fill();
+    if (dashReady) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+      ctx.beginPath();
+      ctx.roundRect(20, H - 34, 76, 5, 3);
+      ctx.fill();
+    }
     ctx.fillStyle = "#fffdf4";
-    ctx.font = "11px 'VT323', monospace";
+    ctx.font = "13px 'VT323', monospace";
     ctx.textAlign = "left";
-    ctx.fillText(dashReady ? "DASH prêt (Maj/X)" : "DASH…", 114, H - 23);
+    ctx.fillText("💨", 102, H - 24);
+    ctx.fillText(dashReady ? "DASH prêt (Maj/X)" : "DASH…", 130, H - 24);
   }
 }
 
@@ -2665,7 +2779,7 @@ function drawMap(): void {
       const fi = Math.floor(now * s.fps) % s.frames;
       const sx = (fi % s.cols) * s.cw;
       const sy = Math.floor(fi / s.cols) * s.ch;
-      const h = 46;
+      const h = 54;
       const w2 = (s.cw / s.ch) * h;
       ctx.save();
       ctx.translate(hx, hy);
@@ -2677,7 +2791,7 @@ function drawMap(): void {
     const [pxm, pym] = mapNodePos(cur);
     const bobT = Math.sin(now * 1.6 + cur.id * 1.7) * 3 + Math.sin(now * 3.1) * 2;
     if (ready(SHEETS.idle)) {
-      const h = hCur * 0.52;
+      const h = hCur * 0.6;
       const w2 = (SHEETS.idle.cw / SHEETS.idle.ch) * h;
       ctx.drawImage(SHEETS.idle.img, pxm - w2 / 2, pym - hCur * 0.5 - h + bobT, w2, h);
     }
