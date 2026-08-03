@@ -15,6 +15,15 @@ export class RoomError extends Error {}
 // Worker à la première réponse impossible (404/405 du statique, réseau…)
 let apiBase = API;
 
+// décalage horloge serveur − horloge locale, mis à jour à chaque réponse ;
+// sert à faire tourner le même timer chez tous les joueurs
+let clockOffset = 0;
+
+/** convertit un horodatage serveur en temps local (Date.now). */
+export function serverToLocal(serverMs: number): number {
+  return serverMs - clockOffset;
+}
+
 async function request(base: string, method: string, path: string, body?: unknown): Promise<Response> {
   return fetch(`${base}${path}`, {
     method,
@@ -44,8 +53,9 @@ async function call(method: string, path: string, body?: unknown): Promise<{ roo
     }
   }
   if (res === null) throw new RoomError("serveur de salons injoignable");
-  const data = (await res.json().catch(() => ({}))) as { error?: string; room?: Room; playerId?: string };
+  const data = (await res.json().catch(() => ({}))) as { error?: string; room?: Room; playerId?: string; now?: number };
   if (!res.ok) throw new RoomError(data.error ?? `erreur ${res.status}`);
+  if (typeof data.now === "number") clockOffset = data.now - Date.now();
   return data as { room: Room; playerId?: string };
 }
 

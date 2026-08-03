@@ -26,6 +26,8 @@ export interface Room {
   roundIdx: number;
   // guesses[manche][playerId] = estimation en euros
   guesses: Record<number, Record<string, number>>;
+  // horodatage serveur du début de la phase courante (pour le timer partagé)
+  phaseAt: number;
   version: number;
   touchedAt: number;
 }
@@ -35,11 +37,12 @@ export interface RoomResponse {
   body: unknown;
 }
 
-const ok = (body: unknown): RoomResponse => ({ status: 200, body });
 const err = (status: number, error: string): RoomResponse => ({ status, body: { error } });
 
 export function createRoomStore(now: () => number = Date.now) {
   const rooms = new Map<string, Room>();
+  // l'heure serveur accompagne chaque réponse : le client synchronise le timer
+  const ok = (body: Record<string, unknown>): RoomResponse => ({ status: 200, body: { ...body, now: now() } });
 
   const newCode = (): string => {
     let code = "";
@@ -84,6 +87,7 @@ export function createRoomStore(now: () => number = Date.now) {
         itemIds: [],
         roundIdx: 0,
         guesses: {},
+        phaseAt: now(),
         version: 0,
         touchedAt: now(),
       };
@@ -138,6 +142,7 @@ export function createRoomStore(now: () => number = Date.now) {
       room.phase = "guess";
       room.roundIdx = 0;
       room.guesses = {};
+      room.phaseAt = now();
       touch(room);
       return ok({ room });
     }
@@ -149,7 +154,10 @@ export function createRoomStore(now: () => number = Date.now) {
       const roundGuesses = (room.guesses[room.roundIdx] ??= {});
       if (roundGuesses[playerId] !== undefined) return err(409, "tu as déjà validé pour cette manche");
       roundGuesses[playerId] = guess;
-      if (room.players.every((p) => roundGuesses[p.id] !== undefined)) room.phase = "reveal";
+      if (room.players.every((p) => roundGuesses[p.id] !== undefined)) {
+        room.phase = "reveal";
+        room.phaseAt = now();
+      }
       touch(room);
       return ok({ room });
     }
@@ -159,6 +167,7 @@ export function createRoomStore(now: () => number = Date.now) {
       if (room.phase !== "guess") return err(409, "pas en phase d'estimation");
       room.guesses[room.roundIdx] ??= {};
       room.phase = "reveal";
+      room.phaseAt = now();
       touch(room);
       return ok({ room });
     }
@@ -172,6 +181,7 @@ export function createRoomStore(now: () => number = Date.now) {
       } else {
         room.phase = "end";
       }
+      room.phaseAt = now();
       touch(room);
       return ok({ room });
     }
@@ -183,6 +193,7 @@ export function createRoomStore(now: () => number = Date.now) {
       room.itemIds = [];
       room.roundIdx = 0;
       room.guesses = {};
+      room.phaseAt = now();
       touch(room);
       return ok({ room });
     }

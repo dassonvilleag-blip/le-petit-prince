@@ -125,6 +125,25 @@ test("une estimation hors phase ou invalide est rejetée", () => {
   assert.equal(call(store, "POST", `/rooms/${code}/guess`, { playerId: "inconnu", guess: 5 }).status, 403);
 });
 
+test("phaseAt suit les transitions et les réponses portent l'heure serveur", () => {
+  let t = 1000;
+  const store = createRoomStore(() => t);
+  const created = call(store, "POST", "/rooms", { pseudo: "x" });
+  assert.equal((created.body as { now?: number }).now, 1000);
+  const code = created.body.room!.code;
+  const host = created.body.playerId!;
+  t = 5000;
+  const started = call(store, "POST", `/rooms/${code}/start`, { playerId: host, itemIds: ["a", "b"] });
+  assert.equal(started.body.room!.phaseAt, 5000);
+  t = 9000;
+  call(store, "POST", `/rooms/${code}/guess`, { playerId: host, guess: 1 });
+  // seul joueur → révélation immédiate, phaseAt rebasculé
+  assert.equal(call(store, "GET", `/rooms/${code}`).body.room!.phaseAt, 9000);
+  t = 12_000;
+  const nexted = call(store, "POST", `/rooms/${code}/next`, { playerId: host });
+  assert.equal(nexted.body.room!.phaseAt, 12_000);
+});
+
 test("les salons inactifs expirent après le TTL", () => {
   let t = 0;
   const store = createRoomStore(() => t);
