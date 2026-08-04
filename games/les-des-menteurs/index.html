@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Grandstander:wght@400;600;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/les-des-menteurs/game.css" />
+    <title>Les Dés Menteurs — Le Petit Prince</title>
+  </head>
+  <body>
+    <a class="back-link" href="../../">← le petit prince</a>
+
+    <main>
+      <!-- accueil : créer ou rejoindre un salon -->
+      <section id="screen-intro">
+        <h1 class="title">Les Dés Menteurs</h1>
+        <p class="subtitle">
+          Le businessman compte ses étoiles… mais bluffe-t-il ? Un Perudo en ligne, de 2 à 6 joueurs.
+        </p>
+
+        <div class="multi-box">
+          <input id="pseudo-input" type="text" maxlength="20" placeholder="Ton pseudo" autocomplete="nickname" />
+          <div class="multi-actions">
+            <button id="btn-create-room" class="btn-main">Créer un salon</button>
+            <div class="join-row">
+              <input id="code-input" type="text" maxlength="4" placeholder="CODE" autocomplete="off" />
+              <button id="btn-join-room" class="btn-second">Rejoindre</button>
+            </div>
+          </div>
+          <p id="multi-error" class="multi-error hidden"></p>
+        </div>
+
+        <details class="rules">
+          <summary>Comment on joue ?</summary>
+          <ol>
+            <li>Chacun démarre avec 5 dés, lancés en secret à chaque manche.</li>
+            <li>À ton tour, tu annonces un nombre de dés d'une face — tous joueurs confondus (« quatre 3 »). L'annonce suivante doit toujours monter.</li>
+            <li>L'étoile ⭐ (le 1) est un joker : elle compte pour toutes les faces.</li>
+            <li>Tu ne crois pas l'annonce ? Crie <strong>Menteur !</strong> On révèle tout : le perdant rend un dé.</li>
+            <li>Tu penses que l'annonce est <em>pile exacte</em> ? Tente <strong>Pile poil !</strong> et regagne un dé.</li>
+            <li>Réduit à un dé, tu ouvres une manche <strong>palifico</strong> : face figée, étoiles muettes.</li>
+            <li>Le dernier joueur avec des dés a gagné.</li>
+          </ol>
+        </details>
+      </section>
+
+      <!-- salon d'attente -->
+      <section id="screen-lobby" class="hidden">
+        <h2 class="title">Salon <span id="lobby-code" class="lobby-code"></span></h2>
+        <p class="subtitle">Partage ce code, puis lancez la partie (2 à 6 joueurs).</p>
+        <ul id="lobby-players" class="lobby-players"></ul>
+        <button id="btn-launch" class="btn-main hidden">Lancer la partie</button>
+        <p id="lobby-wait" class="wait-note hidden">En attente que l'hôte lance la partie…</p>
+        <button id="btn-leave" class="btn-ghost">Quitter le salon</button>
+      </section>
+
+      <!-- table de jeu -->
+      <section id="screen-game" class="hidden">
+        <p class="round-info">
+          Manche <span id="round-num">1</span> · <span id="dice-total">10</span> dés en jeu
+          <span id="palifico-badge" class="palifico-badge hidden">PALIFICO</span>
+        </p>
+
+        <div id="players-strip" class="players-strip"></div>
+
+        <div id="bid-board" class="bid-board">
+          <p id="last-bid" class="last-bid">—</p>
+          <p id="turn-status" class="turn-status"></p>
+        </div>
+
+        <div class="my-hand">
+          <p class="hand-label">Tes dés <span class="hand-hint">(chut… personne d'autre ne les voit)</span></p>
+          <div id="my-dice" class="dice-row"></div>
+        </div>
+
+        <div id="action-panel" class="action-panel hidden">
+          <div class="bid-builder">
+            <div class="stepper">
+              <button id="count-minus" class="btn-step" aria-label="moins">−</button>
+              <span id="bid-count" class="bid-count">1</span>
+              <button id="count-plus" class="btn-step" aria-label="plus">+</button>
+            </div>
+            <span class="times">×</span>
+            <div id="face-picker" class="face-picker"></div>
+          </div>
+          <button id="btn-bid" class="btn-main">Annoncer</button>
+          <div class="challenge-row">
+            <button id="btn-dudo" class="btn-danger hidden">🗯️ Menteur !</button>
+            <button id="btn-calza" class="btn-second hidden">🎯 Pile poil !</button>
+          </div>
+          <p id="bid-error" class="multi-error hidden"></p>
+        </div>
+
+        <!-- révélation : tous les dés sur la table -->
+        <div id="reveal-panel" class="reveal-panel hidden">
+          <p id="reveal-call" class="reveal-call"></p>
+          <div id="reveal-dice" class="reveal-dice"></div>
+          <p id="reveal-verdict" class="reveal-verdict"></p>
+          <button id="btn-next" class="btn-main">Manche suivante</button>
+        </div>
+      </section>
+
+      <!-- fin de partie -->
+      <section id="screen-end" class="hidden">
+        <h2 class="title">🏆 <span id="winner-name"></span> gagne !</h2>
+        <p id="end-note" class="subtitle"></p>
+        <button id="btn-replay" class="btn-main hidden">Rejouer ensemble</button>
+        <p id="end-wait" class="wait-note hidden">L'hôte peut relancer une partie…</p>
+        <button id="btn-end-leave" class="btn-ghost">Quitter le salon</button>
+      </section>
+    </main>
+
+    <script type="module" src="/src/games/les-des-menteurs/main.ts"></script>
+  </body>
+</html>

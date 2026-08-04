@@ -2,6 +2,7 @@ import { defineConfig, type Plugin } from "vite";
 import { resolve } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createRoomStore } from "./src/games/ca-coute-combien/rooms-server";
+import { createRoomStore as createDudoStore } from "./src/games/les-des-menteurs/rooms-server";
 
 // Signalisation minimale pour Le Phare : offre/réponse WebRTC stockées en
 // mémoire quelques minutes, indexées par un code court. Servie par le serveur
@@ -77,11 +78,10 @@ function phareSignaling(): Plugin {
   };
 }
 
-// Salons multijoueurs de « Ça coûte combien ?! » : même philosophie que la
-// signalisation du Phare — état en mémoire dans le serveur, zéro infra.
-function cccRooms(): Plugin {
-  const store = createRoomStore();
-
+// Salons multijoueurs (« Ça coûte combien ?! », « Les Dés Menteurs ») : même
+// philosophie que la signalisation du Phare — état en mémoire dans le serveur,
+// zéro infra. Chaque jeu fournit son store `handle(method, path, body)`.
+function roomsApi(name: string, base: string, store: { handle(m: string, p: string, b: unknown): { status: number; body: unknown } }): Plugin {
   const readBody = (req: IncomingMessage): Promise<string> =>
     new Promise((done) => {
       let data = "";
@@ -113,19 +113,23 @@ function cccRooms(): Plugin {
   };
 
   return {
-    name: "ccc-rooms",
+    name,
     configureServer(server) {
-      server.middlewares.use("/api/ccc", (req, res, next) => void handle(req, res, next));
+      server.middlewares.use(base, (req, res, next) => void handle(req, res, next));
     },
     configurePreviewServer(server) {
-      server.middlewares.use("/api/ccc", (req, res, next) => void handle(req, res, next));
+      server.middlewares.use(base, (req, res, next) => void handle(req, res, next));
     },
   };
 }
 
 export default defineConfig({
   base: process.env.GITHUB_PAGES ? "/le-petit-prince/" : "/",
-  plugins: [phareSignaling(), cccRooms()],
+  plugins: [
+    phareSignaling(),
+    roomsApi("ccc-rooms", "/api/ccc", createRoomStore()),
+    roomsApi("dudo-rooms", "/api/dudo", createDudoStore()),
+  ],
   server: {
     // le tunnel Cloudflare présente ce hostname au serveur de dev
     allowedHosts: ["leptitprince.simptom.fr"],
@@ -149,6 +153,7 @@ export default defineConfig({
         laPromenade: resolve(__dirname, "games/la-promenade/index.html"),
         aquarium: resolve(__dirname, "games/aquarium/index.html"),
         abysse: resolve(__dirname, "games/abysse/index.html"),
+        lesDesMenteurs: resolve(__dirname, "games/les-des-menteurs/index.html"),
       },
     },
   },
