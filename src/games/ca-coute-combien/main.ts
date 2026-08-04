@@ -78,8 +78,13 @@ function startGame() {
   showScreen(screenRound);
 }
 
+// verrou de manche (solo) : false pendant la saisie, true dès la révélation —
+// une seule révélation possible, et « suivant » seulement après elle
+let roundResolved = false;
+
 function showRound() {
   cancelAllReveals();
+  roundResolved = false;
   const item = round[roundIndex];
   roundIndexEl.textContent = String(roundIndex + 1);
   roundPhotoEl.src = item.photo;
@@ -119,8 +124,12 @@ function submitGuess(event: SubmitEvent) {
 }
 
 function soloReveal(guess: number, timedOut: boolean) {
+  // déjà révélé (double soumission, course clic/timer…) : rien à rejouer
+  if (roundResolved) return;
+  roundResolved = true;
   cancelAllReveals();
   stopGuessTimer();
+  guessInput.blur();
 
   const item = round[roundIndex];
   const score = computeRoundScore(guess, item.prix);
@@ -150,11 +159,19 @@ function soloReveal(guess: number, timedOut: boolean) {
 
 function nextRound() {
   if (multi) {
-    void rc.nextRound(multi.code, multi.playerId).catch(showMultiError);
+    // un seul envoi par manche : le double-clic de l'hôte en fin de partie
+    // envoyait deux « next » et affichait une erreur
+    if (multiNextSent === multiShownRound) return;
+    multiNextSent = multiShownRound;
+    void rc.nextRound(multi.code, multi.playerId).catch((e) => {
+      multiNextSent = -1;
+      showMultiError(e);
+    });
     return;
   }
+  if (!roundResolved) return; // pas de « suivant » avant la révélation
   roundIndex += 1;
-  if (roundIndex >= ROUND_COUNT) {
+  if (roundIndex >= round.length) {
     finishGame();
     return;
   }
@@ -163,13 +180,15 @@ function nextRound() {
 
 function finishGame() {
   stopGuessTimer();
-  const total = roundScores.reduce((sum, s) => sum + s, 0);
-  const bestIndex = roundScores.indexOf(Math.max(...roundScores));
-  const worstIndex = roundScores.indexOf(Math.min(...roundScores));
+  // jamais plus de scores que de manches, quoi qu'il ait pu se passer
+  const scores = roundScores.slice(0, round.length);
+  const total = scores.reduce((sum, s) => sum + s, 0);
+  const bestIndex = scores.indexOf(Math.max(...scores));
+  const worstIndex = scores.indexOf(Math.min(...scores));
 
   recapTotalEl.textContent = `Score total : ${total} / 10 000`;
-  recapBestEl.textContent = `Meilleure manche : ${round[bestIndex].nom} (${roundScores[bestIndex]} pts)`;
-  recapWorstEl.textContent = `Pire manche : ${round[worstIndex].nom} (${roundScores[worstIndex]} pts)`;
+  recapBestEl.textContent = round[bestIndex] ? `Meilleure manche : ${round[bestIndex].nom} (${scores[bestIndex]} pts)` : "";
+  recapWorstEl.textContent = round[worstIndex] ? `Pire manche : ${round[worstIndex].nom} (${scores[worstIndex]} pts)` : "";
   recapCommentEl.textContent = pickClosingComment(total);
 
   if (total > record) {
@@ -294,6 +313,7 @@ interface MultiSession {
 
 let multi: MultiSession | null = null;
 let lastRoom: Room | null = null;
+let multiNextSent = -1; // dernière manche pour laquelle l'hôte a déjà envoyé « suivant »
 let lastSentGuess = 0;
 let multiShownRound = -1; // dernière manche affichée (pour ne pas re-render)
 let multiRevealed = false;
@@ -364,6 +384,7 @@ function onRoomUpdate(room: Room) {
     round = room.itemIds.map((id) => ITEMS_BY_ID.get(id)).filter((i): i is Item => i !== undefined);
     if (room.roundIdx !== multiShownRound) {
       multiShownRound = room.roundIdx;
+      multiNextSent = -1;
       multiRevealed = false;
       roundIndex = room.roundIdx;
       showRound();
@@ -517,6 +538,7 @@ async function multiSubmitGuess() {
 }
 
 function enterMulti(code: string, playerId: string) {
+  multiNextSent = -1;
   multi = {
     code,
     playerId,
