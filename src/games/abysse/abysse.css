@@ -1,0 +1,208 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --ink: #17171b;
+  --card: #fffdf4;
+  --pink: #ff5c8a;
+  --teal: #1fc7a8;
+  --purple: #6c63ff;
+  --yellow: #ffc93c;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #041019;
+  font-family: "Pixelify Sans", "VT323", monospace;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#sea {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+.back-link {
+  position: fixed;
+  top: 14px;
+  left: 16px;
+  z-index: 10;
+  color: #e8f4f0;
+  text-decoration: none;
+  font-size: 15px;
+  padding: 6px 10px;
+  background: rgba(4, 16, 25, 0.6);
+  border-radius: 8px;
+  opacity: 0.8;
+}
+
+.back-link:hover {
+  opacity: 1;
+}
+
+.hud {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 10;
+  text-align: right;
+  color: #e8f4f0;
+  font-family: "VT323", monospace;
+  font-size: 24px;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.hud-sub {
+  color: #9fd8cc;
+  font-size: 17px;
+}
+
+#btn-sound {
+  position: fixed;
+  z-index: 10;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: 16px;
+  font-family: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 9px 11px;
+  background: rgba(4, 16, 25, 0.6);
+  color: #e8f4f0;
+  border: 2px solid rgba(232, 244, 240, 0.35);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  padding: 20px;
+  background: rgba(3, 8, 14, 0.8);
+  color: #eef8f4;
+  cursor: pointer;
+  transition: opacity 0.45s ease;
+}
+
+.overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.overlay h1 {
+  font-size: clamp(40px, 9vw, 68px);
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-shadow: 0 0 18px rgba(31, 199, 168, 0.65), 4px 4px 0 rgba(0, 0, 0, 0.6);
+}
+
+.overlay p {
+  font-family: "VT323", monospace;
+  font-size: clamp(17px, 2.5vw, 22px);
+  line-height: 1.55;
+  opacity: 0.92;
+}
+
+.overlay .overlay-go {
+  margin-top: 4px;
+  font-family: "Pixelify Sans", monospace;
+  font-size: clamp(16px, 2.4vw, 20px);
+  animation: breathe 2.2s ease-in-out infinite;
+}
+
+.proto-tag {
+  font-size: 14px !important;
+  opacity: 0.5 !important;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.shop {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: min(430px, 94vw);
+  margin-top: 6px;
+}
+
+.shop button {
+  flex: 1 1 130px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.35;
+  padding: 10px 8px;
+  background: var(--card);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+}
+
+.shop button:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--teal);
+}
+
+.shop button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%) translateY(20px);
+  z-index: 15;
+  background: var(--card);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 9px 16px;
+  font-size: 17px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* --- curseur maison ------------------------------------------------------ */
+
+*:not(input):not(textarea):not(select) {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Ctext y='21' font-size='20'%3E%F0%9F%AA%9D%3C/text%3E%3C/svg%3E") 4 4,
+    auto;
+}
