@@ -20,30 +20,24 @@
       <div class="hud-line">profondeur : <span id="hud-depth">0 m</span></div>
       <div class="hud-line">ligne : <span class="bar"><span id="bar-fill"></span></span></div>
       <div class="hud-line">⚓ <span id="hud-money">0</span></div>
-      <div class="hud-line">viviers : <span id="hud-slots"></span></div>
       <div class="hud-line hud-record">record : <span id="hud-record">0 m</span></div>
     </div>
 
-    <button id="btn-book" type="button">📖 <span id="book-count">0/26</span></button>
-    <button id="btn-sound" type="button">🔊</button>
+    <button id="btn-book" type="button">📖 <span id="book-count">0/20</span></button>
     <button id="btn-up" class="hidden" type="button">⤴️ remonter</button>
 
     <div class="overlay" id="overlay">
       <h1 id="overlay-title">La pêche abyssale</h1>
-      <p id="overlay-text">Guide l'hameçon. Plus tu descends, plus c'est bizarre et précieux.<br />
-      Ferre des créatures — chaque prise alourdit la ligne, et tu peux continuer à descendre…<br />
-      ou remonter tant qu'il est temps. Si la ligne casse, tout est perdu.<br />
-      Ramasse les trésors 💰, évite les mines 💣, honore les commandes 📜. Clique pour plonger.</p>
+      <p id="overlay-text">Guide l'hameçon à la souris. Plus tu descends, plus c'est bizarre et précieux.<br />
+      Touche une créature pour la ferrer, puis esquive tout pendant la remontée :<br />
+      si la ligne casse, la prise est perdue. Vends tes prises ⚓, améliore ton matériel,<br />
+      descends plus profond. Clique pour plonger.</p>
       <div class="shop" id="shop">
         <p class="shop-title">🛒 La boutique du port — <span id="shop-money">0</span> ⚓</p>
         <button id="up-line" type="button"></button>
         <button id="up-reel" type="button"></button>
         <button id="up-weight" type="button"></button>
-        <button id="up-hooks" type="button"></button>
-        <button id="up-lamp" type="button"></button>
-        <button id="up-magnet" type="button"></button>
         <button id="up-knot" type="button"></button>
-        <div class="orders" id="orders"></div>
       </div>
     </div>
 
