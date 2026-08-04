@@ -1052,76 +1052,6 @@ const fisherCatch = (screenX: number, r: Rect): void => {
   if (best && best.catchT < 0) best.nextCatch = 0; // prise au prochain frame
 };
 
-// le poisson décroché : projeté sur le ponton, il frétille en sautillant,
-// puis bondit par-dessus le bord et replonge dans le lac
-const addCaughtFish = (startX: number, startY: number, deckX: number, deckY: number, waterY: number): void => {
-  let phase = 0; // 0 = vol vers le ponton, 1 = frétille sur les planches, 2 = replongeon
-  let t = 0;
-  let x = startX;
-  let y = startY;
-  let vy = 0;
-  let hops = 2 + Math.floor(rnd(0, 3));
-  const flightDur = 0.55;
-  const diveDur = 0.8;
-  let diveStart = { x: 0, y: 0 };
-  let diveX = 0;
-  let scale = 1;
-  const dir = Math.sign(deckX - startX) || 1;
-  particles.push({
-    update(dt) {
-      t += dt;
-      if (phase === 0) {
-        // arc de la canne jusqu'aux planches
-        const p = Math.min(1, t / flightDur);
-        x = startX + (deckX - startX) * p;
-        y = startY + (deckY - startY) * p - Math.sin(p * Math.PI) * 46 * (S() / 3);
-        if (p >= 1) {
-          phase = 1;
-          t = 0;
-          vy = -rnd(70, 110) * (S() / 3);
-        }
-      } else if (phase === 1) {
-        // sautille sur le ponton, de moins en moins haut
-        vy += 900 * (S() / 3) * dt;
-        y += vy * dt;
-        x += dir * 14 * (S() / 3) * dt;
-        if (y >= deckY) {
-          y = deckY;
-          hops--;
-          if (hops <= 0) {
-            phase = 2;
-            t = 0;
-            diveStart = { x, y };
-            diveX = x + rnd(-30, 30) * (S() / 3);
-          } else {
-            vy = -rnd(50, 100) * (S() / 3);
-          }
-        }
-      } else {
-        // bond final : par-dessus le bord, vers l'eau (il rapetisse en s'éloignant)
-        const p = Math.min(1, t / diveDur);
-        x = diveStart.x + (diveX - diveStart.x) * p;
-        y = diveStart.y + (waterY - diveStart.y) * p - Math.sin(p * Math.PI) * 60 * (S() / 3);
-        scale = 1 - p * 0.5;
-        if (p >= 1) {
-          addSplash(x, waterY);
-          addRipple(x, waterY);
-          return false;
-        }
-      }
-      return true;
-    },
-    draw(c) {
-      const s = S() * 1.45 * scale;
-      // frétillement : rapide au sol, plus lâche en l'air
-      const wig = Math.sin(t * (phase === 1 ? 34 : 16)) * (phase === 1 ? 1.1 : 0.6) * s;
-      px(c, x - s + wig * 0.3, y - 0.8 * s, 2 * s, s, "#c8d8e0");
-      px(c, x + s + wig, y - 0.6 * s, 0.9 * s, 0.7 * s, "#a8bcc8");
-      px(c, x - 0.4 * s, y - 0.6 * s, 0.4 * s, 0.4 * s, "#2a2622");
-    },
-  });
-};
-
 const drawFisher = (c: CanvasRenderingContext2D, f: Fisher, r: Rect, t: number): void => {
   const s = S() * 1.45;
   const base = imgToScreen(r, f.nx, WORLDS[worldIdx].groundY);
@@ -1135,14 +1065,7 @@ const drawFisher = (c: CanvasRenderingContext2D, f: Fisher, r: Rect, t: number):
     f.nextCatch = t + CATCH_DUR + rnd(16, 34);
   }
   const ph = f.catchT >= 0 ? (t - f.catchT) / CATCH_DUR : -1;
-  if (ph > 1) {
-    f.catchT = -1;
-    // le poisson se décroche et atterrit sur le ponton
-    const tipX0 = x - 8.5 * s;
-    const tipY0 = y - 18 * s;
-    const deckX = x + (Math.random() < 0.7 ? 1 : -1) * rnd(4, 9) * s;
-    addCaughtFish(tipX0, tipY0, deckX, y - 0.6 * s, waterY);
-  }
+  if (ph > 1) f.catchT = -1;
   const pulling = ph >= 0 && ph <= 1;
 
   // bonhomme de profil, face à l'eau (vers la gauche)
