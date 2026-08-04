@@ -8,6 +8,11 @@ interactives inspirées de l'univers du Petit Prince.
 - **Petites Orbites** (`/games/petites-orbites/`) — bac à sable gravitationnel.
   Glisse pour lancer des planètes autour du soleil et construis un système
   solaire qui survit le plus longtemps possible.
+- **Les Dés Menteurs** (`/games/les-des-menteurs/`) — Perudo en ligne, de 2 à
+  6 joueurs dans un salon à code. Enchères, bluff, « Menteur ! » et « Pile
+  poil ! » ; l'étoile ⭐ est joker, manches palifico incluses. Les dés vivent
+  côté serveur (middleware vite en dev, Worker `workers/dudo-rooms` en prod) :
+  chacun ne voit que sa main.
 
 ## Assets en cours (branche `feature/panne-au-decollage`)
 
