@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Abysse</title>
+    <meta name="description" content="Plonge le plus profond possible, puis remonte en accrochant tout ce qui passe. Prototype mobile de notre futur jeu de pêche." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪝</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/abysse/abysse.css" />
+  </head>
+  <body>
+    <canvas id="sea"></canvas>
+
+    <a class="back-link" href="../../">← le petit prince</a>
+
+    <div class="hud">
+      <div class="hud-line"><span id="hud-depth" class="numeric">0 m</span></div>
+      <div class="hud-line">🪙 <span id="hud-money" class="numeric">0</span></div>
+      <div class="hud-line hud-sub">record : <span id="hud-record" class="numeric">0 m</span> · 📖 <span id="hud-book">0</span></div>
+    </div>
+
+    <button id="btn-sound" type="button">🔊</button>
+
+    <div class="overlay" id="overlay">
+      <h1 id="overlay-title">ABYSSE</h1>
+      <p id="overlay-text">Guide l'hameçon pendant la descente.<br />
+      Tout ce que tu touches s'accroche — et stoppe la plongée.<br />
+      À la remontée, c'est l'inverse : accroche <strong>tout</strong> ce que tu peux.<br />
+      Plus profond = plus rare = plus cher.</p>
+
+      <div class="shop" id="shop">
+        <button id="up-depth" type="button"></button>
+        <button id="up-hooks" type="button"></button>
+        <button id="up-value" type="button"></button>
+      </div>
+
+      <p class="overlay-go">toucher pour plonger</p>
+      <p class="proto-tag">🚧 prototype mobile — la boucle d'abord, l'habillage ensuite</p>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script type="module" src="/src/games/abysse/main.ts"></script>
+  </body>
+</html>
