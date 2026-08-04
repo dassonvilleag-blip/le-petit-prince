@@ -1294,7 +1294,7 @@ let paused = false;
 // sélection sur la carte
 let mapSel = 0;
 let mapHover = -1;
-let mapTravel: { from: number; to: number; t: number } | null = null;
+let mapTravel: { from: number; to: number; t: number; autostart?: boolean } | null = null;
 
 function resize(): void {
   const dpr = window.devicePixelRatio || 1;
@@ -1609,10 +1609,13 @@ function step(dt: number): void {
     mapTravel.t += dt * 1.4;
     if (mapTravel.t >= 1) {
       const dest = nodeById(mapTravel.to);
+      const auto = mapTravel.autostart ?? false;
       mapTravel = null;
       saveData.pos = dest.id;
+      mapSel = dest.id;
       save();
-      startLevel(dest);
+      // au clic on enchaîne dans le niveau ; aux flèches on reste sur la carte
+      if (auto) startLevel(dest);
     }
     return;
   }
@@ -2322,6 +2325,7 @@ function drawPlayer(): void {
       ctx.save();
       ctx.translate(Math.round(px), Math.round(py));
       ctx.rotate(deathRot);
+      ctx.scale(1.14, 1);
       ctx.drawImage(s.img, sx, sy, s.cw, s.ch, -w / 2, -h / 2, w, h);
       ctx.restore();
     }
@@ -2330,6 +2334,7 @@ function drawPlayer(): void {
   if (iframes > 0 && state === "play" && Math.floor(performance.now() / 90) % 2 === 1) return;
   const footY = py + (PH / 2) * gdir;
   const hVis = 41;
+  const FAT = 1.14; // l'embonpoint présidentiel : largeur seule, hitbox intacte
   const flip = facing < 0;
   const nowS = performance.now() / 1000;
 
@@ -2355,6 +2360,9 @@ function drawPlayer(): void {
     ctx.translate(0, Math.round(py) * 2);
     ctx.scale(1, -1);
   }
+  ctx.translate(px, 0);
+  ctx.scale(FAT, 1);
+  ctx.translate(-px, 0);
 
   // squash & stretch : écrasé à l'atterrissage, étiré en pleine chute
   if (gdir > 0) {
@@ -2459,7 +2467,12 @@ function drawLevel(): void {
   ghosts = ghosts.filter((g) => nowMs - g.t < 170);
   for (const g of ghosts) {
     ctx.globalAlpha = (1 - (nowMs - g.t) / 170) * 0.3;
+    ctx.save();
+    ctx.translate(g.x, 0);
+    ctx.scale(1.14, 1);
+    ctx.translate(-g.x, 0);
     drawSheetFrame(SHEETS.dash, 5, g.x, g.y, 41, g.flip);
+    ctx.restore();
   }
   ctx.globalAlpha = 1;
 
@@ -2754,7 +2767,7 @@ function drawMap(): void {
     ctx.font = "16px 'VT323', monospace";
     ctx.fillText(`${BIOMES[sel.biome].name} · ${status}${secret}`, W / 2, H - 46);
     ctx.fillStyle = "#8fd3ff";
-    ctx.fillText(mapTravel ? "en route…" : "Entrée ↵ ou clic pour y aller", W / 2, H - 28);
+    ctx.fillText(mapTravel ? "en route…" : "Flèches : voyager · Entrée ou clic : jouer", W / 2, H - 28);
   } else {
     ctx.fillStyle = "#aab3c7";
     ctx.font = "bold 20px 'Pixelify Sans', monospace";
@@ -2783,6 +2796,7 @@ function drawMap(): void {
       const w2 = (s.cw / s.ch) * h;
       ctx.save();
       ctx.translate(hx, hy);
+      ctx.scale(1.14, 1);
       if (x2 < x1) ctx.scale(-1, 1);
       ctx.drawImage(s.img, sx, sy, s.cw, s.ch, -w2 / 2, -h, w2, h);
       ctx.restore();
@@ -2792,20 +2806,22 @@ function drawMap(): void {
     const bobT = Math.sin(now * 1.6 + cur.id * 1.7) * 3 + Math.sin(now * 3.1) * 2;
     if (ready(SHEETS.idle)) {
       const h = hCur * 0.6;
-      const w2 = (SHEETS.idle.cw / SHEETS.idle.ch) * h;
+      const w2 = (SHEETS.idle.cw / SHEETS.idle.ch) * h * 1.14;
       ctx.drawImage(SHEETS.idle.img, pxm - w2 / 2, pym - hCur * 0.5 - h + bobT, w2, h);
     }
   }
 }
 
 // navigation sur la carte
+// les flèches font voyager le héros d'île en île (sans lancer le niveau)
 function mapMove(dx: number, dy: number): void {
-  const cur = nodeById(mapSel);
+  if (mapTravel) return;
+  const cur = nodeById(saveData.pos);
   const [cx, cy] = mapNodePos(cur);
   let best: MapNode | null = null;
   let bestScore = Infinity;
   for (const n of nodes) {
-    if (n.id === mapSel || !unlocked(n)) continue;
+    if (n.id === saveData.pos || !unlocked(n)) continue;
     if (n.bonus && !nodes.some((p) => p.secretTo === n.id && saveData.secrets.includes(p.id))) continue;
     const [x, y] = mapNodePos(n);
     const ddx = x - cx;
@@ -2818,12 +2834,11 @@ function mapMove(dx: number, dy: number): void {
       best = n;
     }
   }
-  if (best) mapSel = best.id;
+  if (best) mapGoto(best, false);
 }
 
-function mapEnter(): void {
+function mapGoto(n: MapNode, autostart: boolean): void {
   if (mapTravel) return;
-  const n = nodeById(mapSel);
   if (!unlocked(n)) {
     toast("🔒 Termine d'abord un niveau qui y mène !");
     return;
@@ -2832,7 +2847,13 @@ function mapEnter(): void {
     startLevel(n);
     return;
   }
-  mapTravel = { from: saveData.pos, to: n.id, t: 0 };
+  mapSel = n.id;
+  mapTravel = { from: saveData.pos, to: n.id, t: 0, autostart };
+}
+
+// Entrée / tap sur l'île où l'on se trouve : on joue
+function mapEnter(): void {
+  mapGoto(nodeById(mapSel), true);
 }
 
 // ---------- HUD ----------
@@ -2897,8 +2918,7 @@ canvas.addEventListener("pointerdown", (e) => {
       if (n.bonus && !nodes.some((p) => p.secretTo === n.id && saveData.secrets.includes(p.id))) continue;
       const [x, y] = mapNodePos(n);
       if (Math.hypot(e.clientX - x, e.clientY - y) < 46) {
-        mapSel = n.id;
-        mapEnter();
+        mapGoto(n, true);
         return;
       }
     }
