@@ -4,7 +4,7 @@ import { createSceneRig } from "./scene";
 import { createFlyControls } from "./fly-controls";
 import { createHeightmap, heightAt, raiseVertex, lowerVertex, type Heightmap } from "./terrain";
 import { createTerrainMesh, createWaterMesh, updateTerrainMesh, nearestVertex } from "./terrain-mesh";
-import { PIECES } from "./pieces";
+import { PIECES, pieceById } from "./pieces";
 import { MATERIALS, DEFAULT_MATERIAL_ID } from "./materials";
 import { buildPieceMesh } from "./piece-geometry";
 import { threeMaterialFor, preloadAllMaterials } from "./materials-three";
@@ -59,6 +59,24 @@ let rotation: Rotation = 0;
 
 function cellCenter(cellX: number, cellZ: number): { x: number; z: number } {
   return { x: (cellX + 0.5) * CELL_SIZE, z: (cellZ + 0.5) * CELL_SIZE };
+}
+
+// placement.ts reste volontairement ignorant des catalogues (Task 4) : c'est donc ici,
+// côté appelant, que l'on décide quelles pièces déjà posées comptent vraiment comme
+// "occupant ce niveau" pour resolvePlacement — une pièce "edge" (mur, créneau, herse) ne
+// bloque une AUTRE pièce "edge" que si elles visent le même bord (même rotation) ; une
+// pièce "cell" bloque tout, comme avant. Sans ce filtre, deux murs perpendiculaires dans la
+// même cellule (le geste normal pour fermer un coin ou une pièce) étaient toujours forcés à
+// s'empiler l'un sur l'autre au lieu de coexister au même niveau.
+function piecesBlockingLevel(cellX: number, cellZ: number, pieceId: string, pieceRotation: Rotation): PlacedPiece[] {
+  const footprint = pieceById(pieceId)?.footprint ?? "cell";
+  return placedPieces.filter((existing) => {
+    if (existing.cellX !== cellX || existing.cellZ !== cellZ) return false;
+    if (footprint === "cell") return true;
+    const existingFootprint = pieceById(existing.pieceId)?.footprint ?? "cell";
+    if (existingFootprint === "cell") return true;
+    return existing.rotation === pieceRotation;
+  });
 }
 
 function addPieceToScene(piece: PlacedPiece): void {
@@ -235,7 +253,8 @@ function updateGhost(): void {
 
   const cell = hoveredCell();
   if (!cell) return;
-  const result = resolvePlacement(cell.cellX, cell.cellZ, terrain, placedPieces);
+  const blocking = piecesBlockingLevel(cell.cellX, cell.cellZ, selectedPieceId, rotation);
+  const result = resolvePlacement(cell.cellX, cell.cellZ, terrain, blocking);
   const tint = new THREE.MeshStandardMaterial({
     color: result.valid ? 0x6fd08c : 0xd0625a,
     transparent: true,
@@ -299,7 +318,8 @@ canvas.addEventListener("pointerup", (event) => {
     return;
   }
 
-  const result = resolvePlacement(cell.cellX, cell.cellZ, terrain, placedPieces);
+  const blocking = piecesBlockingLevel(cell.cellX, cell.cellZ, selectedPieceId, rotation);
+  const result = resolvePlacement(cell.cellX, cell.cellZ, terrain, blocking);
   if (!result.valid) return;
   const piece: PlacedPiece = {
     id: `${cell.cellX}-${cell.cellZ}-${result.level}-${Date.now()}`,
