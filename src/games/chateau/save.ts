@@ -1,6 +1,6 @@
 // src/games/chateau/save.ts
 // note : extensions .ts nécessaires sur les imports relatifs (même raison que grid.ts).
-import { GRID_SIZE } from "./constants.ts";
+import { GRID_SIZE, MAX_FLOORS } from "./constants.ts";
 import { createGrid, type Grid, type Cell } from "./grid.ts";
 
 export interface WorldState {
@@ -20,7 +20,18 @@ export function serializeWorld(world: WorldState): string {
 function isValidCell(value: unknown): value is Cell {
   if (typeof value !== "object" || value === null) return false;
   const cell = value as Partial<Cell>;
-  return typeof cell.height === "number" && typeof cell.colorId === "string";
+  if (typeof cell.colorId !== "string") return false;
+  // Une hauteur non bornée (Infinity, un flottant, un nombre négatif ou juste très grand)
+  // passerait un simple `typeof === "number"` tout en faisant boucler indéfiniment
+  // buildBuildingColumn (Task 7 : `for (floor = 0; floor < height; floor++)`) au chargement
+  // — un blocage du navigateur, pire que le plantage récupérable que ce genre de contrôle
+  // évitait déjà côté v1.
+  return (
+    typeof cell.height === "number" &&
+    Number.isInteger(cell.height) &&
+    cell.height >= 0 &&
+    cell.height <= MAX_FLOORS
+  );
 }
 
 function isValidWorld(value: unknown): value is WorldState {
