@@ -148,6 +148,7 @@ export default defineConfig({
         caCouteCombien: resolve(__dirname, "games/ca-coute-combien/index.html"),
         laPromenade: resolve(__dirname, "games/la-promenade/index.html"),
         aquarium: resolve(__dirname, "games/aquarium/index.html"),
+        chateau: resolve(__dirname, "games/chateau/index.html"),
       },
     },
   },

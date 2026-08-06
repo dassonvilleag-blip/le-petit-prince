@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Château</title>
+    <meta name="description" content="Bac à sable de construction de château, vu de l'extérieur." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏰</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/chateau/chateau.css" />
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <a class="back-link" href="../../">← le petit prince</a>
+
+    <div class="palette" id="palette">
+      <div class="palette-section" id="palette-pieces"></div>
+      <div class="palette-section" id="palette-materials"></div>
+      <div class="palette-actions">
+        <button id="rotate-btn" type="button">↻ Pivoter</button>
+        <button id="reset-btn" type="button">Recommencer</button>
+      </div>
+    </div>
+
+    <div class="hint" id="hint">
+      <h1>Château</h1>
+      <p>Façonne le terrain, pose des pièces, choisis leurs matériaux.<br />
+      Ton château, ta forme — il n'y a pas de mauvaise réponse.</p>
+    </div>
+
+    <script type="module" src="/src/games/chateau/main.ts"></script>
+  </body>
+</html>
