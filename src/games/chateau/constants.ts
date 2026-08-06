@@ -1,8 +1,9 @@
-export const PLOT_SIZE = 12; // cellules par côté
-export const MIN_TERRAIN_LEVEL = 0;
-export const MAX_TERRAIN_LEVEL = 4;
-export const WATER_LEVEL = 1; // niveau de terrain à/sous lequel l'eau recouvre
-export const DEFAULT_TERRAIN_LEVEL = 2; // niveau de départ du terrain — au-dessus de l'eau, sec par défaut
-export const MAX_STACK_HEIGHT = 6; // pièces empilables au-dessus du sol sur une cellule
-export const CELL_SIZE = 2; // unités monde par cellule (X/Z)
-export const LEVEL_HEIGHT = 1; // unités monde par niveau vertical
+export const GRID_SIZE = 20; // cellules par côté
+export const MAX_FLOORS = 8; // étages max par case
+export const CELL_SIZE = 1; // unités monde par cellule (X/Z)
+export const FLOOR_HEIGHT = 1; // unités monde par étage
+export const CORNER_RADIUS = CELL_SIZE / 3; // rayon des coins arrondis/chamfrés
+export const FLOOR_INSET = CELL_SIZE * 0.06; // rétrécissement par étage au-dessus du rez-de-chaussée
+export const MIN_HALF_EXTENT = CELL_SIZE * 0.15; // demi-largeur plancher, pour qu'un étage très haut ne s'inverse jamais
+export const ROOF_HEIGHT = FLOOR_HEIGHT * 0.6; // hauteur du toit à deux pans
+export const WATER_LEVEL = 0; // les bâtiments poussent à partir du niveau de l'eau, pas de terrain variable
