@@ -1117,7 +1117,7 @@ import * as THREE from "three";
 import { createSceneRig } from "./scene";
 import { createGrid, growCell, shrinkCell, type Grid } from "./grid";
 import { classifyCorners } from "./corners";
-import { buildBuildingColumn } from "./building-geometry";
+import { buildBuildingColumn, disposeBuildingColumn } from "./building-geometry";
 import { COLORS, DEFAULT_COLOR_ID, colorById } from "./palette";
 import { CELL_SIZE, GRID_SIZE, WATER_LEVEL } from "./constants";
 import { loadFromLocalStorage, saveToLocalStorage, clearSave } from "./save";
@@ -1128,7 +1128,7 @@ const { scene, camera, renderer, controls } = createSceneRig(canvas);
 const initialWorld = loadFromLocalStorage();
 let grid: Grid = initialWorld.grid;
 
-const columns = new Map<string, THREE.Object3D>();
+const columns = new Map<string, THREE.Group>();
 const wallMaterials = new Map<string, THREE.MeshStandardMaterial>();
 const roofMaterials = new Map<string, THREE.MeshStandardMaterial>();
 
@@ -1162,19 +1162,14 @@ function cellCenter(cellX: number, cellZ: number): { x: number; z: number } {
 
 // Chaque colonne a sa propre géométrie (jamais partagée), mais ses matériaux SONT
 // partagés (mis en cache par couleur ci-dessus, réutilisés par toutes les cases de la
-// même couleur) — ne jamais les disposer ici, seulement la géométrie.
-function disposeColumn(object: THREE.Object3D): void {
-  object.traverse((child) => {
-    if (child instanceof THREE.Mesh) child.geometry.dispose();
-  });
-}
-
+// même couleur) — disposeBuildingColumn (building-geometry.ts) ne touche jamais aux
+// matériaux, seulement à la géométrie, exactement pour cette raison.
 function rebuildColumn(cellX: number, cellZ: number): void {
   const key = cellKey(cellX, cellZ);
   const existing = columns.get(key);
   if (existing) {
     scene.remove(existing);
-    disposeColumn(existing);
+    disposeBuildingColumn(existing);
     columns.delete(key);
   }
 
@@ -1205,7 +1200,7 @@ function rebuildEverything(): void {
   for (const key of [...columns.keys()]) {
     const object = columns.get(key)!;
     scene.remove(object);
-    disposeColumn(object);
+    disposeBuildingColumn(object);
   }
   columns.clear();
   for (let z = 0; z < GRID_SIZE; z++) {
