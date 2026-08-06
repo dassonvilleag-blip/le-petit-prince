@@ -377,7 +377,10 @@ Expected: FAIL — `Cannot find module '../terrain.ts'` (module doesn't exist ye
 
 ```ts
 // src/games/chateau/terrain.ts
-import { PLOT_SIZE, MIN_TERRAIN_LEVEL, MAX_TERRAIN_LEVEL } from "./constants";
+// note : extension .ts nécessaire ici — `node --experimental-strip-types` résout les
+// imports relatifs en ESM natif (contrairement à Vite/tsc en mode bundler), et ce fichier
+// est chargé transitivement par terrain.test.ts.
+import { PLOT_SIZE, MIN_TERRAIN_LEVEL, MAX_TERRAIN_LEVEL } from "./constants.ts";
 
 export type Heightmap = number[][]; // grid[z][x], (PLOT_SIZE+1) x (PLOT_SIZE+1) vertices
 
@@ -638,8 +641,10 @@ Expected: FAIL — `Cannot find module '../placement.ts'`.
 
 ```ts
 // src/games/chateau/placement.ts
-import { PLOT_SIZE, MAX_STACK_HEIGHT } from "./constants";
-import { terrainLevelAtCell, type Heightmap } from "./terrain";
+// note : extensions .ts nécessaires — voir la note dans terrain.ts (Task 2), même raison :
+// ce fichier est chargé transitivement par placement.test.ts sous node --experimental-strip-types.
+import { PLOT_SIZE, MAX_STACK_HEIGHT } from "./constants.ts";
+import { terrainLevelAtCell, type Heightmap } from "./terrain.ts";
 
 export type Rotation = 0 | 90 | 180 | 270;
 
@@ -758,9 +763,11 @@ Expected: FAIL — `Cannot find module '../save.ts'`.
 
 ```ts
 // src/games/chateau/save.ts
-import { PLOT_SIZE } from "./constants";
-import { createHeightmap, type Heightmap } from "./terrain";
-import type { PlacedPiece } from "./placement";
+// note : extensions .ts nécessaires — même raison que terrain.ts (Task 2) et placement.ts
+// (Task 4) : ce fichier est chargé transitivement par save.test.ts sous node --experimental-strip-types.
+import { PLOT_SIZE } from "./constants.ts";
+import { createHeightmap, type Heightmap } from "./terrain.ts";
+import type { PlacedPiece } from "./placement.ts";
 
 export interface WorldState {
   terrain: Heightmap;
