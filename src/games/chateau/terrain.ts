@@ -1,9 +1,9 @@
-import { PLOT_SIZE, MIN_TERRAIN_LEVEL, MAX_TERRAIN_LEVEL } from "./constants.ts";
+import { PLOT_SIZE, MIN_TERRAIN_LEVEL, MAX_TERRAIN_LEVEL, DEFAULT_TERRAIN_LEVEL } from "./constants.ts";
 
 export type Heightmap = number[][]; // grid[z][x], (PLOT_SIZE+1) x (PLOT_SIZE+1) vertices
 
 export function createHeightmap(): Heightmap {
-  return Array.from({ length: PLOT_SIZE + 1 }, () => Array(PLOT_SIZE + 1).fill(0));
+  return Array.from({ length: PLOT_SIZE + 1 }, () => Array(PLOT_SIZE + 1).fill(DEFAULT_TERRAIN_LEVEL));
 }
 
 function inBounds(x: number, z: number): boolean {

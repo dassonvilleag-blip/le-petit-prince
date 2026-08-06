@@ -1,7 +1,7 @@
 // src/games/chateau/test/placement.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { PLOT_SIZE, MAX_STACK_HEIGHT } from "../constants.ts";
+import { PLOT_SIZE, MAX_STACK_HEIGHT, DEFAULT_TERRAIN_LEVEL } from "../constants.ts";
 import { createHeightmap, raiseVertex } from "../terrain.ts";
 import { resolvePlacement, removeTopPiece, type PlacedPiece } from "../placement.ts";
 
@@ -9,17 +9,17 @@ function piece(cellX: number, cellZ: number, level: number): PlacedPiece {
   return { id: `${cellX}-${cellZ}-${level}`, pieceId: "mur-plein", cellX, cellZ, level, rotation: 0, materialId: "pierre-claire" };
 }
 
-test("first piece on flat terrain rests at level 0", () => {
+test("first piece on flat terrain rests at ground level", () => {
   const result = resolvePlacement(2, 3, createHeightmap(), []);
   assert.equal(result.valid, true);
-  assert.equal(result.level, 0);
+  assert.equal(result.level, DEFAULT_TERRAIN_LEVEL);
 });
 
 test("a second piece on the same cell stacks on top", () => {
-  const existing = [piece(2, 3, 0)];
+  const existing = [piece(2, 3, DEFAULT_TERRAIN_LEVEL)];
   const result = resolvePlacement(2, 3, createHeightmap(), existing);
   assert.equal(result.valid, true);
-  assert.equal(result.level, 1);
+  assert.equal(result.level, DEFAULT_TERRAIN_LEVEL + 1);
 });
 
 test("placement respects terrain height on a raised cell", () => {
@@ -30,7 +30,7 @@ test("placement respects terrain height on a raised cell", () => {
   grid = raiseVertex(grid, 1, 1);
   const result = resolvePlacement(0, 0, grid, []);
   assert.equal(result.valid, true);
-  assert.equal(result.level, 1);
+  assert.equal(result.level, DEFAULT_TERRAIN_LEVEL + 1);
 });
 
 test("placement outside the plot is invalid", () => {
@@ -39,7 +39,7 @@ test("placement outside the plot is invalid", () => {
 });
 
 test("placement is invalid once the stack is full", () => {
-  const existing = Array.from({ length: MAX_STACK_HEIGHT }, (_, level) => piece(5, 5, level));
+  const existing = Array.from({ length: MAX_STACK_HEIGHT }, (_, i) => piece(5, 5, DEFAULT_TERRAIN_LEVEL + i));
   const result = resolvePlacement(5, 5, createHeightmap(), existing);
   assert.equal(result.valid, false);
 });
