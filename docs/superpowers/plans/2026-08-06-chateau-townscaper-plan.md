@@ -1296,11 +1296,27 @@ function paintCell(cellX: number, cellZ: number): void {
   persist();
 }
 
+// Un seul écouteur pointerdown pour construire ET retirer (branché par event.altKey) : les
+// deux chemins partagent le même calcul de case survolée, donc il ne peut plus y avoir de
+// divergence accidentelle entre eux (ex. l'un des deux qui oublierait updatePointer avant
+// de raycaster — piège réel rencontré pendant la revue de qualité de cette tâche : la
+// version initiale avec deux écouteurs séparés omettait updatePointer() côté construction,
+// laissant le premier clic d'un clic/glissement raycaster contre une position obsolète).
 canvas.addEventListener("pointerdown", (event) => {
-  if (event.button !== 0) return; // le clic gauche seul ; jamais avec ctrl/alt (voir plus bas)
-  if (event.altKey) return; // alt+clic gère le retrait, pas la construction
+  if (event.button !== 0) return; // le clic gauche seul
+  updatePointer(event);
   const cell = hoveredCell();
   if (!cell) return;
+
+  if (event.altKey) {
+    // Alt + clic : retrait d'un étage, pas de glissement pour cette action.
+    if (grid[cell.cellZ][cell.cellX].height === 0) return;
+    grid = shrinkCell(grid, cell.cellX, cell.cellZ);
+    rebuildNeighborhood(cell.cellX, cell.cellZ);
+    persist();
+    return;
+  }
+
   painting = true;
   paintedThisStroke.clear();
   // Un simple clic (sans glisser) sur une case déjà construite doit quand même ajouter un
@@ -1322,19 +1338,11 @@ canvas.addEventListener("pointermove", (event) => {
   if (cell) paintCell(cell.cellX, cell.cellZ);
 });
 
-window.addEventListener("pointerup", () => {
+function stopPainting(): void {
   painting = false;
-});
-
-canvas.addEventListener("pointerdown", (event) => {
-  if (event.button !== 0 || !event.altKey) return;
-  updatePointer(event);
-  const cell = hoveredCell();
-  if (!cell || grid[cell.cellZ][cell.cellX].height === 0) return;
-  grid = shrinkCell(grid, cell.cellX, cell.cellZ);
-  rebuildNeighborhood(cell.cellX, cell.cellZ);
-  persist();
-});
+}
+window.addEventListener("pointerup", stopPainting);
+window.addEventListener("pointercancel", stopPainting);
 
 function frame(): void {
   controls.update();
