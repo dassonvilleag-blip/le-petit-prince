@@ -8,10 +8,18 @@ function mesh(geometry: THREE.BufferGeometry, material: THREE.Material): THREE.M
   return m;
 }
 
+// Les murs longent un bord de la cellule (celui à Z minimal avant rotation) plutôt que de
+// la traverser en son centre : deux murs posés dans des cellules voisines, avec la bonne
+// rotation, se rejoignent alors pile au coin partagé et forment un angle propre — poser un
+// mur centré dans chaque cellule ne les fait jamais vraiment se toucher. La rotation (0/90/
+// 180/270, appliquée par buildPieceMesh autour du centre de la cellule) fait donc pivoter
+// le mur d'un bord à l'autre plutôt que de simplement l'orienter sur place.
+const WALL_EDGE_Z = -CELL_SIZE / 2;
+
 function wallSolid(material: THREE.Material): THREE.Group {
   const group = new THREE.Group();
   const geo = new THREE.BoxGeometry(CELL_SIZE, LEVEL_HEIGHT, 0.25);
-  geo.translate(0, LEVEL_HEIGHT / 2, 0);
+  geo.translate(0, LEVEL_HEIGHT / 2, WALL_EDGE_Z);
   group.add(mesh(geo, material));
   return group;
 }
@@ -20,14 +28,14 @@ function wallWithOpening(material: THREE.Material): THREE.Group {
   const group = new THREE.Group();
   const postWidth = CELL_SIZE * 0.25;
   const postGeo = new THREE.BoxGeometry(postWidth, LEVEL_HEIGHT, 0.25);
-  postGeo.translate(0, LEVEL_HEIGHT / 2, 0);
+  postGeo.translate(0, LEVEL_HEIGHT / 2, WALL_EDGE_Z);
   const left = mesh(postGeo, material);
   left.position.x = -(CELL_SIZE / 2 - postWidth / 2);
   const right = mesh(postGeo.clone(), material);
   right.position.x = CELL_SIZE / 2 - postWidth / 2;
   const lintelHeight = LEVEL_HEIGHT * 0.3;
   const lintelGeo = new THREE.BoxGeometry(CELL_SIZE, lintelHeight, 0.25);
-  lintelGeo.translate(0, LEVEL_HEIGHT - lintelHeight / 2, 0);
+  lintelGeo.translate(0, LEVEL_HEIGHT - lintelHeight / 2, WALL_EDGE_Z);
   group.add(left, right, mesh(lintelGeo, material));
   return group;
 }
@@ -119,7 +127,7 @@ function crenellation(material: THREE.Material): THREE.Group {
   const group = new THREE.Group();
   const baseHeight = LEVEL_HEIGHT * 0.15;
   const baseGeo = new THREE.BoxGeometry(CELL_SIZE, baseHeight, CELL_SIZE * 0.5);
-  baseGeo.translate(0, baseHeight / 2, 0);
+  baseGeo.translate(0, baseHeight / 2, WALL_EDGE_Z);
   group.add(mesh(baseGeo, material));
   const merlonCount = 3;
   const merlonWidth = CELL_SIZE / (merlonCount * 2);
@@ -127,7 +135,7 @@ function crenellation(material: THREE.Material): THREE.Group {
   for (let i = 0; i < merlonCount; i++) {
     const geo = new THREE.BoxGeometry(merlonWidth, merlonHeight, CELL_SIZE * 0.5);
     const x = -CELL_SIZE / 2 + merlonWidth * (2 * i + 1);
-    geo.translate(x, baseHeight + merlonHeight / 2, 0);
+    geo.translate(x, baseHeight + merlonHeight / 2, WALL_EDGE_Z);
     group.add(mesh(geo, material));
   }
   return group;
@@ -149,13 +157,13 @@ function portcullis(material: THREE.Material): THREE.Group {
   const span = CELL_SIZE * 0.7;
   for (let i = 0; i < verticalBars; i++) {
     const geo = new THREE.BoxGeometry(barThickness, LEVEL_HEIGHT * 0.9, barThickness);
-    geo.translate(-span / 2 + (span / (verticalBars - 1)) * i, LEVEL_HEIGHT * 0.45, 0);
+    geo.translate(-span / 2 + (span / (verticalBars - 1)) * i, LEVEL_HEIGHT * 0.45, WALL_EDGE_Z);
     group.add(mesh(geo, material));
   }
   const horizontalBars = 4;
   for (let i = 0; i < horizontalBars; i++) {
     const geo = new THREE.BoxGeometry(span, barThickness, barThickness);
-    geo.translate(0, (LEVEL_HEIGHT * 0.9 * (i + 0.5)) / horizontalBars, 0);
+    geo.translate(0, (LEVEL_HEIGHT * 0.9 * (i + 0.5)) / horizontalBars, WALL_EDGE_Z);
     group.add(mesh(geo, material));
   }
   return group;
