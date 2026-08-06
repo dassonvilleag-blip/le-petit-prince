@@ -1,32 +1,35 @@
 // src/games/chateau/save.ts
-// note : extensions .ts nécessaires — même raison que terrain.ts (Task 2) et placement.ts
-// (Task 4) : ce fichier est chargé transitivement par save.test.ts sous node --experimental-strip-types.
-import { PLOT_SIZE } from "./constants.ts";
-import { createHeightmap, type Heightmap } from "./terrain.ts";
-import type { PlacedPiece } from "./placement.ts";
+// note : extensions .ts nécessaires sur les imports relatifs (même raison que grid.ts).
+import { GRID_SIZE } from "./constants.ts";
+import { createGrid, type Grid, type Cell } from "./grid.ts";
 
 export interface WorldState {
-  terrain: Heightmap;
-  pieces: PlacedPiece[];
+  grid: Grid;
 }
 
-const STORAGE_KEY = "chateau-save-v1";
+const STORAGE_KEY = "chateau-townscaper-save-v1";
 
 export function emptyWorld(): WorldState {
-  return { terrain: createHeightmap(), pieces: [] };
+  return { grid: createGrid() };
 }
 
 export function serializeWorld(world: WorldState): string {
   return JSON.stringify(world);
 }
 
+function isValidCell(value: unknown): value is Cell {
+  if (typeof value !== "object" || value === null) return false;
+  const cell = value as Partial<Cell>;
+  return typeof cell.height === "number" && typeof cell.colorId === "string";
+}
+
 function isValidWorld(value: unknown): value is WorldState {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<WorldState>;
-  if (!Array.isArray(candidate.terrain) || candidate.terrain.length !== PLOT_SIZE + 1) return false;
-  if (!candidate.terrain.every((row) => Array.isArray(row) && row.length === PLOT_SIZE + 1)) return false;
-  if (!Array.isArray(candidate.pieces)) return false;
-  return true;
+  if (!Array.isArray(candidate.grid) || candidate.grid.length !== GRID_SIZE) return false;
+  return candidate.grid.every(
+    (row) => Array.isArray(row) && row.length === GRID_SIZE && row.every(isValidCell),
+  );
 }
 
 export function deserializeWorld(raw: string | null): WorldState {
