@@ -1,6 +1,7 @@
 // src/games/chateau/main.ts
 import * as THREE from "three";
 import { createSceneRig } from "./scene";
+import { createFlyControls } from "./fly-controls";
 import { createHeightmap, raiseVertex, lowerVertex, type Heightmap } from "./terrain";
 import { createTerrainMesh, createWaterMesh, updateTerrainMesh, nearestVertex } from "./terrain-mesh";
 import { PIECES } from "./pieces";
@@ -12,7 +13,8 @@ import { CELL_SIZE, LEVEL_HEIGHT } from "./constants";
 import { loadFromLocalStorage, saveToLocalStorage, clearSave } from "./save";
 
 const canvas = document.getElementById("scene") as HTMLCanvasElement;
-const { scene, camera, renderer, controls } = createSceneRig(canvas);
+const { scene, camera, renderer } = createSceneRig(canvas);
+const flyControls = createFlyControls(camera, canvas);
 preloadAllMaterials();
 
 const initialWorld = loadFromLocalStorage();
@@ -202,12 +204,11 @@ canvas.addEventListener("pointermove", (event) => {
   updateGhost();
 });
 
-// OrbitControls (Task 7) listens for pointerdown on this same canvas to start its
-// rotate-drag (left button) — it doesn't stopPropagation, so a bare "act on pointerdown"
-// handler here would ALSO place/sculpt/remove on every orbit-drag's starting pixel, not
-// just on genuine clicks (found during Task 8's review). Track movement between
-// pointerdown and pointerup instead, and only act if the pointer barely moved — a real
-// click/tap — so orbiting the camera and placing a piece stay independent gestures.
+// Track movement between pointerdown and pointerup and only act if the pointer barely
+// moved — a real click/tap, not a shaky drag — so a slightly wobbly click never places
+// a piece or sculpts terrain by accident. (Camera look/movement no longer shares this
+// canvas's left/right buttons since the free-fly camera — fly-controls.ts — only reacts
+// to the middle button, but the click-vs-drag tolerance is still worth keeping on its own.)
 const CLICK_DRAG_THRESHOLD_PX = 6;
 let pointerDownAt: { x: number; y: number } | null = null;
 
@@ -266,8 +267,12 @@ canvas.addEventListener("pointerup", (event) => {
 
 canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 
-function frame(): void {
-  controls.update();
+let lastFrameTime = performance.now();
+
+function frame(now: number): void {
+  const deltaSeconds = Math.min(0.1, (now - lastFrameTime) / 1000); // borne haute : ignore les à-coups après un onglet en arrière-plan
+  lastFrameTime = now;
+  flyControls.update(deltaSeconds);
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }

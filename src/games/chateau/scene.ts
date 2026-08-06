@@ -1,13 +1,11 @@
 // src/games/chateau/scene.ts
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { PLOT_SIZE, CELL_SIZE } from "./constants";
 
 export interface SceneRig {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
-  controls: OrbitControls;
 }
 
 function skyTexture(): THREE.CanvasTexture {
@@ -36,6 +34,7 @@ export function createSceneRig(canvas: HTMLCanvasElement): SceneRig {
   const center = plotCenter();
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
   camera.position.set(center + 16, 16, center + 16);
+  camera.lookAt(center, 0, center); // orientation de départ ; ensuite le vol libre (fly-controls.ts) prend le relais
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -43,14 +42,6 @@ export function createSceneRig(canvas: HTMLCanvasElement): SceneRig {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(center, 0, center);
-  controls.minDistance = 6;
-  controls.maxDistance = 40;
-  controls.maxPolarAngle = Math.PI * 0.49;
-  controls.enablePan = false;
-  controls.update();
 
   const ambient = new THREE.AmbientLight(0xffffff, 0.55);
   scene.add(ambient);
@@ -75,5 +66,5 @@ export function createSceneRig(canvas: HTMLCanvasElement): SceneRig {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  return { scene, camera, renderer, controls };
+  return { scene, camera, renderer };
 }
