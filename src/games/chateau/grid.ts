@@ -37,6 +37,9 @@ export function growCell(grid: Grid, cellX: number, cellZ: number, colorId: stri
   if (current.height === 0) {
     return withCell(grid, cellX, cellZ, { height: 1, colorId });
   }
+  // Une fois qu'une case a une couleur, elle la garde pour tous les étages suivants —
+  // le `colorId` fourni ici est ignoré volontairement (pas de "repeinte" en cours de
+  // construction pour cette v1).
   return withCell(grid, cellX, cellZ, {
     height: Math.min(MAX_FLOORS, current.height + 1),
     colorId: current.colorId,

@@ -73,3 +73,22 @@ test("shrinkCell out of bounds is a no-op", () => {
   const after = shrinkCell(before, -1, 0);
   assert.deepEqual(after, before);
 });
+
+test("growCell and shrinkCell never mutate the grid passed in", () => {
+  const before = createGrid();
+  growCell(before, 3, 4, "rouge");
+  assert.equal(heightAt(before, 3, 4), 0, "growCell must not mutate its input");
+
+  const grownElsewhere = growCell(createGrid(), 2, 2, "rouge");
+  shrinkCell(grownElsewhere, 2, 2);
+  assert.equal(heightAt(grownElsewhere, 2, 2), 1, "shrinkCell must not mutate its input");
+});
+
+test("heightAt/cellAt treat coordinates out of bounds on both axes as empty", () => {
+  // Les voisins en diagonale d'une case de coin (classifyCorners, Task 3) sortent
+  // souvent des deux axes à la fois — vérifie que ce cas ne casse rien séparément
+  // du cas "un seul axe hors limites" déjà couvert ci-dessus.
+  assert.equal(heightAt(createGrid(), -1, -1), 0);
+  assert.equal(heightAt(createGrid(), GRID_SIZE, GRID_SIZE), 0);
+  assert.equal(cellAt(createGrid(), -1, -1).colorId, "");
+});
