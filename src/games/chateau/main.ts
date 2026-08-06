@@ -5,7 +5,7 @@ import { createGrid, growCell, shrinkCell, type Grid } from "./grid";
 import { classifyCorners } from "./corners";
 import { buildBuildingColumn, disposeBuildingColumn } from "./building-geometry";
 import { COLORS, DEFAULT_COLOR_ID, colorById } from "./palette";
-import { CELL_SIZE, GRID_SIZE, WATER_LEVEL } from "./constants";
+import { CELL_SIZE, GRID_SIZE, WATER_LEVEL, FLOOR_HEIGHT } from "./constants";
 import { loadFromLocalStorage, saveToLocalStorage, clearSave } from "./save";
 
 const canvas = document.getElementById("scene") as HTMLCanvasElement;
@@ -118,6 +118,35 @@ scene.add(water);
 // où aucun bâtiment n'existe encore) — le plan d'eau visuel ci-dessus fait déjà l'affaire
 // géométriquement, pas besoin d'un second plan : on raycast directement contre `water`.
 
+// --- Surbrillance de la case survolée (repère visuel pour viser à la souris) ---
+
+const highlightGeometry = new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE);
+highlightGeometry.rotateX(-Math.PI / 2);
+const highlightMaterial = new THREE.MeshBasicMaterial({
+  color: 0xffffff,
+  transparent: true,
+  opacity: 0.35,
+  depthWrite: false, // ne doit jamais masquer l'eau ou un bâtiment, seulement se superposer
+});
+const highlight = new THREE.Mesh(highlightGeometry, highlightMaterial);
+highlight.visible = false;
+highlight.raycast = () => {}; // ne doit jamais s'intercepter lui-même au survol suivant
+scene.add(highlight);
+
+function updateHighlight(cell: { cellX: number; cellZ: number } | null): void {
+  if (!cell) {
+    highlight.visible = false;
+    return;
+  }
+  const { x, z } = cellCenter(cell.cellX, cell.cellZ);
+  // Se pose sur le DESSUS de la pile déjà construite sur cette case (comme le réticule de
+  // Townscaper, qui vise la surface pointée par la souris et pas toujours le sol) — pas
+  // toujours au niveau de l'eau.
+  const top = WATER_LEVEL + grid[cell.cellZ][cell.cellX].height * FLOOR_HEIGHT;
+  highlight.position.set(x, top + 0.01, z); // léger décalage pour éviter le z-fighting
+  highlight.visible = true;
+}
+
 // --- Palette de couleurs ---
 
 const colorsPanel = document.getElementById("palette-colors")!;
@@ -172,6 +201,16 @@ let painting = false;
 // remplir que les cases VIDES traversées).
 const paintedThisStroke = new Set<string>();
 
+// Un simple maintien du clic (main qui tremble légèrement) ne doit jamais peindre plusieurs
+// cases — seul un vrai glissement délibéré (au-delà d'un petit seuil en pixels écran) active
+// la peinture de zone. Sans ce seuil, un tremblement de quelques pixels pendant un clic
+// maintenu peut traverser une frontière de case (surtout à un zoom rapproché) et déclencher
+// une construction en tache d'huile qui donne l'impression d'être "illimitée".
+const DRAG_THRESHOLD_PX = 6;
+let pointerDownX = 0;
+let pointerDownY = 0;
+let dragExceededThreshold = false;
+
 function paintCell(cellX: number, cellZ: number): void {
   const key = cellKey(cellX, cellZ);
   if (paintedThisStroke.has(key)) return;
@@ -203,6 +242,9 @@ canvas.addEventListener("pointerdown", (event) => {
 
   painting = true;
   paintedThisStroke.clear();
+  pointerDownX = event.clientX;
+  pointerDownY = event.clientY;
+  dragExceededThreshold = false;
   // Un simple clic (sans glisser) sur une case déjà construite doit quand même ajouter un
   // étage — paintCell() ignore les cases non-vides, donc on gère ce cas séparément ici,
   // une seule fois par pointerdown (pas à chaque pointermove).
@@ -217,9 +259,20 @@ canvas.addEventListener("pointerdown", (event) => {
 
 canvas.addEventListener("pointermove", (event) => {
   updatePointer(event);
-  if (!painting) return;
   const cell = hoveredCell();
+  updateHighlight(cell);
+  if (!painting) return;
+  if (!dragExceededThreshold) {
+    const dx = event.clientX - pointerDownX;
+    const dy = event.clientY - pointerDownY;
+    if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return; // tremblement pendant le maintien : ignoré
+    dragExceededThreshold = true;
+  }
   if (cell) paintCell(cell.cellX, cell.cellZ);
+});
+
+canvas.addEventListener("pointerleave", () => {
+  updateHighlight(null);
 });
 
 function stopPainting(): void {
