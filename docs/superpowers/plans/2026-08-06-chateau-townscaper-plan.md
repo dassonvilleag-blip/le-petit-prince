@@ -1429,3 +1429,25 @@ Expected: a clean, reviewable stack of commits, working tree clean, ready for `s
 - **Known, flagged simplification:** concave corners are chamfered, not smoothly arced (see the note at the top of this plan) — this was derived, not guessed, and is called out explicitly so it isn't mistaken for an oversight during review.
 - **Verified against the actual installed library, not memory:** the `OrbitControls.mouseButtons.LEFT = -1` disable trick (Task 6) was confirmed correct by reading `node_modules/three/examples/jsm/controls/OrbitControls.js` directly, not assumed.
 - **Verified by running real code, not just hand derivation:** the corner-rounding geometry in Task 7 (`buildFloorShape`) went through several rounds of hand-derived math that turned out wrong on the first two attempts (a sign error in the arc's sweep direction, and a missed axis-flip introduced by `extrudeFlat`'s `rotateX`). Both were caught and fixed by actually building the real file, bundling it, and running the numerical checks in Task 7's Step 2 — not by re-reasoning harder. The plan's final numbers are real output from that run.
+
+---
+
+## Post-v2 playtest fixes (applied directly, not through the full task process)
+
+After Task 9, manual playtesting surfaced three small UX issues, fixed directly in `main.ts` (each verified with `npm test` + `npm run build`, no plan-doc task needed since they're small, isolated, and don't touch the geometry/data-model core):
+
+1. **No visual feedback for the targeted cell.** Added a translucent highlight quad (`highlight`, a `PlaneGeometry(CELL_SIZE, CELL_SIZE)`) that follows the raycasted hovered cell on every `pointermove`, hidden on `pointerleave`. `highlight.raycast = () => {}` so it can never intercept its own next raycast.
+2. **Holding the mouse mostly still could spread construction across cells.** A drag needs to exceed `DRAG_THRESHOLD_PX = 6` screen pixels from the `pointerdown` position before area-painting activates — below that, hand tremor while holding no longer triggers `paintCell` on neighboring cells. This doesn't affect the deliberate "click again to add a floor" behavior, which still fires unconditionally on `pointerdown`.
+3. **Highlight/aim always looked squashed to the water level.** The highlight's Y position now reads `grid[cellZ][cellX].height * FLOOR_HEIGHT` (the top of whatever is already built on that cell) instead of always `WATER_LEVEL` — matches Townscaper's surface-following reticle instead of a ground-locked one.
+
+## Known backlog item: side-attached / cantilevered building (bridges)
+
+**Not implemented.** Real Townscaper lets you attach a new block to the SIDE of an existing tall column, not just stack upward from the water — this is how bridges between two towers get built (confirmed against the real townscaper.org demo: hovering the side of a tall building shows a floating placement reticle at deck height, offset sideways from the column, not touching the water). The user asked for this directly during playtesting ("il faut qu'on puisse construire sur le côté pour faire un pont").
+
+This is a genuine data-model change, not a small patch, because:
+- `Cell` (`grid.ts`) currently stores a single `height: number` — a contiguous stack from the water up. A cantilevered/bridge segment needs a floor that exists WITHOUT floors 0..N-1 beneath it in that same column (e.g. a segment starting at floor 4, floating, connected sideways to a neighbor that IS full height there).
+- `classifyCorners` (`corners.ts`) currently checks `heightAt(...) > 0` — "is this neighbor filled at all" — per COLUMN, not per FLOOR LEVEL. Supporting bridges means corner (and eventually wall-opening) classification has to become per-floor-level-aware: "is neighbor N filled at floor level L," not just "is neighbor N filled."
+- `buildBuildingColumn` (`building-geometry.ts`) already builds each floor as an independent extruded slab in a loop — that part is closer to bridge-ready than the data model is. The real blocker is `grid.ts`'s height-counter model, not the geometry pipeline.
+- `main.ts`'s raycasting currently only ever hits the flat water plane (`raycaster.intersectObject(water)`), so there's no way to even express "I'm pointing at the side of floor 4 of that tower" yet — raycasting would need to target real building geometry too.
+
+**Recommendation for whoever picks this up next:** don't attempt this as a quick patch. It likely needs its own brainstorming/design pass (superpowers:brainstorming) before a plan, since it changes the core data model that `grid.ts`, `corners.ts`, `save.ts`, and `main.ts` all depend on, and the migration of the save format (`WorldState`/`isValidCell` in `save.ts`) needs explicit thought (existing saves use a simple `height` counter — this isn't backward compatible with a floor-set model without a conversion step).
