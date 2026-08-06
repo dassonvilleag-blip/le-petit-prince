@@ -15,10 +15,17 @@ function mesh(geometry: THREE.BufferGeometry, material: THREE.Material): THREE.M
 // 180/270, appliquée par buildPieceMesh autour du centre de la cellule) fait donc pivoter
 // le mur d'un bord à l'autre plutôt que de simplement l'orienter sur place.
 const WALL_EDGE_Z = -CELL_SIZE / 2;
+const WALL_THICKNESS = 0.25;
+// Un mur pile à la largeur de la cellule laisse son bout (l'épaisseur, une fine face qui
+// hérite mal de la texture) dépasser à nu au coin — c'est le rebord disgracieux constaté
+// en jeu. En le rallongeant d'une demi-épaisseur de chaque côté, chaque mur empiète
+// légèrement sur les cellules voisines : au coin, le bout de chaque mur se retrouve
+// entièrement noyé à l'intérieur du volume du mur perpendiculaire, donc invisible.
+const WALL_LENGTH = CELL_SIZE + WALL_THICKNESS;
 
 function wallSolid(material: THREE.Material): THREE.Group {
   const group = new THREE.Group();
-  const geo = new THREE.BoxGeometry(CELL_SIZE, LEVEL_HEIGHT, 0.25);
+  const geo = new THREE.BoxGeometry(WALL_LENGTH, LEVEL_HEIGHT, WALL_THICKNESS);
   geo.translate(0, LEVEL_HEIGHT / 2, WALL_EDGE_Z);
   group.add(mesh(geo, material));
   return group;
@@ -27,14 +34,14 @@ function wallSolid(material: THREE.Material): THREE.Group {
 function wallWithOpening(material: THREE.Material): THREE.Group {
   const group = new THREE.Group();
   const postWidth = CELL_SIZE * 0.25;
-  const postGeo = new THREE.BoxGeometry(postWidth, LEVEL_HEIGHT, 0.25);
+  const postGeo = new THREE.BoxGeometry(postWidth, LEVEL_HEIGHT, WALL_THICKNESS);
   postGeo.translate(0, LEVEL_HEIGHT / 2, WALL_EDGE_Z);
   const left = mesh(postGeo, material);
   left.position.x = -(CELL_SIZE / 2 - postWidth / 2);
   const right = mesh(postGeo.clone(), material);
   right.position.x = CELL_SIZE / 2 - postWidth / 2;
   const lintelHeight = LEVEL_HEIGHT * 0.3;
-  const lintelGeo = new THREE.BoxGeometry(CELL_SIZE, lintelHeight, 0.25);
+  const lintelGeo = new THREE.BoxGeometry(WALL_LENGTH, lintelHeight, WALL_THICKNESS);
   lintelGeo.translate(0, LEVEL_HEIGHT - lintelHeight / 2, WALL_EDGE_Z);
   group.add(left, right, mesh(lintelGeo, material));
   return group;
@@ -126,7 +133,7 @@ function stairs(material: THREE.Material): THREE.Group {
 function crenellation(material: THREE.Material): THREE.Group {
   const group = new THREE.Group();
   const baseHeight = LEVEL_HEIGHT * 0.15;
-  const baseGeo = new THREE.BoxGeometry(CELL_SIZE, baseHeight, CELL_SIZE * 0.5);
+  const baseGeo = new THREE.BoxGeometry(WALL_LENGTH, baseHeight, CELL_SIZE * 0.5);
   baseGeo.translate(0, baseHeight / 2, WALL_EDGE_Z);
   group.add(mesh(baseGeo, material));
   const merlonCount = 3;
