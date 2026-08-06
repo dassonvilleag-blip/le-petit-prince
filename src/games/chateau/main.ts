@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { createSceneRig } from "./scene";
 import { createFlyControls } from "./fly-controls";
-import { createHeightmap, raiseVertex, lowerVertex, type Heightmap } from "./terrain";
+import { createHeightmap, heightAt, raiseVertex, lowerVertex, type Heightmap } from "./terrain";
 import { createTerrainMesh, createWaterMesh, updateTerrainMesh, nearestVertex } from "./terrain-mesh";
 import { PIECES } from "./pieces";
 import { MATERIALS, DEFAULT_MATERIAL_ID } from "./materials";
@@ -47,7 +47,13 @@ function persist(): void {
   saveToLocalStorage({ terrain, pieces: placedPieces });
 }
 
-let selectedPieceId = PIECES[0].id;
+// Outil de façonnage du terrain, rangé dans la palette au même titre qu'une pièce plutôt
+// que caché derrière un clic droit — sa sélection est mutuellement exclusive avec les
+// pièces via la même variable selectedPieceId (choisir la pelle "désélectionne"
+// implicitement toute pièce, et vice-versa).
+const SHOVEL_TOOL_ID = "pelle";
+
+let selectedPieceId: string = PIECES[0].id;
 let selectedMaterialId = DEFAULT_MATERIAL_ID;
 let rotation: Rotation = 0;
 
@@ -80,10 +86,23 @@ function removePieceFromScene(id: string): void {
 
 // --- Palette : sélection de pièce et de matériau ---
 
+const toolsPanel = document.getElementById("palette-tools")!;
 const piecesPanel = document.getElementById("palette-pieces")!;
 const materialsPanel = document.getElementById("palette-materials")!;
 
 function renderPalette(): void {
+  toolsPanel.innerHTML = "";
+  const shovelButton = document.createElement("button");
+  shovelButton.type = "button";
+  shovelButton.textContent = "🪏 Pelle";
+  shovelButton.classList.toggle("active", selectedPieceId === SHOVEL_TOOL_ID);
+  shovelButton.addEventListener("click", () => {
+    selectedPieceId = SHOVEL_TOOL_ID;
+    renderPalette();
+    updateGhost(); // reflète le changement d'outil immédiatement, comme rotateSelection()
+  });
+  toolsPanel.appendChild(shovelButton);
+
   piecesPanel.innerHTML = "";
   for (const piece of PIECES) {
     const button = document.createElement("button");
@@ -139,17 +158,32 @@ const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 let ghost: THREE.Object3D | null = null;
 
+// Marqueur de survol de la pelle : un unique mesh réutilisé (pas de géométrie/matériau
+// recréés à chaque pointermove comme pour le fantôme de pièce, inutile ici puisque sa
+// forme/couleur ne changent jamais) — on bascule juste sa position et sa visibilité.
+const shovelMarker = new THREE.Mesh(
+  new THREE.SphereGeometry(0.18, 12, 12),
+  new THREE.MeshStandardMaterial({ color: 0xf5c15c, transparent: true, opacity: 0.85 }),
+);
+shovelMarker.visible = false;
+scene.add(shovelMarker);
+
 function updatePointer(event: PointerEvent): void {
   pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
   pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 }
 
-function hoveredCell(): { cellX: number; cellZ: number } | null {
+function raycastTerrainPoint(): THREE.Vector3 | null {
   raycaster.setFromCamera(pointer, camera);
   const hit = raycaster.intersectObject(terrainMesh)[0];
-  if (!hit) return null;
-  const cellX = Math.floor(hit.point.x / CELL_SIZE);
-  const cellZ = Math.floor(hit.point.z / CELL_SIZE);
+  return hit ? hit.point : null;
+}
+
+function hoveredCell(): { cellX: number; cellZ: number } | null {
+  const point = raycastTerrainPoint();
+  if (!point) return null;
+  const cellX = Math.floor(point.x / CELL_SIZE);
+  const cellZ = Math.floor(point.z / CELL_SIZE);
   return { cellX, cellZ };
 }
 
@@ -175,17 +209,31 @@ function disposeGhost(object: THREE.Object3D): void {
   for (const material of materials) material.dispose();
 }
 
-// Rebuilds the ghost at whatever cell `pointer` currently points at (the last known
-// pointer position, updated by updatePointer). Factored out of the "pointermove" handler
-// so rotating the selection (button or keyboard shortcut) can refresh the preview
-// immediately, without waiting for the mouse to move again.
+// Rebuilds the ghost/marker at whatever point `pointer` currently points at (the last
+// known pointer position, updated by updatePointer). Factored out of the "pointermove"
+// handler so rotating the selection or switching tool (button or keyboard shortcut) can
+// refresh the preview immediately, without waiting for the mouse to move again.
 function updateGhost(): void {
-  const cell = hoveredCell();
   if (ghost) {
     scene.remove(ghost);
     disposeGhost(ghost);
     ghost = null;
   }
+
+  if (selectedPieceId === SHOVEL_TOOL_ID) {
+    const point = raycastTerrainPoint();
+    if (!point) {
+      shovelMarker.visible = false;
+      return;
+    }
+    const { x, z } = nearestVertex(point);
+    shovelMarker.position.set(x * CELL_SIZE, heightAt(terrain, x, z) * LEVEL_HEIGHT, z * CELL_SIZE);
+    shovelMarker.visible = true;
+    return;
+  }
+  shovelMarker.visible = false;
+
+  const cell = hoveredCell();
   if (!cell) return;
   const result = resolvePlacement(cell.cellX, cell.cellZ, terrain, placedPieces);
   const tint = new THREE.MeshStandardMaterial({
@@ -206,9 +254,7 @@ canvas.addEventListener("pointermove", (event) => {
 
 // Track movement between pointerdown and pointerup and only act if the pointer barely
 // moved — a real click/tap, not a shaky drag — so a slightly wobbly click never places
-// a piece or sculpts terrain by accident. (Camera look/movement no longer shares this
-// canvas's left/right buttons since the free-fly camera — fly-controls.ts — only reacts
-// to the middle button, but the click-vs-drag tolerance is still worth keeping on its own.)
+// a piece or sculpts terrain by accident.
 const CLICK_DRAG_THRESHOLD_PX = 6;
 let pointerDownAt: { x: number; y: number } | null = null;
 
@@ -219,24 +265,28 @@ canvas.addEventListener("pointerdown", (event) => {
 canvas.addEventListener("pointerup", (event) => {
   const downAt = pointerDownAt;
   pointerDownAt = null;
+  // Ctrl + clic gauche est réservé au regard caméra (fly-controls.ts) — jamais une pose,
+  // un creusement ou un retrait, même si le clic n'a pas bougé.
+  if (event.ctrlKey) return;
   if (!downAt) return;
   const moved = Math.hypot(event.clientX - downAt.x, event.clientY - downAt.y);
-  if (moved > CLICK_DRAG_THRESHOLD_PX) return; // c'était une orbite, pas un clic
+  if (moved > CLICK_DRAG_THRESHOLD_PX) return; // c'était un glissement, pas un clic
 
   updatePointer(event);
-  const cell = hoveredCell();
-  if (!cell) return;
 
-  if (event.button === 2) {
-    // clic droit : sculpter le terrain (shift = creuser)
-    const hit = raycaster.intersectObject(terrainMesh)[0];
-    if (!hit) return;
-    const { x, z } = nearestVertex(hit.point);
+  if (selectedPieceId === SHOVEL_TOOL_ID) {
+    // Pelle sélectionnée : clic = monter le terrain, shift + clic = creuser.
+    const point = raycastTerrainPoint();
+    if (!point) return;
+    const { x, z } = nearestVertex(point);
     terrain = event.shiftKey ? lowerVertex(terrain, x, z) : raiseVertex(terrain, x, z);
     updateTerrainMesh(terrainMesh, terrain);
     persist();
     return;
   }
+
+  const cell = hoveredCell();
+  if (!cell) return;
 
   if (event.altKey) {
     // alt-clic : retirer la pièce du dessus sur cette cellule
@@ -264,8 +314,6 @@ canvas.addEventListener("pointerup", (event) => {
   addPieceToScene(piece);
   persist();
 });
-
-canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 
 let lastFrameTime = performance.now();
 

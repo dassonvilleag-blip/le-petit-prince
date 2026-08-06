@@ -1,10 +1,12 @@
 // src/games/chateau/fly-controls.ts
-// Caméra en vol libre : ZQSD pour se déplacer, clic milieu maintenu + glisser pour
-// regarder autour. Remplace l'orbite autour d'un point fixe (rejetée : impossible de se
-// déplacer latéralement, sensation trop contrainte pour un bac à sable de construction).
+// Caméra façon jeu de gestion (Zoo Tycoon et consorts) : ZQSD pour se déplacer, molette
+// pour zoomer, ctrl + clic gauche maintenu + glisser pour regarder autour. Remplace
+// l'orbite autour d'un point fixe (rejetée : impossible de se déplacer latéralement,
+// sensation trop contrainte pour un bac à sable de construction).
 import * as THREE from "three";
 
 const MOVE_SPEED = 10; // unités monde par seconde
+const ZOOM_SPEED = 0.02; // unités monde par unité de deltaY de la molette
 const LOOK_SENSITIVITY = 0.0025; // radians par pixel de glissement souris
 const MAX_PITCH = Math.PI / 2 - 0.01; // évite le retournement (gimbal flip) à la verticale stricte
 
@@ -46,13 +48,20 @@ export function createFlyControls(camera: THREE.PerspectiveCamera, domElement: H
   // de foncer indéfiniment.
   window.addEventListener("blur", () => pressed.clear());
 
+  const forward = new THREE.Vector3();
+  const right = new THREE.Vector3();
+  const move = new THREE.Vector3();
+
   let dragging = false;
   let lastX = 0;
   let lastY = 0;
 
+  // Ctrl + clic gauche démarre le regard caméra — le clic gauche seul est déjà pris par la
+  // pose de pièce (main.ts) ; celui-ci vérifie lui-même event.ctrlKey pour ignorer le clic
+  // tant que ctrl est enfoncé, donc les deux gestes ne se marchent jamais dessus.
   domElement.addEventListener("pointerdown", (event) => {
-    if (event.button !== 1) return;
-    event.preventDefault(); // évite le curseur "défilement automatique" du clic milieu
+    if (event.button !== 0 || !event.ctrlKey) return;
+    event.preventDefault();
     dragging = true;
     lastX = event.clientX;
     lastY = event.clientY;
@@ -70,12 +79,19 @@ export function createFlyControls(camera: THREE.PerspectiveCamera, domElement: H
   });
 
   window.addEventListener("pointerup", (event) => {
-    if (event.button === 1) dragging = false;
+    if (event.button === 0) dragging = false;
   });
 
-  const forward = new THREE.Vector3();
-  const right = new THREE.Vector3();
-  const move = new THREE.Vector3();
+  // Molette = avancer/reculer le long de l'axe de visée, comme un zoom.
+  domElement.addEventListener(
+    "wheel",
+    (event) => {
+      event.preventDefault();
+      forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
+      camera.position.addScaledVector(forward, -event.deltaY * ZOOM_SPEED);
+    },
+    { passive: false },
+  );
 
   function update(deltaSeconds: number): void {
     if (pressed.size === 0) return;
