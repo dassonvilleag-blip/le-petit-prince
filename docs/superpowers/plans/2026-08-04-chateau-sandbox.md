@@ -1739,14 +1739,28 @@ const terrainMesh = createTerrainMesh(terrain);
 scene.add(terrainMesh);
 scene.add(createWaterMesh());
 
-let placedPieces: PlacedPiece[] = initialWorld.pieces;
 const placedObjects = new Map<string, THREE.Object3D>();
+
+// `save.ts`'s deserializeWorld only validates the terrain/pieces *shape*, not each
+// piece's individual fields — a hand-edited or version-skewed localStorage value could
+// contain a piece with an unknown pieceId, which makes buildPieceMesh (Task 9) throw.
+// Restoring must never crash the page (per the design spec's error-handling section), so
+// skip and log any piece that fails to build instead of letting one bad entry take down
+// the whole boot sequence — and drop it from placedPieces too, so the next persist() call
+// self-heals the save instead of re-writing the same corrupt entry forever.
+let placedPieces: PlacedPiece[] = initialWorld.pieces.filter((piece) => {
+  try {
+    addPieceToScene(piece);
+    return true;
+  } catch (error) {
+    console.warn("Pièce de sauvegarde corrompue ignorée :", piece, error);
+    return false;
+  }
+});
 
 function persist(): void {
   saveToLocalStorage({ terrain, pieces: placedPieces });
 }
-
-for (const piece of placedPieces) addPieceToScene(piece);
 ```
 
 (`addPieceToScene` is a hoisted `function` declaration defined further down in the file, so calling it here — after `placedObjects` exists — is safe.)
@@ -1769,6 +1783,11 @@ document.getElementById("reset-btn")!.addEventListener("click", () => {
 
 Run: `npm run dev`, open `/games/chateau/`. Sculpt some terrain, place a few pieces, then reload the page (F5).
 Expected: the terrain shape and every placed piece are exactly as left before reload. Click "Recommencer", reload again — the plot is back to flat and empty (the save was actually cleared, not just the in-memory state).
+
+Then verify the corrupted-save safeguard: with at least one piece placed, open the browser devtools console and run
+`localStorage.setItem("chateau-save-v1", JSON.stringify({ ...JSON.parse(localStorage.getItem("chateau-save-v1")), pieces: [...JSON.parse(localStorage.getItem("chateau-save-v1")).pieces, { id: "x", pieceId: "donjon-inexistant", cellX: 0, cellZ: 0, level: 0, rotation: 0, materialId: "bois" }] }))`
+(this appends one piece with an unknown `pieceId`) then reload the page.
+Expected: the page loads normally, every valid piece is still there, a `console.warn` about the corrupted piece appears in devtools, and no uncaught exception is thrown. Reload once more — the corrupted entry should be gone from `localStorage` too (self-healed by the next `persist()`).
 
 - [ ] **Step 3: Commit**
 
