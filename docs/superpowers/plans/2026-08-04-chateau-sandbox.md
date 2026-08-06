@@ -1631,7 +1631,26 @@ canvas.addEventListener("pointermove", (event) => {
   scene.add(ghost);
 });
 
+// OrbitControls (Task 7) listens for pointerdown on this same canvas to start its
+// rotate-drag (left button) — it doesn't stopPropagation, so a bare "act on pointerdown"
+// handler here would ALSO place/sculpt/remove on every orbit-drag's starting pixel, not
+// just on genuine clicks (found during Task 8's review). Track movement between
+// pointerdown and pointerup instead, and only act if the pointer barely moved — a real
+// click/tap — so orbiting the camera and placing a piece stay independent gestures.
+const CLICK_DRAG_THRESHOLD_PX = 6;
+let pointerDownAt: { x: number; y: number } | null = null;
+
 canvas.addEventListener("pointerdown", (event) => {
+  pointerDownAt = { x: event.clientX, y: event.clientY };
+});
+
+canvas.addEventListener("pointerup", (event) => {
+  const downAt = pointerDownAt;
+  pointerDownAt = null;
+  if (!downAt) return;
+  const moved = Math.hypot(event.clientX - downAt.x, event.clientY - downAt.y);
+  if (moved > CLICK_DRAG_THRESHOLD_PX) return; // c'était une orbite, pas un clic
+
   updatePointer(event);
   const cell = hoveredCell();
   if (!cell) return;
@@ -1689,7 +1708,8 @@ Run: `npm run dev`, open `/games/chateau/`.
 Expected:
 - The palette on the right lists all 16 pieces and 6 materials as clickable buttons; clicking one highlights it.
 - Moving the mouse over the terrain shows a green (valid) or red (invalid, e.g. outside the plot) translucent ghost piece following the cursor.
-- Left-click places the selected piece with the selected material at the hovered cell; a second click on the same cell stacks another piece on top.
+- Left-click (a quick tap, not a drag) places the selected piece with the selected material at the hovered cell; a second click on the same cell stacks another piece on top.
+- Left-click-and-drag orbits the camera as usual and does NOT place a piece at the drag's starting point — this is the click-vs-drag guard from Task 8's review; if a piece gets placed every time you orbit, the guard isn't working.
 - Right-click raises terrain; shift+right-click lowers it (terrain updates immediately).
 - "↻ Pivoter" rotates the ghost/next placed piece by 90°.
 - Alt+click removes the topmost piece on the hovered cell.
