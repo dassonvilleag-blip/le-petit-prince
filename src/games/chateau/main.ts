@@ -1,346 +1,229 @@
 // src/games/chateau/main.ts
 import * as THREE from "three";
 import { createSceneRig } from "./scene";
-import { createFlyControls } from "./fly-controls";
-import { createHeightmap, heightAt, raiseVertex, lowerVertex, type Heightmap } from "./terrain";
-import { createTerrainMesh, createWaterMesh, updateTerrainMesh, nearestVertex } from "./terrain-mesh";
-import { PIECES, pieceById } from "./pieces";
-import { MATERIALS, DEFAULT_MATERIAL_ID } from "./materials";
-import { buildPieceMesh } from "./piece-geometry";
-import { threeMaterialFor, preloadAllMaterials } from "./materials-three";
-import { resolvePlacement, removeTopPiece, type PlacedPiece, type Rotation } from "./placement";
-import { CELL_SIZE, LEVEL_HEIGHT } from "./constants";
+import { createGrid, growCell, shrinkCell, type Grid } from "./grid";
+import { classifyCorners } from "./corners";
+import { buildBuildingColumn, disposeBuildingColumn } from "./building-geometry";
+import { COLORS, DEFAULT_COLOR_ID, colorById } from "./palette";
+import { CELL_SIZE, GRID_SIZE, WATER_LEVEL } from "./constants";
 import { loadFromLocalStorage, saveToLocalStorage, clearSave } from "./save";
 
 const canvas = document.getElementById("scene") as HTMLCanvasElement;
-const { scene, camera, renderer } = createSceneRig(canvas);
-const flyControls = createFlyControls(camera, canvas);
-preloadAllMaterials();
+const { scene, camera, renderer, controls } = createSceneRig(canvas);
 
 const initialWorld = loadFromLocalStorage();
+let grid: Grid = initialWorld.grid;
 
-let terrain: Heightmap = initialWorld.terrain;
-const terrainMesh = createTerrainMesh(terrain);
-scene.add(terrainMesh);
-scene.add(createWaterMesh());
+const columns = new Map<string, THREE.Group>();
+const wallMaterials = new Map<string, THREE.MeshStandardMaterial>();
+const roofMaterials = new Map<string, THREE.MeshStandardMaterial>();
 
-const placedObjects = new Map<string, THREE.Object3D>();
-
-// `save.ts`'s deserializeWorld only validates the terrain/pieces *shape*, not each
-// piece's individual fields — a hand-edited or version-skewed localStorage value could
-// contain a piece with an unknown pieceId, which makes buildPieceMesh (Task 9) throw.
-// Restoring must never crash the page (per the design spec's error-handling section), so
-// skip and log any piece that fails to build instead of letting one bad entry take down
-// the whole boot sequence — and drop it from placedPieces too, so the next persist() call
-// self-heals the save instead of re-writing the same corrupt entry forever.
-let placedPieces: PlacedPiece[] = initialWorld.pieces.filter((piece) => {
-  try {
-    addPieceToScene(piece);
-    return true;
-  } catch (error) {
-    console.warn("Pièce de sauvegarde corrompue ignorée :", piece, error);
-    return false;
+function materialsFor(colorId: string): { walls: THREE.Material; roof: THREE.Material } {
+  const def = colorById(colorId);
+  let walls = wallMaterials.get(def.id);
+  if (!walls) {
+    // side: DoubleSide est une sécurité gratuite (le sens des normales des murs a été
+    // vérifié correct par calcul dans building-geometry.ts, mais ce réglage ne coûte rien
+    // et évite qu'un mur ne devienne invisible si jamais un futur changement de géométrie
+    // inversait le sens d'enroulement sans qu'on s'en rende compte).
+    walls = new THREE.MeshStandardMaterial({ color: def.hex, roughness: 0.85, side: THREE.DoubleSide });
+    wallMaterials.set(def.id, walls);
   }
-});
-
-function persist(): void {
-  saveToLocalStorage({ terrain, pieces: placedPieces });
+  let roof = roofMaterials.get(def.id);
+  if (!roof) {
+    const roofColor = new THREE.Color(def.hex).multiplyScalar(0.75); // toit légèrement plus sombre
+    roof = new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.85 });
+    roofMaterials.set(def.id, roof);
+  }
+  return { walls, roof };
 }
 
-// Outil de façonnage du terrain, rangé dans la palette au même titre qu'une pièce plutôt
-// que caché derrière un clic droit — sa sélection est mutuellement exclusive avec les
-// pièces via la même variable selectedPieceId (choisir la pelle "désélectionne"
-// implicitement toute pièce, et vice-versa).
-const SHOVEL_TOOL_ID = "pelle";
-
-let selectedPieceId: string = PIECES[0].id;
-let selectedMaterialId = DEFAULT_MATERIAL_ID;
-let rotation: Rotation = 0;
+function cellKey(cellX: number, cellZ: number): string {
+  return `${cellX}-${cellZ}`;
+}
 
 function cellCenter(cellX: number, cellZ: number): { x: number; z: number } {
   return { x: (cellX + 0.5) * CELL_SIZE, z: (cellZ + 0.5) * CELL_SIZE };
 }
 
-// placement.ts reste volontairement ignorant des catalogues (Task 4) : c'est donc ici,
-// côté appelant, que l'on décide quelles pièces déjà posées comptent vraiment comme
-// "occupant ce niveau" pour resolvePlacement — une pièce "edge" (mur, créneau, herse) ne
-// bloque une AUTRE pièce "edge" que si elles visent le même bord (même rotation) ; une
-// pièce "cell" bloque tout, comme avant. Sans ce filtre, deux murs perpendiculaires dans la
-// même cellule (le geste normal pour fermer un coin ou une pièce) étaient toujours forcés à
-// s'empiler l'un sur l'autre au lieu de coexister au même niveau.
-function piecesBlockingLevel(cellX: number, cellZ: number, pieceId: string, pieceRotation: Rotation): PlacedPiece[] {
-  const footprint = pieceById(pieceId)?.footprint ?? "cell";
-  return placedPieces.filter((existing) => {
-    if (existing.cellX !== cellX || existing.cellZ !== cellZ) return false;
-    if (footprint === "cell") return true;
-    const existingFootprint = pieceById(existing.pieceId)?.footprint ?? "cell";
-    if (existingFootprint === "cell") return true;
-    return existing.rotation === pieceRotation;
-  });
-}
-
-function addPieceToScene(piece: PlacedPiece): void {
-  const material = threeMaterialFor(piece.materialId);
-  const object = buildPieceMesh(piece.pieceId, piece.rotation, material);
-  const { x, z } = cellCenter(piece.cellX, piece.cellZ);
-  object.position.set(x, piece.level * LEVEL_HEIGHT, z);
-  scene.add(object);
-  placedObjects.set(piece.id, object);
-}
-
-function removePieceFromScene(id: string): void {
-  const object = placedObjects.get(id);
-  if (!object) return;
-  scene.remove(object);
-  // Chaque pièce posée a sa propre géométrie (jamais partagée, contrairement au matériau
-  // mis en cache par threeMaterialFor) — même fuite que le fantôme (voir disposeGhost) si
-  // on ne la libère pas ici. Ne surtout pas disposer le matériau : il est partagé avec
-  // toutes les autres pièces utilisant le même id de matériau.
-  object.traverse((child) => {
-    if (child instanceof THREE.Mesh) child.geometry.dispose();
-  });
-  placedObjects.delete(id);
-}
-
-// --- Palette : sélection de pièce et de matériau ---
-
-const toolsPanel = document.getElementById("palette-tools")!;
-const piecesPanel = document.getElementById("palette-pieces")!;
-const materialsPanel = document.getElementById("palette-materials")!;
-
-function renderPalette(): void {
-  toolsPanel.innerHTML = "";
-  const shovelButton = document.createElement("button");
-  shovelButton.type = "button";
-  shovelButton.textContent = "🪏 Pelle";
-  shovelButton.classList.toggle("active", selectedPieceId === SHOVEL_TOOL_ID);
-  shovelButton.addEventListener("click", () => {
-    selectedPieceId = SHOVEL_TOOL_ID;
-    renderPalette();
-    updateGhost(); // reflète le changement d'outil immédiatement, comme rotateSelection()
-  });
-  toolsPanel.appendChild(shovelButton);
-
-  piecesPanel.innerHTML = "";
-  for (const piece of PIECES) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = piece.label;
-    button.classList.toggle("active", piece.id === selectedPieceId);
-    button.addEventListener("click", () => {
-      selectedPieceId = piece.id;
-      renderPalette();
-    });
-    piecesPanel.appendChild(button);
+// Chaque colonne a sa propre géométrie (jamais partagée), mais ses matériaux SONT
+// partagés (mis en cache par couleur ci-dessus, réutilisés par toutes les cases de la
+// même couleur) — disposeBuildingColumn (building-geometry.ts) ne touche jamais aux
+// matériaux, seulement à la géométrie, exactement pour cette raison.
+function rebuildColumn(cellX: number, cellZ: number): void {
+  const key = cellKey(cellX, cellZ);
+  const existing = columns.get(key);
+  if (existing) {
+    scene.remove(existing);
+    disposeBuildingColumn(existing);
+    columns.delete(key);
   }
 
-  materialsPanel.innerHTML = "";
-  for (const material of MATERIALS) {
+  const cell = grid[cellZ][cellX];
+  if (cell.height === 0) return;
+
+  const corners = classifyCorners(grid, cellX, cellZ);
+  const column = buildBuildingColumn(corners, cell.height, cellX, cellZ, materialsFor(cell.colorId));
+  const { x, z } = cellCenter(cellX, cellZ);
+  column.position.set(x, WATER_LEVEL, z);
+  scene.add(column);
+  columns.set(key, column);
+}
+
+// Une modification à (cellX,cellZ) peut changer la classification de coin de TOUTES ses
+// cellules voisines (jusqu'en diagonale) — pas seulement la case elle-même — puisque
+// classifyCorners lit les voisins de chaque case. Reconstruire ce voisinage à chaque
+// modification, pas juste la case cliquée.
+function rebuildNeighborhood(cellX: number, cellZ: number): void {
+  for (let dz = -1; dz <= 1; dz++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      rebuildColumn(cellX + dx, cellZ + dz);
+    }
+  }
+}
+
+function rebuildEverything(): void {
+  for (const key of [...columns.keys()]) {
+    const object = columns.get(key)!;
+    scene.remove(object);
+    disposeBuildingColumn(object);
+  }
+  columns.clear();
+  for (let z = 0; z < GRID_SIZE; z++) {
+    for (let x = 0; x < GRID_SIZE; x++) rebuildColumn(x, z);
+  }
+}
+rebuildEverything();
+
+function persist(): void {
+  saveToLocalStorage({ grid });
+}
+
+// --- Plan d'eau statique (le sol est fixe, seule la masse des bâtiments grandit) ---
+
+const waterGeometry = new THREE.PlaneGeometry(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+waterGeometry.rotateX(-Math.PI / 2);
+waterGeometry.translate((GRID_SIZE * CELL_SIZE) / 2, WATER_LEVEL, (GRID_SIZE * CELL_SIZE) / 2);
+const waterMaterial = new THREE.MeshStandardMaterial({
+  color: 0x2f7bb0,
+  transparent: true,
+  opacity: 0.75,
+  roughness: 0.15,
+  metalness: 0.05,
+});
+const water = new THREE.Mesh(waterGeometry, waterMaterial);
+scene.add(water);
+
+// Un simple plan invisible au niveau de l'eau pour le raycasting (viser une case même là
+// où aucun bâtiment n'existe encore) — le plan d'eau visuel ci-dessus fait déjà l'affaire
+// géométriquement, pas besoin d'un second plan : on raycast directement contre `water`.
+
+// --- Palette de couleurs ---
+
+const colorsPanel = document.getElementById("palette-colors")!;
+let selectedColorId = DEFAULT_COLOR_ID;
+
+function renderPalette(): void {
+  colorsPanel.innerHTML = "";
+  for (const color of COLORS) {
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = material.label;
-    button.classList.toggle("active", material.id === selectedMaterialId);
+    button.textContent = color.label;
+    button.style.background = `#${color.hex.toString(16).padStart(6, "0")}`;
+    button.classList.toggle("active", color.id === selectedColorId);
     button.addEventListener("click", () => {
-      selectedMaterialId = material.id;
+      selectedColorId = color.id;
       renderPalette();
     });
-    materialsPanel.appendChild(button);
+    colorsPanel.appendChild(button);
   }
 }
 renderPalette();
 
-function rotateSelection(): void {
-  rotation = ((rotation + 90) % 360) as Rotation;
-  updateGhost(); // reflète la rotation immédiatement, sans attendre un mouvement de souris
-}
-
-document.getElementById("rotate-btn")!.addEventListener("click", rotateSelection);
-
-// Raccourci clavier pour pivoter la pièce sélectionnée sans lâcher la souris — le bouton
-// "↻ Pivoter" seul obligeait à un aller-retour souris entre la palette et la parcelle.
-window.addEventListener("keydown", (event) => {
-  if (event.key.toLowerCase() === "r" && !event.repeat) rotateSelection();
-});
-
 document.getElementById("reset-btn")!.addEventListener("click", () => {
-  terrain = createHeightmap();
-  updateTerrainMesh(terrainMesh, terrain);
-  for (const id of [...placedObjects.keys()]) removePieceFromScene(id);
-  placedPieces = [];
+  grid = createGrid();
+  rebuildEverything();
   clearSave();
 });
 
-// --- Prévisualisation fantôme + pose/retrait ---
+// --- Interaction : construire (glisser pour peindre), retirer (alt + clic) ---
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
-let ghost: THREE.Object3D | null = null;
-
-// Marqueur de survol de la pelle : un unique mesh réutilisé (pas de géométrie/matériau
-// recréés à chaque pointermove comme pour le fantôme de pièce, inutile ici puisque sa
-// forme/couleur ne changent jamais) — on bascule juste sa position et sa visibilité.
-const shovelMarker = new THREE.Mesh(
-  new THREE.SphereGeometry(0.18, 12, 12),
-  new THREE.MeshStandardMaterial({ color: 0xf5c15c, transparent: true, opacity: 0.85 }),
-);
-shovelMarker.visible = false;
-scene.add(shovelMarker);
 
 function updatePointer(event: PointerEvent): void {
   pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
   pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 }
 
-function raycastTerrainPoint(): THREE.Vector3 | null {
-  raycaster.setFromCamera(pointer, camera);
-  const hit = raycaster.intersectObject(terrainMesh)[0];
-  return hit ? hit.point : null;
-}
-
 function hoveredCell(): { cellX: number; cellZ: number } | null {
-  const point = raycastTerrainPoint();
-  if (!point) return null;
-  const cellX = Math.floor(point.x / CELL_SIZE);
-  const cellZ = Math.floor(point.z / CELL_SIZE);
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObject(water)[0];
+  if (!hit) return null;
+  const cellX = Math.floor(hit.point.x / CELL_SIZE);
+  const cellZ = Math.floor(hit.point.z / CELL_SIZE);
+  if (cellX < 0 || cellX >= GRID_SIZE || cellZ < 0 || cellZ >= GRID_SIZE) return null;
   return { cellX, cellZ };
 }
 
-// buildPieceMesh() allocates fresh geometries (and, for the ghost, a fresh tint material)
-// on every call — scene.remove() only unlinks an object from the graph, it never frees the
-// underlying GPU buffers. pointermove fires at display refresh rate while hovering the
-// viewport, so without this the ghost preview would leak geometry/material on the busiest
-// code path in the game (found in Task 11's review). Dispose everything the outgoing ghost
-// owns before building the next one. Never reuse this on a *placed* piece's object — those
-// share cached materials from materials-three.ts's threeMaterialFor(), which other pieces
-// still reference.
-function disposeGhost(object: THREE.Object3D): void {
-  const geometries = new Set<THREE.BufferGeometry>();
-  const materials = new Set<THREE.Material>();
-  object.traverse((child) => {
-    if (!(child instanceof THREE.Mesh)) return;
-    geometries.add(child.geometry);
-    for (const material of Array.isArray(child.material) ? child.material : [child.material]) {
-      materials.add(material);
-    }
-  });
-  for (const geometry of geometries) geometry.dispose();
-  for (const material of materials) material.dispose();
+let painting = false;
+// Pendant un même glissement, ne touche chaque case qu'une fois — sinon glisser lentement
+// sur une case déjà construite lui ajouterait des étages en rafale (le glissement ne doit
+// remplir que les cases VIDES traversées).
+const paintedThisStroke = new Set<string>();
+
+function paintCell(cellX: number, cellZ: number): void {
+  const key = cellKey(cellX, cellZ);
+  if (paintedThisStroke.has(key)) return;
+  paintedThisStroke.add(key);
+  if (grid[cellZ][cellX].height > 0) return; // ne fait grandir QUE les cases vides pendant un glissement
+  grid = growCell(grid, cellX, cellZ, selectedColorId);
+  rebuildNeighborhood(cellX, cellZ);
+  persist();
 }
 
-// Rebuilds the ghost/marker at whatever point `pointer` currently points at (the last
-// known pointer position, updated by updatePointer). Factored out of the "pointermove"
-// handler so rotating the selection or switching tool (button or keyboard shortcut) can
-// refresh the preview immediately, without waiting for the mouse to move again.
-function updateGhost(): void {
-  if (ghost) {
-    scene.remove(ghost);
-    disposeGhost(ghost);
-    ghost = null;
-  }
-
-  if (selectedPieceId === SHOVEL_TOOL_ID) {
-    const point = raycastTerrainPoint();
-    if (!point) {
-      shovelMarker.visible = false;
-      return;
-    }
-    const { x, z } = nearestVertex(point);
-    shovelMarker.position.set(x * CELL_SIZE, heightAt(terrain, x, z) * LEVEL_HEIGHT, z * CELL_SIZE);
-    shovelMarker.visible = true;
-    return;
-  }
-  shovelMarker.visible = false;
-
+canvas.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0) return; // le clic gauche seul ; jamais avec ctrl/alt (voir plus bas)
+  if (event.altKey) return; // alt+clic gère le retrait, pas la construction
   const cell = hoveredCell();
   if (!cell) return;
-  const blocking = piecesBlockingLevel(cell.cellX, cell.cellZ, selectedPieceId, rotation);
-  const result = resolvePlacement(cell.cellX, cell.cellZ, terrain, blocking);
-  const tint = new THREE.MeshStandardMaterial({
-    color: result.valid ? 0x6fd08c : 0xd0625a,
-    transparent: true,
-    opacity: 0.55,
-  });
-  ghost = buildPieceMesh(selectedPieceId, rotation, tint);
-  const { x, z } = cellCenter(cell.cellX, cell.cellZ);
-  ghost.position.set(x, result.level * LEVEL_HEIGHT, z);
-  scene.add(ghost);
-}
+  painting = true;
+  paintedThisStroke.clear();
+  // Un simple clic (sans glisser) sur une case déjà construite doit quand même ajouter un
+  // étage — paintCell() ignore les cases non-vides, donc on gère ce cas séparément ici,
+  // une seule fois par pointerdown (pas à chaque pointermove).
+  if (grid[cell.cellZ][cell.cellX].height > 0) {
+    grid = growCell(grid, cell.cellX, cell.cellZ, selectedColorId);
+    rebuildNeighborhood(cell.cellX, cell.cellZ);
+    persist();
+  } else {
+    paintCell(cell.cellX, cell.cellZ);
+  }
+});
 
 canvas.addEventListener("pointermove", (event) => {
   updatePointer(event);
-  updateGhost();
+  if (!painting) return;
+  const cell = hoveredCell();
+  if (cell) paintCell(cell.cellX, cell.cellZ);
 });
 
-// Track movement between pointerdown and pointerup and only act if the pointer barely
-// moved — a real click/tap, not a shaky drag — so a slightly wobbly click never places
-// a piece or sculpts terrain by accident.
-const CLICK_DRAG_THRESHOLD_PX = 6;
-let pointerDownAt: { x: number; y: number } | null = null;
+window.addEventListener("pointerup", () => {
+  painting = false;
+});
 
 canvas.addEventListener("pointerdown", (event) => {
-  pointerDownAt = { x: event.clientX, y: event.clientY };
-});
-
-canvas.addEventListener("pointerup", (event) => {
-  const downAt = pointerDownAt;
-  pointerDownAt = null;
-  // Ctrl + clic gauche est réservé au regard caméra (fly-controls.ts) — jamais une pose,
-  // un creusement ou un retrait, même si le clic n'a pas bougé.
-  if (event.ctrlKey) return;
-  if (!downAt) return;
-  const moved = Math.hypot(event.clientX - downAt.x, event.clientY - downAt.y);
-  if (moved > CLICK_DRAG_THRESHOLD_PX) return; // c'était un glissement, pas un clic
-
+  if (event.button !== 0 || !event.altKey) return;
   updatePointer(event);
-
-  if (selectedPieceId === SHOVEL_TOOL_ID) {
-    // Pelle sélectionnée : clic = monter le terrain, shift + clic = creuser.
-    const point = raycastTerrainPoint();
-    if (!point) return;
-    const { x, z } = nearestVertex(point);
-    terrain = event.shiftKey ? lowerVertex(terrain, x, z) : raiseVertex(terrain, x, z);
-    updateTerrainMesh(terrainMesh, terrain);
-    persist();
-    return;
-  }
-
   const cell = hoveredCell();
-  if (!cell) return;
-
-  if (event.altKey) {
-    // alt-clic : retirer la pièce du dessus sur cette cellule
-    placedPieces = removeTopPiece(cell.cellX, cell.cellZ, placedPieces);
-    const stillThere = new Set(placedPieces.map((p) => p.id));
-    for (const id of [...placedObjects.keys()]) {
-      if (!stillThere.has(id)) removePieceFromScene(id);
-    }
-    persist();
-    return;
-  }
-
-  const blocking = piecesBlockingLevel(cell.cellX, cell.cellZ, selectedPieceId, rotation);
-  const result = resolvePlacement(cell.cellX, cell.cellZ, terrain, blocking);
-  if (!result.valid) return;
-  const piece: PlacedPiece = {
-    id: `${cell.cellX}-${cell.cellZ}-${result.level}-${Date.now()}`,
-    pieceId: selectedPieceId,
-    cellX: cell.cellX,
-    cellZ: cell.cellZ,
-    level: result.level,
-    rotation,
-    materialId: selectedMaterialId,
-  };
-  placedPieces.push(piece);
-  addPieceToScene(piece);
+  if (!cell || grid[cell.cellZ][cell.cellX].height === 0) return;
+  grid = shrinkCell(grid, cell.cellX, cell.cellZ);
+  rebuildNeighborhood(cell.cellX, cell.cellZ);
   persist();
 });
 
-let lastFrameTime = performance.now();
-
-function frame(now: number): void {
-  const deltaSeconds = Math.min(0.1, (now - lastFrameTime) / 1000); // borne haute : ignore les à-coups après un onglet en arrière-plan
-  lastFrameTime = now;
-  flyControls.update(deltaSeconds);
+function frame(): void {
+  controls.update();
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
