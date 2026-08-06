@@ -110,8 +110,17 @@ function renderPalette(): void {
 }
 renderPalette();
 
-document.getElementById("rotate-btn")!.addEventListener("click", () => {
+function rotateSelection(): void {
   rotation = ((rotation + 90) % 360) as Rotation;
+  updateGhost(); // reflète la rotation immédiatement, sans attendre un mouvement de souris
+}
+
+document.getElementById("rotate-btn")!.addEventListener("click", rotateSelection);
+
+// Raccourci clavier pour pivoter la pièce sélectionnée sans lâcher la souris — le bouton
+// "↻ Pivoter" seul obligeait à un aller-retour souris entre la palette et la parcelle.
+window.addEventListener("keydown", (event) => {
+  if (event.key.toLowerCase() === "r" && !event.repeat) rotateSelection();
 });
 
 document.getElementById("reset-btn")!.addEventListener("click", () => {
@@ -164,8 +173,11 @@ function disposeGhost(object: THREE.Object3D): void {
   for (const material of materials) material.dispose();
 }
 
-canvas.addEventListener("pointermove", (event) => {
-  updatePointer(event);
+// Rebuilds the ghost at whatever cell `pointer` currently points at (the last known
+// pointer position, updated by updatePointer). Factored out of the "pointermove" handler
+// so rotating the selection (button or keyboard shortcut) can refresh the preview
+// immediately, without waiting for the mouse to move again.
+function updateGhost(): void {
   const cell = hoveredCell();
   if (ghost) {
     scene.remove(ghost);
@@ -183,6 +195,11 @@ canvas.addEventListener("pointermove", (event) => {
   const { x, z } = cellCenter(cell.cellX, cell.cellZ);
   ghost.position.set(x, result.level * LEVEL_HEIGHT, z);
   scene.add(ghost);
+}
+
+canvas.addEventListener("pointermove", (event) => {
+  updatePointer(event);
+  updateGhost();
 });
 
 // OrbitControls (Task 7) listens for pointerdown on this same canvas to start its
