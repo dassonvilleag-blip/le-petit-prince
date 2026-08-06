@@ -131,6 +131,10 @@ export function buildBuildingColumn(
   materials: BuildingMaterials,
 ): THREE.Group {
   const group = new THREE.Group();
+  // Une case vide (height <= 0) ne doit jamais produire de toit flottant sans mur dessous —
+  // ce garde-fou rend visible un appel invalide plutôt que de rendre silencieusement un bug.
+  if (height <= 0) return group;
+
   const baseHalf = CELL_SIZE / 2;
   let lastHalf = baseHalf;
 
@@ -148,4 +152,14 @@ export function buildBuildingColumn(
   group.add(roof);
 
   return group;
+}
+
+// Libère les géométries de tous les meshes de la colonne (murs + toit). Ne touche jamais aux
+// matériaux : ils sont partagés entre colonnes (un par couleur/usage, voir BuildingMaterials)
+// et restent la responsabilité de l'appelant — même piège que celui déjà rencontré côté v1
+// avec les meshes de pièces/fantômes jamais disposés.
+export function disposeBuildingColumn(group: THREE.Group): void {
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) child.geometry.dispose();
+  });
 }
