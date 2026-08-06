@@ -1611,11 +1611,34 @@ function hoveredCell(): { cellX: number; cellZ: number } | null {
   return { cellX, cellZ };
 }
 
+// buildPieceMesh() allocates fresh geometries (and, for the ghost, a fresh tint material)
+// on every call — scene.remove() only unlinks an object from the graph, it never frees the
+// underlying GPU buffers. pointermove fires at display refresh rate while hovering the
+// viewport, so without this the ghost preview would leak geometry/material on the busiest
+// code path in the game (found in Task 11's review). Dispose everything the outgoing ghost
+// owns before building the next one. Never reuse this on a *placed* piece's object — those
+// share cached materials from materials-three.ts's threeMaterialFor(), which other pieces
+// still reference.
+function disposeGhost(object: THREE.Object3D): void {
+  const geometries = new Set<THREE.BufferGeometry>();
+  const materials = new Set<THREE.Material>();
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    geometries.add(child.geometry);
+    for (const material of Array.isArray(child.material) ? child.material : [child.material]) {
+      materials.add(material);
+    }
+  });
+  for (const geometry of geometries) geometry.dispose();
+  for (const material of materials) material.dispose();
+}
+
 canvas.addEventListener("pointermove", (event) => {
   updatePointer(event);
   const cell = hoveredCell();
   if (ghost) {
     scene.remove(ghost);
+    disposeGhost(ghost);
     ghost = null;
   }
   if (!cell) return;
