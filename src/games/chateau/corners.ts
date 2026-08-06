@@ -9,6 +9,9 @@ export interface CellCorners {
   nn: CornerRounding; // coin (-x, -z) : voisins (cellX-1,cellZ) et (cellX,cellZ-1), diagonale (cellX-1,cellZ-1)
 }
 
+// La hauteur exacte n'est jamais pertinente ici, seulement "vide ou pas" : la
+// classification des coins est calculée une seule fois par colonne (Task 7), pas par
+// étage — un voisin à 1 étage ou à 8 étages donne le même résultat.
 function isFilled(grid: Grid, cellX: number, cellZ: number): boolean {
   return heightAt(grid, cellX, cellZ) > 0;
 }
