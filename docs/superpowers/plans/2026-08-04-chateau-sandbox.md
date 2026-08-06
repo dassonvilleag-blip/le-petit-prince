@@ -1508,7 +1508,7 @@ import { MATERIALS, DEFAULT_MATERIAL_ID } from "./materials";
 import { buildPieceMesh } from "./piece-geometry";
 import { threeMaterialFor, preloadAllMaterials } from "./materials-three";
 import { resolvePlacement, removeTopPiece, type PlacedPiece, type Rotation } from "./placement";
-import { CELL_SIZE } from "./constants";
+import { CELL_SIZE, LEVEL_HEIGHT } from "./constants";
 
 const canvas = document.getElementById("scene") as HTMLCanvasElement;
 const { scene, camera, renderer, controls } = createSceneRig(canvas);
@@ -1534,7 +1534,7 @@ function addPieceToScene(piece: PlacedPiece): void {
   const material = threeMaterialFor(piece.materialId);
   const object = buildPieceMesh(piece.pieceId, piece.rotation, material);
   const { x, z } = cellCenter(piece.cellX, piece.cellZ);
-  object.position.set(x, piece.level, z);
+  object.position.set(x, piece.level * LEVEL_HEIGHT, z);
   scene.add(object);
   placedObjects.set(piece.id, object);
 }
@@ -1627,7 +1627,7 @@ canvas.addEventListener("pointermove", (event) => {
   });
   ghost = buildPieceMesh(selectedPieceId, rotation, tint);
   const { x, z } = cellCenter(cell.cellX, cell.cellZ);
-  ghost.position.set(x, result.level, z);
+  ghost.position.set(x, result.level * LEVEL_HEIGHT, z);
   scene.add(ghost);
 });
 
