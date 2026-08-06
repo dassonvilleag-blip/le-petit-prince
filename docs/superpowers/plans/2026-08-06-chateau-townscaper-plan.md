@@ -129,6 +129,8 @@ git commit -m "feat(chateau): remove v1 piece/terrain system, prep for Townscape
 
 ---
 
+**Known interim state after Task 1 (expected, resolved by Task 5):** `src/games/chateau/save.ts` was deliberately left untouched by Task 1, but it imports `createHeightmap`/`Heightmap` from the now-deleted `./terrain.ts` — so `save.test.ts` fails with a module-not-found error (not an assertion failure) until Task 5 rewrites `save.ts`. This is the same kind of expected breakage as `main.ts`/`scene.ts` failing to build until Tasks 6/8 — Tasks 2-4's own tests (`grid`, `corners`, `palette`) are unaffected and should pass cleanly; only ignore the pre-existing `save.test.ts` failure specifically, don't treat it as something those tasks broke.
+
 ### Task 2: Grid module (pure, TDD)
 
 **Files:**
