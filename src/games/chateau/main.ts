@@ -66,6 +66,13 @@ function removePieceFromScene(id: string): void {
   const object = placedObjects.get(id);
   if (!object) return;
   scene.remove(object);
+  // Chaque pièce posée a sa propre géométrie (jamais partagée, contrairement au matériau
+  // mis en cache par threeMaterialFor) — même fuite que le fantôme (voir disposeGhost) si
+  // on ne la libère pas ici. Ne surtout pas disposer le matériau : il est partagé avec
+  // toutes les autres pièces utilisant le même id de matériau.
+  object.traverse((child) => {
+    if (child instanceof THREE.Mesh) child.geometry.dispose();
+  });
   placedObjects.delete(id);
 }
 
