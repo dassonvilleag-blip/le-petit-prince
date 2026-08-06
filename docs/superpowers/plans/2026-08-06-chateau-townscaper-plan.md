@@ -509,7 +509,7 @@ git commit -m "feat(chateau): flat color palette catalog"
 // src/games/chateau/test/save.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GRID_SIZE } from "../constants.ts";
+import { GRID_SIZE, MAX_FLOORS } from "../constants.ts";
 import { emptyWorld, serializeWorld, deserializeWorld } from "../save.ts";
 import { growCell } from "../grid.ts";
 
@@ -544,6 +544,21 @@ test("deserializeWorld falls back to an empty world when a cell has the wrong sh
   const bad = { grid: grid.map((row, z) => (z === 0 ? [{ height: "pas-un-nombre", colorId: "" }, ...row.slice(1)] : row)) };
   assert.deepEqual(deserializeWorld(JSON.stringify(bad)), emptyWorld());
 });
+
+test("deserializeWorld falls back to an empty world when a cell's height is out of range", () => {
+  // Une sauvegarde trafiquée avec une hauteur infinie/négative/non entière ne doit jamais
+  // atteindre buildBuildingColumn (Task 7) : sa boucle `for (floor < height)` tournerait
+  // indéfiniment plutôt que de simplement planter — pire que le bug équivalent de la v1.
+  const grid = emptyWorld().grid;
+  const withHeight = (height: number) => {
+    const bad = { grid: grid.map((row, z) => (z === 0 ? [{ height, colorId: "" }, ...row.slice(1)] : row)) };
+    return deserializeWorld(JSON.stringify(bad));
+  };
+  assert.deepEqual(withHeight(Infinity), emptyWorld());
+  assert.deepEqual(withHeight(-1), emptyWorld());
+  assert.deepEqual(withHeight(2.5), emptyWorld());
+  assert.deepEqual(withHeight(MAX_FLOORS + 1), emptyWorld());
+});
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -556,7 +571,7 @@ Expected: FAIL (existing `save.test.ts` still references the old piece-based for
 ```ts
 // src/games/chateau/save.ts
 // note : extensions .ts nécessaires sur les imports relatifs (même raison que grid.ts).
-import { GRID_SIZE } from "./constants.ts";
+import { GRID_SIZE, MAX_FLOORS } from "./constants.ts";
 import { createGrid, type Grid, type Cell } from "./grid.ts";
 
 export interface WorldState {
@@ -576,7 +591,18 @@ export function serializeWorld(world: WorldState): string {
 function isValidCell(value: unknown): value is Cell {
   if (typeof value !== "object" || value === null) return false;
   const cell = value as Partial<Cell>;
-  return typeof cell.height === "number" && typeof cell.colorId === "string";
+  if (typeof cell.colorId !== "string") return false;
+  // Une hauteur non bornée (Infinity, un flottant, un nombre négatif ou juste très grand)
+  // passerait un simple `typeof === "number"` tout en faisant boucler indéfiniment
+  // buildBuildingColumn (Task 7 : `for (floor = 0; floor < height; floor++)`) au chargement
+  // — un blocage du navigateur, pire que le plantage récupérable que ce genre de contrôle
+  // évitait déjà côté v1. Trouvé par la revue de code de cette tâche.
+  return (
+    typeof cell.height === "number" &&
+    Number.isInteger(cell.height) &&
+    cell.height >= 0 &&
+    cell.height <= MAX_FLOORS
+  );
 }
 
 function isValidWorld(value: unknown): value is WorldState {
@@ -611,7 +637,7 @@ export function clearSave(): void {
 }
 ```
 
-Note: unlike the v1 (where a corrupted save could reference an unknown `pieceId` and crash `buildPieceMesh`, requiring a defensive try/catch at load time), this format validates every cell's shape directly (`height` is a number, `colorId` is a string) — there's no equivalent "unknown id that crashes the renderer" risk, since an unrecognized `colorId` just falls back gracefully via `colorById`. No extra defensive wrapping is needed when this is wired into `main.ts` in Task 8.
+Note: unlike the v1 (where a corrupted save could reference an unknown `pieceId` and crash `buildPieceMesh`, requiring a defensive try/catch at load time), this format validates every cell's shape directly (`height` is a bounded, non-negative integer; `colorId` is a string) — there's no equivalent "unknown id that crashes the renderer" risk, since an unrecognized `colorId` just falls back gracefully via `colorById`. `height` specifically needs the numeric bounds check above (not just `typeof === "number"`) — an unbounded value (`Infinity`, negative, non-integer, or just very large) would otherwise reach Task 7's `buildBuildingColumn`, whose `for (floor = 0; floor < height; floor++)` loop would hang the tab rather than crash it. No extra defensive wrapping is needed when this is wired into `main.ts` in Task 8.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
