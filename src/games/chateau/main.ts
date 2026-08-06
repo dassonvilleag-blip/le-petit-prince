@@ -9,18 +9,41 @@ import { buildPieceMesh } from "./piece-geometry";
 import { threeMaterialFor, preloadAllMaterials } from "./materials-three";
 import { resolvePlacement, removeTopPiece, type PlacedPiece, type Rotation } from "./placement";
 import { CELL_SIZE, LEVEL_HEIGHT } from "./constants";
+import { loadFromLocalStorage, saveToLocalStorage, clearSave } from "./save";
 
 const canvas = document.getElementById("scene") as HTMLCanvasElement;
 const { scene, camera, renderer, controls } = createSceneRig(canvas);
 preloadAllMaterials();
 
-let terrain: Heightmap = createHeightmap();
+const initialWorld = loadFromLocalStorage();
+
+let terrain: Heightmap = initialWorld.terrain;
 const terrainMesh = createTerrainMesh(terrain);
 scene.add(terrainMesh);
 scene.add(createWaterMesh());
 
-let placedPieces: PlacedPiece[] = [];
 const placedObjects = new Map<string, THREE.Object3D>();
+
+// `save.ts`'s deserializeWorld only validates the terrain/pieces *shape*, not each
+// piece's individual fields — a hand-edited or version-skewed localStorage value could
+// contain a piece with an unknown pieceId, which makes buildPieceMesh (Task 9) throw.
+// Restoring must never crash the page (per the design spec's error-handling section), so
+// skip and log any piece that fails to build instead of letting one bad entry take down
+// the whole boot sequence — and drop it from placedPieces too, so the next persist() call
+// self-heals the save instead of re-writing the same corrupt entry forever.
+let placedPieces: PlacedPiece[] = initialWorld.pieces.filter((piece) => {
+  try {
+    addPieceToScene(piece);
+    return true;
+  } catch (error) {
+    console.warn("Pièce de sauvegarde corrompue ignorée :", piece, error);
+    return false;
+  }
+});
+
+function persist(): void {
+  saveToLocalStorage({ terrain, pieces: placedPieces });
+}
 
 let selectedPieceId = PIECES[0].id;
 let selectedMaterialId = DEFAULT_MATERIAL_ID;
@@ -89,6 +112,7 @@ document.getElementById("reset-btn")!.addEventListener("click", () => {
   updateTerrainMesh(terrainMesh, terrain);
   for (const id of [...placedObjects.keys()]) removePieceFromScene(id);
   placedPieces = [];
+  clearSave();
 });
 
 // --- Prévisualisation fantôme + pose/retrait ---
@@ -185,6 +209,7 @@ canvas.addEventListener("pointerup", (event) => {
     const { x, z } = nearestVertex(hit.point);
     terrain = event.shiftKey ? lowerVertex(terrain, x, z) : raiseVertex(terrain, x, z);
     updateTerrainMesh(terrainMesh, terrain);
+    persist();
     return;
   }
 
@@ -195,6 +220,7 @@ canvas.addEventListener("pointerup", (event) => {
     for (const id of [...placedObjects.keys()]) {
       if (!stillThere.has(id)) removePieceFromScene(id);
     }
+    persist();
     return;
   }
 
@@ -211,6 +237,7 @@ canvas.addEventListener("pointerup", (event) => {
   };
   placedPieces.push(piece);
   addPieceToScene(piece);
+  persist();
 });
 
 canvas.addEventListener("contextmenu", (event) => event.preventDefault());
