@@ -39,6 +39,9 @@ export function buildCellGraph(points: Point[], polygons: Polygon[]): OrganicGri
   }
 
   const edgeOwner = new Map<string, { cellId: number; edgeIndex: number }>();
+  // Assumes a proper 2-manifold mesh: each edge is touched by at most 2 cells.
+  // If a third cell claimed an already-owned edge, only the first two cells would be linked,
+  // and the third's neighbor slot for that edge would remain unset (-1).
   for (const cell of cells) {
     const n = cell.vertexIndices.length;
     for (let i = 0; i < n; i++) {

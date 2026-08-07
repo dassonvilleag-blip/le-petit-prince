@@ -24,6 +24,8 @@ test("two quads sharing an edge become mutual neighbors at the right edge index"
   assert.equal(grid.cells[0].neighborCellIds[1], 1); // edge 1 de cell0 = (1,2)
   assert.equal(grid.cells[1].neighborCellIds[3], 0); // edge 3 de cell1 = (2,1), même arête
   assert.equal(grid.cells[0].neighborCellIds[0], -1); // edge 0 = (0,1), bord, aucune voisine
+  assert.deepEqual(grid.vertices[1].incidentCellIds, [0, 1]);
+  assert.deepEqual(grid.vertices[2].incidentCellIds, [0, 1]);
 });
 
 test("every vertex lists the cells that touch it", () => {
