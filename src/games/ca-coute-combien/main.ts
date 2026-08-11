@@ -366,6 +366,8 @@ function onRoomUpdate(room: Room) {
     stopGuessTimer();
     multiShownRound = -1;
     multiRevealed = false;
+    guessSentRound = -1;
+    multiNextSent = -1;
     lobbyCodeEl.textContent = room.code;
     const host = isHost(room);
     lobbyPlayersEl.innerHTML = room.players
@@ -385,6 +387,7 @@ function onRoomUpdate(room: Room) {
     if (room.roundIdx !== multiShownRound) {
       multiShownRound = room.roundIdx;
       multiNextSent = -1;
+      guessSentRound = -1;
       multiRevealed = false;
       roundIndex = room.roundIdx;
       showRound();
@@ -529,7 +532,7 @@ async function multiSubmitGuess() {
     onRoomUpdate(room);
   } catch (e) {
     // « déjà validé » n'est pas une raison de ré-ouvrir le formulaire
-    if (!(e instanceof rc.RoomError && e.message.includes("déjà validé"))) {
+    if (!(e instanceof rc.RoomError && (e.message.includes("déjà validé") || e.message.includes("pas en phase")))) {
       guessSentRound = -1;
       guessForm.classList.remove("hidden");
       showMultiError(e);

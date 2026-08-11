@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createRoomStore, MAX_PLAYERS, ROOM_TTL_MS, type Room } from "../rooms-server.ts";
+import { createRoomStore, MAX_PLAYERS, ROOM_TTL_MS, GUESS_TIMEOUT_MS, type Room } from "../rooms-server.ts";
 
 type Result = { status: number; body: { room?: Room; playerId?: string; error?: string } };
 
@@ -142,6 +142,21 @@ test("phaseAt suit les transitions et les réponses portent l'heure serveur", ()
   t = 12_000;
   const nexted = call(store, "POST", `/rooms/${code}/next`, { playerId: host });
   assert.equal(nexted.body.room!.phaseAt, 12_000);
+});
+
+test("manche expirée : la révélation se déclenche au premier appel, sans l'hôte", () => {
+  let t = 0;
+  const store = createRoomStore(() => t);
+  const created = call(store, "POST", "/rooms", { pseudo: "hôte" });
+  const code = created.body.room!.code;
+  const host = created.body.playerId!;
+  call(store, "POST", `/rooms/${code}/join`, { pseudo: "p2" });
+  t = 1000;
+  call(store, "POST", `/rooms/${code}/start`, { playerId: host, itemIds: ["a"] });
+  // personne ne répond ; bien après l'expiration, un simple GET débloque
+  t = 1000 + GUESS_TIMEOUT_MS + 1;
+  const room = call(store, "GET", `/rooms/${code}`).body.room!;
+  assert.equal(room.phase, "reveal");
 });
 
 test("les salons inactifs expirent après le TTL", () => {

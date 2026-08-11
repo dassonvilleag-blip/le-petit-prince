@@ -7,6 +7,9 @@
 // trivial à tester et à brancher sur n'importe quel serveur.
 
 export const MAX_PLAYERS = 8;
+// durée d'une manche (20 s) + 2 s de grâce : passé ce délai, la révélation
+// se déclenche toute seule au premier appel venu, hôte présent ou non
+export const GUESS_TIMEOUT_MS = 22_000;
 export const ROOM_TTL_MS = 60 * 60_000;
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // sans I/L/O/0/1 ambigus
 
@@ -99,6 +102,14 @@ export function createRoomStore(now: () => number = Date.now) {
     if (!m) return err(404, "route inconnue");
     const room = rooms.get(m[1]);
     if (!room) return err(404, "salon inconnu");
+    // filet de sécurité : manche expirée → révélation, même si l'hôte a
+    // disparu (le moindre poll d'un joueur suffit à débloquer le salon)
+    if (room.phase === "guess" && now() - room.phaseAt > GUESS_TIMEOUT_MS) {
+      room.guesses[room.roundIdx] ??= {};
+      room.phase = "reveal";
+      room.phaseAt = now();
+      touch(room);
+    }
     const action = m[2];
 
     if (method === "GET" && !action) return ok({ room });
