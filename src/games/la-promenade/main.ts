@@ -1288,123 +1288,171 @@ const drawFixtures = (c: CanvasRenderingContext2D, r: Rect, t: number): void => 
 // Audio — lofi génératif + ambiances (WebAudio)
 // ---------------------------------------------------------------------------
 
-// Une couleur musicale par monde : accords, tempo, timbre, batterie et
-// gamme des petites notes jouées au clic.
+// Un thème lofi par monde : chaque monde garde un groove de concentration
+// (le beat ne s'arrête jamais) mais parle son propre langage musical —
+// asiatique au lac, boom-bap en ville, kompa antillais dans l'océan,
+// hawaïen à la plage, alternatif sur la lune.
 interface MusicStyle {
-  bar: number; // durée d'une mesure (s)
-  chords: number[][];
+  flavor: "asie" | "hiphop" | "kompa" | "hawai" | "alt";
+  bpm: number;
+  swing: number; // retard des contretemps, en fraction de temps (0 = binaire)
+  chords: number[][]; // progression principale (sections A)
+  chordsB: number[][]; // progression alternative (sections B)
   scale: number[]; // notes de la mélodie et des plucks au clic
   pad: OscillatorType;
   padGain: number;
   padFilter: number;
-  padAttack: number; // temps de montée de la nappe (s)
-  bass: "steady" | "pulse" | "bossa" | "drone" | "none";
-  drums: "none" | "soft" | "lofi" | "shaker";
-  melodyProb: number; // 1 = à chaque mesure
+  bassGain: number;
+  kickGain: number;
+  snareGain: number;
+  hatGain: number;
   melodyMul: number; // transposition de la mélodie
-  melodyDur: number;
+  melodyGain: number;
 }
 
 const MUSIC: Record<string, MusicStyle> = {
-  // aube sur le lac : majeur paisible, presque acoustique
+  // aube sur le lac : lofi asiatique — pentatonique, accords ouverts égrenés
+  // façon koto, basse posée
   peche: {
-    bar: 3.6,
+    flavor: "asie",
+    bpm: 76,
+    swing: 0.14,
     chords: [
-      [130.8, 164.8, 196, 246.9], // Cmaj7
-      [110, 164.8, 220, 261.6], // Am7
-      [174.6, 220, 261.6, 329.6], // Fmaj7
-      [196, 246.9, 293.7, 349.2], // G7
+      [130.8, 196, 293.7], // Do–Sol–Ré (Cadd9 ouvert)
+      [110, 164.8, 261.6], // La–Mi–Do (Am)
+      [174.6, 261.6, 329.6], // Fa–Do–Mi (Fmaj7 ouvert)
+      [98, 146.8, 196], // Sol–Ré–Sol (quinte ouverte)
     ],
-    scale: [261.6, 293.7, 329.6, 392, 440, 523.3],
-    pad: "triangle",
-    padGain: 0.032,
-    padFilter: 850,
-    padAttack: 0.1,
-    bass: "steady",
-    drums: "soft",
-    melodyProb: 0.5,
-    melodyMul: 2,
-    melodyDur: 1.6,
-  },
-  // grands fonds : mineur lent et aquatique, sans batterie
-  ocean: {
-    bar: 4.4,
-    chords: [
-      [146.8, 220, 261.6, 329.6], // Dm9
-      [116.5, 174.6, 220, 293.7], // B♭maj7
-      [98, 146.8, 174.6, 233.1], // Gm7
-      [110, 164.8, 220, 261.6], // Am7
+    chordsB: [
+      [110, 164.8, 246.9], // La–Mi–Si (Am add9)
+      [98, 146.8, 196], // quinte ouverte de Sol
+      [174.6, 261.6, 329.6], // Fmaj7 ouvert
+      [130.8, 196, 293.7], // Cadd9 ouvert
     ],
-    scale: [293.7, 349.2, 392, 440, 523.3],
-    pad: "sine",
-    padGain: 0.042,
-    padFilter: 600,
-    padAttack: 1.2,
-    bass: "drone",
-    drums: "none",
-    melodyProb: 0.35,
-    melodyMul: 1,
-    melodyDur: 2.4,
-  },
-  // la lune : quintes ouvertes, cloches lointaines, très lent
-  lune: {
-    bar: 5.2,
-    chords: [
-      [130.8, 196, 293.7], // C–G–D
-      [110, 164.8, 246.9], // A–E–B
-      [87.3, 130.8, 196], // F–C–G
-      [98, 146.8, 220], // G–D–A
-    ],
-    scale: [523.3, 587.3, 659.3, 784, 880],
+    scale: [261.6, 293.7, 329.6, 392, 440, 523.3], // pentatonique de Do
     pad: "sine",
     padGain: 0.03,
-    padFilter: 500,
-    padAttack: 0.8,
-    bass: "none",
-    drums: "none",
-    melodyProb: 1,
-    melodyMul: 1,
-    melodyDur: 3,
+    padFilter: 900,
+    bassGain: 0.085,
+    kickGain: 0.11,
+    snareGain: 0.032,
+    hatGain: 0.013,
+    melodyMul: 2,
+    melodyGain: 0.055,
   },
-  // la ville : le vrai lofi hip-hop, groove feutré
+  // grands fonds : kompa antillais — binaire, kick sur chaque temps,
+  // guitare piquée en doubles-croches
+  ocean: {
+    flavor: "kompa",
+    bpm: 92,
+    swing: 0,
+    chords: [
+      [146.8, 174.6, 220, 261.6], // Dm7
+      [98, 146.8, 174.6, 233.1], // Gm7
+      [116.5, 174.6, 220, 293.7], // B♭maj7
+      [110, 138.6, 164.8, 196], // A7
+    ],
+    chordsB: [
+      [146.8, 174.6, 220, 261.6], // Dm7
+      [116.5, 174.6, 220, 293.7], // B♭maj7
+      [98, 146.8, 174.6, 233.1], // Gm7
+      [110, 138.6, 164.8, 196], // A7
+    ],
+    scale: [293.7, 329.6, 349.2, 392, 440, 523.3], // ré mineur
+    pad: "triangle",
+    padGain: 0.026,
+    padFilter: 1000,
+    bassGain: 0.1,
+    kickGain: 0.11,
+    snareGain: 0.04,
+    hatGain: 0.016,
+    melodyMul: 2,
+    melodyGain: 0.04,
+  },
+  // la lune : lofi alternatif — demi-temps, nappe saw sombre, mélodie planante
+  lune: {
+    flavor: "alt",
+    bpm: 72,
+    swing: 0.1,
+    chords: [
+      [110, 164.8, 246.9, 293.7], // Am9
+      [174.6, 220, 261.6, 329.6], // Fmaj7
+      [130.8, 196, 246.9, 329.6], // Cmaj7
+      [164.8, 196, 246.9, 293.7], // Em7
+    ],
+    chordsB: [
+      [174.6, 220, 261.6, 329.6], // Fmaj7
+      [196, 246.9, 293.7, 329.6], // G6
+      [164.8, 196, 246.9, 293.7], // Em7
+      [110, 164.8, 246.9, 293.7], // Am9
+    ],
+    scale: [440, 493.9, 523.3, 659.3, 784], // la mineur pentatonique aigu
+    pad: "sawtooth",
+    padGain: 0.016,
+    padFilter: 520,
+    bassGain: 0.09,
+    kickGain: 0.13,
+    snareGain: 0.05,
+    hatGain: 0.012,
+    melodyMul: 1,
+    melodyGain: 0.04,
+  },
+  // la ville : le lofi hip-hop classique, boom-bap appuyé
   ville: {
-    bar: 3.2,
+    flavor: "hiphop",
+    bpm: 88,
+    swing: 0.16,
     chords: [
       [174.6, 220, 261.6, 329.6], // Fmaj7
       [164.8, 196, 246.9, 293.7], // Em7
       [146.8, 174.6, 220, 261.6], // Dm7
       [130.8, 164.8, 196, 246.9], // Cmaj7
     ],
-    scale: [261.6, 293.7, 329.6, 392, 440, 523.3],
-    pad: "triangle",
-    padGain: 0.035,
-    padFilter: 900,
-    padAttack: 0.05,
-    bass: "pulse",
-    drums: "lofi",
-    melodyProb: 0.65,
-    melodyMul: 2,
-    melodyDur: 1.4,
-  },
-  // plage au crépuscule : douceur bossa, maracas discrètes
-  plage: {
-    bar: 3.4,
-    chords: [
-      [174.6, 220, 261.6, 329.6], // Fmaj7
-      [196, 246.9, 293.7, 349.2], // G7
-      [164.8, 196, 246.9, 293.7], // Em7
+    chordsB: [
       [110, 164.8, 220, 261.6], // Am7
+      [146.8, 174.6, 220, 261.6], // Dm7
+      [196, 246.9, 293.7, 349.2], // G7
+      [130.8, 164.8, 196, 246.9], // Cmaj7
     ],
     scale: [261.6, 293.7, 329.6, 392, 440, 523.3],
     pad: "triangle",
-    padGain: 0.03,
-    padFilter: 1000,
-    padAttack: 0.08,
-    bass: "bossa",
-    drums: "shaker",
-    melodyProb: 0.55,
+    padGain: 0.034,
+    padFilter: 1200,
+    bassGain: 0.11,
+    kickGain: 0.15,
+    snareGain: 0.06,
+    hatGain: 0.026,
     melodyMul: 2,
-    melodyDur: 1.5,
+    melodyGain: 0.05,
+  },
+  // plage au crépuscule : lofi hawaïen — accords de sixte strummés façon
+  // ukulélé, steel guitar glissée, basse oom-pah
+  plage: {
+    flavor: "hawai",
+    bpm: 76,
+    swing: 0.18,
+    chords: [
+      [174.6, 220, 261.6, 293.7], // F6
+      [130.8, 164.8, 196, 220], // C6
+      [196, 246.9, 293.7, 349.2], // G7
+      [130.8, 164.8, 196, 220], // C6
+    ],
+    chordsB: [
+      [146.8, 185, 220, 261.6], // D7
+      [196, 246.9, 293.7, 349.2], // G7
+      [130.8, 164.8, 196, 220], // C6
+      [110, 138.6, 164.8, 196], // A7
+    ],
+    scale: [261.6, 293.7, 329.6, 392, 440, 523.3],
+    pad: "triangle",
+    padGain: 0.02,
+    padFilter: 1200,
+    bassGain: 0.09,
+    kickGain: 0.1,
+    snareGain: 0.03,
+    hatGain: 0.013,
+    melodyMul: 2,
+    melodyGain: 0.05,
   },
 };
 
@@ -1416,6 +1464,7 @@ class Lofi {
   muted = false;
   private nextBar = 0;
   private barIdx = 0;
+  private motif: { step: number; beat: number }[] = [];
   private ambNodes: { gain: GainNode; stops: (() => void)[] } | null = null;
 
   start(): void {
@@ -1512,52 +1561,215 @@ class Lofi {
       // le style peut changer entre deux mesures : chaque monde a sa musique
       const m = MUSIC[WORLDS[worldIdx].id];
       this.scheduleBar(this.nextBar, this.barIdx, m);
-      this.nextBar += m.bar;
+      this.nextBar += (60 / m.bpm) * 4;
       this.barIdx++;
     }
   }
 
+  // Un nouveau motif mélodique tous les 4 mesures : quelques notes en marche
+  // aléatoire dans la gamme, posées sur la grille de croches.
+  private makeMotif(m: MusicStyle): { step: number; beat: number }[] {
+    const count = 3 + Math.floor(Math.random() * 3);
+    const beats = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, count)
+      .sort((a, b) => a - b);
+    let step = Math.floor(Math.random() * m.scale.length);
+    return beats.map((beat) => {
+      step = Math.max(0, Math.min(m.scale.length - 1, step + Math.floor(rnd(-2, 3))));
+      return { step, beat };
+    });
+  }
+
   private scheduleBar(t0: number, bar: number, m: MusicStyle): void {
-    const chord = m.chords[bar % m.chords.length];
-    // nappe d'accord, feutrée (attaque propre au monde)
-    for (const f of chord) this.osc(f, t0, m.bar * 0.96, m.pad, m.padGain, this.musicBus, m.padFilter, m.padAttack);
-    // basse : chaque monde a son motif
-    if (m.bass === "steady") {
-      this.osc(chord[0] / 2, t0, m.bar * 0.9, "sine", 0.09, this.musicBus);
-    } else if (m.bass === "pulse") {
-      this.osc(chord[0] / 2, t0, m.bar * 0.45, "sine", 0.11, this.musicBus);
-      this.osc(chord[2] / 2, t0 + m.bar / 2, m.bar * 0.35, "sine", 0.07, this.musicBus);
-    } else if (m.bass === "bossa") {
-      this.osc(chord[0] / 2, t0, m.bar * 0.3, "sine", 0.1, this.musicBus);
-      this.osc(chord[0] / 2, t0 + m.bar * 0.375, m.bar * 0.12, "sine", 0.07, this.musicBus);
-      this.osc(chord[2] / 2, t0 + m.bar * 0.5, m.bar * 0.3, "sine", 0.08, this.musicBus);
-    } else if (m.bass === "drone") {
-      this.osc(chord[0] / 2, t0, m.bar, "sine", 0.08, this.musicBus, 0, 1.4);
-      this.osc(chord[0] / 4, t0, m.bar, "sine", 0.04, this.musicBus, 0, 1.4);
-    }
-    // batterie selon le monde
-    if (m.drums === "lofi") {
-      for (let b = 0; b < 4; b++) {
-        const bt = t0 + (b * m.bar) / 4;
-        if (b % 2 === 0) this.kick(bt, 0.16);
+    const beat = 60 / m.bpm;
+    const swing = beat * m.swing; // retard des contretemps (0 = binaire)
+    const section = Math.floor(bar / 8);
+    const prog = section % 4 === 2 ? m.chordsB : m.chords;
+    const chord = prog[bar % prog.length];
+    const nextChord = prog[(bar + 1) % prog.length];
+    const breakdown = bar % 32 === 31; // une mesure de respiration par cycle
+    const bus = this.musicBus;
+
+    // — harmonie : chaque thème a son geste
+    if (m.flavor === "asie") {
+      // nappe douce + accord égrené façon koto sur le 1
+      for (const f of chord) this.osc(f, t0, beat * 3.4, m.pad, m.padGain, bus, m.padFilter, 0.5);
+      chord.forEach((f, i) => this.osc(f * 2, t0 + i * 0.09, beat * 1.1, "triangle", 0.028, bus, 2400, 0.004));
+    } else if (m.flavor === "kompa") {
+      // nappe fine tenue + guitare piquée en doubles-croches sur les temps 2 et 4
+      for (const f of chord) this.osc(f, t0, beat * 3.8, m.pad, m.padGain, bus, m.padFilter, 0.06);
+      if (!breakdown) {
+        for (const start of [1, 3]) {
+          for (let i = 0; i < 4; i++) {
+            const f = chord[[0, 2, 1, 3][i] % chord.length] * 2;
+            this.osc(f, t0 + (start + i * 0.25) * beat, beat * 0.22, "triangle", 0.032, bus, 2200, 0.004);
+          }
+        }
       }
-      for (let b = 0; b < 8; b++) this.tickHat(t0 + (b * m.bar) / 8, b % 2 === 0 ? 0.026 : 0.013);
-    } else if (m.drums === "soft") {
-      this.kick(t0, 0.09);
-    } else if (m.drums === "shaker") {
-      for (let b = 0; b < 8; b++) this.tickHat(t0 + (b * m.bar) / 8, b % 2 === 0 ? 0.016 : 0.009);
-      this.kick(t0, 0.08);
-      this.kick(t0 + m.bar / 2, 0.06);
+    } else if (m.flavor === "hawai") {
+      // strums d'ukulélé égrenés : 1, 2&, 3, 4&
+      const strum = (bt: number, g: number): void => {
+        chord.forEach((f, i) => this.osc(f * 2, t0 + bt * beat + (bt % 1 ? swing : 0) + i * 0.022, beat * 0.8, "triangle", g, bus, 1900, 0.006));
+      };
+      strum(0, 0.026);
+      if (!breakdown) {
+        strum(1.5, 0.018);
+        strum(2, 0.022);
+        strum(3.5, 0.018);
+      }
+      for (const f of chord) this.osc(f, t0, beat * 3.6, m.pad, m.padGain, bus, m.padFilter, 0.3);
+    } else if (m.flavor === "alt") {
+      // nappe saw sombre tenue, halo d'octaves une mesure sur quatre
+      for (const f of chord) this.osc(f, t0, beat * 3.9, m.pad, m.padGain, bus, m.padFilter, 0.3);
+      if (bar % 4 === 2) for (const f of chord) this.osc(f * 2, t0 + beat * 2, beat * 1.8, "sine", 0.012, bus, 1200, 0.6);
+    } else {
+      // hiphop : stab façon Rhodes sur le 1, relance sur le "et" du 3
+      for (const f of chord) this.osc(f, t0, beat * 2.6, m.pad, m.padGain, bus, m.padFilter, 0.015);
+      if (!breakdown) for (const f of chord) this.osc(f, t0 + beat * 2.5 + swing, beat * 1.3, m.pad, m.padGain * 0.7, bus, m.padFilter, 0.012);
     }
-    // mélodie clairsemée dans la gamme du monde
-    if (Math.random() < m.melodyProb) {
-      const n = 1 + Math.floor(Math.random() * 2);
-      for (let i = 0; i < n; i++) {
-        const at = t0 + rnd(0, m.bar * 0.7);
-        const f = m.scale[Math.floor(Math.random() * m.scale.length)] * m.melodyMul;
-        this.osc(f, at, m.melodyDur, m.pad, 0.045, this.musicBus, 1600);
+
+    // — basse
+    if (m.flavor === "kompa") {
+      // syncopée : fondamentale, quinte sur le "et" du 3, relance avant le 1
+      this.osc(chord[0] / 2, t0, beat * 1.1, "sine", m.bassGain, bus);
+      this.osc(chord[2] / 2, t0 + beat * 2.5, beat * 0.5, "sine", m.bassGain * 0.8, bus);
+      this.osc(chord[0] / 2, t0 + beat * 3.5, beat * 0.45, "sine", m.bassGain * 0.7, bus);
+    } else if (m.flavor === "hawai") {
+      // oom-pah : fondamentale sur le 1, quinte sur le 3
+      this.osc(chord[0] / 2, t0, beat * 1.8, "sine", m.bassGain, bus);
+      this.osc(chord[2] / 2, t0 + beat * 2, beat * 1.6, "sine", m.bassGain * 0.85, bus);
+    } else if (m.flavor === "asie") {
+      this.osc(chord[0] / 2, t0, beat * 3.4, "sine", m.bassGain, bus, 0, 0.08);
+    } else if (m.flavor === "alt") {
+      this.osc(chord[0] / 2, t0, beat * 3.6, "sine", m.bassGain, bus, 0, 0.05);
+      if (bar % 2 === 1) this.osc(nextChord[0] / 2, t0 + beat * 3.5 + swing, beat * 0.5, "sine", m.bassGain * 0.6, bus);
+    } else {
+      this.osc(chord[0] / 2, t0, beat * 1.6, "sine", m.bassGain, bus);
+      this.osc(chord[0] / 2, t0 + beat * 2, beat * 0.9, "sine", m.bassGain * 0.8, bus);
+      if (bar % 2 === 1) this.osc(nextChord[0] / 2, t0 + beat * 3.5 + swing, beat * 0.5, "sine", m.bassGain * 0.6, bus);
+    }
+
+    // — batterie
+    if (breakdown) {
+      this.kick(t0, m.kickGain * 0.8);
+    } else if (m.flavor === "kompa") {
+      // kick sur les quatre temps, charley binaire, rim sur les "et" de 2 et 4
+      for (let b = 0; b < 4; b++) this.kick(t0 + b * beat, b === 0 ? m.kickGain : m.kickGain * 0.75);
+      for (let i = 0; i < 8; i++) this.tickHat(t0 + (i / 2) * beat, i % 2 === 0 ? m.hatGain * 0.7 : m.hatGain);
+      this.snare(t0 + beat * 1.5, m.snareGain * 0.6);
+      this.snare(t0 + beat * 3.5, m.snareGain);
+      if (bar % 8 === 7) for (let i = 0; i < 4; i++) this.snare(t0 + beat * (3 + i * 0.25), m.snareGain * (0.3 + i * 0.15));
+    } else if (m.flavor === "hawai") {
+      this.kick(t0, m.kickGain);
+      this.kick(t0 + beat * 2, m.kickGain * 0.8);
+      this.snare(t0 + beat, m.snareGain);
+      this.snare(t0 + beat * 3, m.snareGain * 0.9);
+      for (let i = 0; i < 8; i++) {
+        if (Math.random() < 0.2) continue;
+        this.tickHat(t0 + (i / 2) * beat + (i % 2) * swing, i % 2 === 0 ? m.hatGain : m.hatGain * 0.5);
+      }
+    } else if (m.flavor === "asie") {
+      // discret : charley en noires seulement
+      this.kick(t0, m.kickGain);
+      if (bar % 2 === 0) this.kick(t0 + beat * 2.5 + swing, m.kickGain * 0.75);
+      this.snare(t0 + beat, m.snareGain);
+      this.snare(t0 + beat * 3, m.snareGain);
+      for (let i = 0; i < 4; i++) this.tickHat(t0 + i * beat, i % 2 === 0 ? m.hatGain : m.hatGain * 0.6);
+    } else if (m.flavor === "alt") {
+      // demi-temps : la caisse claire n'arrive que sur le 3
+      this.kick(t0, m.kickGain);
+      this.kick(t0 + beat * 2.75, m.kickGain * 0.6);
+      this.snare(t0 + beat * 2, m.snareGain);
+      for (let i = 0; i < 8; i++) {
+        if (Math.random() < 0.15) continue;
+        this.tickHat(t0 + (i / 2) * beat + (i % 2) * swing, i % 2 === 0 ? m.hatGain : m.hatGain * 0.5);
+      }
+      if (bar % 8 === 7) for (let i = 0; i < 2; i++) this.snare(t0 + beat * (3.5 + i * 0.25), m.snareGain * (0.3 + i * 0.2));
+    } else {
+      // hiphop boom-bap : kick 1 (+ variante), caisse claire sur 2 et 4
+      this.kick(t0, m.kickGain);
+      if (bar % 2 === 0) this.kick(t0 + beat * 2.5 + swing, m.kickGain * 0.85);
+      else this.kick(t0 + beat * 1.5 + swing, m.kickGain * 0.7);
+      this.snare(t0 + beat, m.snareGain);
+      this.snare(t0 + beat * 3, m.snareGain);
+      for (let i = 0; i < 8; i++) {
+        if (Math.random() < 0.08) continue;
+        this.tickHat(t0 + (i / 2) * beat + (i % 2) * swing, i % 2 === 0 ? m.hatGain : m.hatGain * 0.55);
+      }
+      if (bar % 8 === 7) for (let i = 0; i < 3; i++) this.snare(t0 + beat * (3.25 + i * 0.25), m.snareGain * (0.25 + i * 0.12));
+    }
+
+    // — mélodie : le motif courant, rejoué avec de petites variations, dans
+    // le timbre du thème
+    if (bar % 4 === 0 || this.motif.length === 0) this.motif = this.makeMotif(m);
+    if (!breakdown && (bar % 8 < 6 || Math.random() < 0.5)) {
+      for (const n of this.motif) {
+        if (Math.random() < 0.12) continue;
+        // le motif peut venir d'un autre monde dont la gamme est plus longue
+        let step = Math.min(n.step, m.scale.length - 1);
+        if (Math.random() < 0.15) step = Math.max(0, Math.min(m.scale.length - 1, step + (Math.random() < 0.5 ? -1 : 1)));
+        const f = m.scale[step] * m.melodyMul;
+        const at = t0 + n.beat * beat + (n.beat % 1 !== 0 ? swing : 0);
+        if (m.flavor === "hawai") {
+          this.slideNote(f, at, beat * 1.4, m.melodyGain);
+        } else if (m.flavor === "asie" || m.flavor === "kompa") {
+          // pincé court façon koto / guitare, avec appoggiature côté lac
+          if (m.flavor === "asie" && step > 0 && Math.random() < 0.4) {
+            this.osc(m.scale[step - 1] * m.melodyMul, at - 0.07, 0.12, "triangle", m.melodyGain * 0.5, bus, 2400, 0.004);
+          }
+          this.osc(f, at, beat * 0.7, "triangle", m.melodyGain, bus, 2400, 0.004);
+        } else if (m.flavor === "alt") {
+          this.osc(f, at, beat * 1.7, "sine", m.melodyGain, bus, 1400, 0.03);
+        } else {
+          this.osc(f, at, beat * 0.9, m.pad, m.melodyGain, bus, 2000, 0.01);
+        }
       }
     }
+  }
+
+  // note glissée façon steel guitar : part sous la cible, la rejoint, puis
+  // vibre doucement
+  private slideNote(freq: number, t0: number, dur: number, gain: number): void {
+    const ac = this.ctx!;
+    const o = ac.createOscillator();
+    o.type = "sine";
+    o.frequency.setValueAtTime(freq * 0.89, t0);
+    o.frequency.exponentialRampToValueAtTime(freq, t0 + 0.18);
+    const lfo = ac.createOscillator();
+    lfo.frequency.value = 5.5;
+    const lg = ac.createGain();
+    lg.gain.value = freq * 0.008;
+    lfo.connect(lg).connect(o.frequency);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(gain, t0 + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    const f = ac.createBiquadFilter();
+    f.type = "lowpass";
+    f.frequency.value = 1500;
+    o.connect(f).connect(g).connect(this.musicBus);
+    o.start(t0);
+    o.stop(t0 + dur + 0.1);
+    lfo.start(t0 + 0.2);
+    lfo.stop(t0 + dur + 0.1);
+  }
+
+  private snare(t0: number, gain: number): void {
+    const ac = this.ctx!;
+    const src = ac.createBufferSource();
+    src.buffer = this.noiseBuffer(0.2);
+    const f = ac.createBiquadFilter();
+    f.type = "bandpass";
+    f.frequency.value = 1900;
+    f.Q.value = 0.8;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(gain, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+    src.connect(f).connect(g).connect(this.musicBus);
+    src.start(t0);
+    // petit corps grave sous le souffle
+    this.osc(190, t0, 0.09, "triangle", gain * 0.5, this.musicBus, 0, 0.005);
   }
 
   private kick(t0: number, gain: number): void {
