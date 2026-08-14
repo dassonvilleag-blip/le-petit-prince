@@ -8,6 +8,13 @@ interactives inspirées de l'univers du Petit Prince.
 - **Petites Orbites** (`/games/petites-orbites/`) — bac à sable gravitationnel.
   Glisse pour lancer des planètes autour du soleil et construis un système
   solaire qui survit le plus longtemps possible.
+- **La Colonie** (`/games/la-colonie/`) — fourmilière en coupe façon Clash of
+  Clans : creuse des galeries, construis nurserie et champignonnière, élève
+  ouvrières et soldates, pars en expédition. Tout vit en temps réel, même hors
+  ligne (localStorage). Les « cercles de symbiose » relient les espèces :
+  chaque insecte du jardin peut devenir allié (les pucerons dès la v1) ou
+  rester adversaire ; ajouter une espèce = une fiche dans
+  `src/games/la-colonie/data.ts`.
 - **Les Dés Menteurs** (`/games/les-des-menteurs/`) — Perudo en ligne, de 2 à
   6 joueurs dans un salon à code. Enchères, bluff, « Menteur ! » et « Pile
   poil ! » ; l'étoile ⭐ est joker, manches palifico incluses. Les dés vivent
