@@ -579,32 +579,39 @@ function traceReseau(cc: CanvasRenderingContext2D): void {
   cc.lineCap = "round";
 
   // le puits de l'entrée plonge depuis la surface
-  cc.lineWidth = cell * 0.5;
+  const LARGEUR = cell * 0.6; // largeur constante des galeries : net et lisible
+  cc.lineWidth = LARGEUR;
   cc.beginPath();
   cc.moveTo(gridX + (ENTRANCE_COL + 0.5) * cell, gridY - cell * 0.25);
   cc.lineTo(gridX + (ENTRANCE_COL + 0.5) * cell, gridY + 0.5 * cell);
   cc.stroke();
 
-  // tunnels : une bulle par cellule, des cordons vers les voisines creusées
+  // tunnels : une bulle par cellule, des couloirs réguliers vers TOUTES les
+  // voisines creusées — y compris les salles, dans les quatre directions
   for (let y = 0; y < ROWS; y++)
     for (let x = 0; x < COLS; x++) {
       if (!state.dug[y * COLS + x]) continue;
       const cx = gridX + (x + 0.5) * cell;
       const cy = gridY + (y + 0.5) * cell;
       cc.beginPath();
-      cc.arc(cx, cy, cell * (0.3 + speckle(x * 91 + y * 57) * 0.09), 0, Math.PI * 2);
+      cc.arc(cx, cy, LARGEUR / 2, 0, Math.PI * 2);
       cc.fill();
-      for (const [dx, dy] of [
-        [1, 0],
-        [0, 1],
-      ])
-        if (estCreusee(state, x + dx, y + dy)) {
-          cc.lineWidth = cell * (0.42 + speckle(x * 17 + y * 43) * 0.1);
-          cc.beginPath();
-          cc.moveTo(cx, cy);
-          cc.lineTo(gridX + (x + dx + 0.5) * cell, gridY + (y + dy + 0.5) * cell);
-          cc.stroke();
-        }
+      for (const [dx, dy] of VOISINS4) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (!estCreusee(state, nx, ny)) continue;
+        // entre deux tunnels, on ne trace le couloir qu'une fois (droite/bas) ;
+        // vers une salle, on trace toujours, pour garantir la jonction
+        const versSalle = !(ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS && state.dug[ny * COLS + nx]);
+        if (!versSalle && (dx < 0 || dy < 0)) continue;
+        // vers une salle, l'embouchure prend toute la cellule : deux jonctions
+        // voisines fusionnent au lieu de laisser un pilier de terre entre elles
+        cc.lineWidth = versSalle ? cell : LARGEUR;
+        cc.beginPath();
+        cc.moveTo(cx, cy);
+        cc.lineTo(gridX + (nx + 0.5) * cell, gridY + (ny + 0.5) * cell);
+        cc.stroke();
+      }
     }
 
   // chantiers de creusage : la bulle grandit avec l'avancement
@@ -768,9 +775,9 @@ function interieurReine(cx: number, cy: number, w: number, h: number, t: number)
     ctx.lineTo(lx, cy - h * 0.5);
     ctx.stroke();
   }
-  // la Reine, qui respire doucement
+  // la Reine, qui respire doucement — assez claire pour se détacher du terrier
   const souffle = 1 + 0.05 * Math.sin(t * 1.7);
-  ctx.fillStyle = "#2b1608";
+  ctx.fillStyle = "#4a2d13";
   ctx.beginPath();
   ctx.ellipse(cx - cell * 0.34, cy + h * 0.06, cell * 0.42, cell * 0.28 * souffle, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -779,6 +786,11 @@ function interieurReine(cx: number, cy: number, w: number, h: number, t: number)
   ctx.fill();
   ctx.beginPath();
   ctx.arc(cx + cell * 0.4, cy - h * 0.04, cell * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+  // lumière des lanternes sur son dos
+  ctx.fillStyle = "rgba(255,209,102,0.22)";
+  ctx.beginPath();
+  ctx.ellipse(cx - cell * 0.34, cy + h * 0.06 - cell * 0.16 * souffle, cell * 0.34, cell * 0.09, 0, 0, Math.PI * 2);
   ctx.fill();
   // rayures dorées sur l'abdomen
   ctx.strokeStyle = "rgba(255,209,102,0.5)";
@@ -791,7 +803,11 @@ function interieurReine(cx: number, cy: number, w: number, h: number, t: number)
   // œil et couronne
   ctx.fillStyle = "#fffdf4";
   ctx.beginPath();
-  ctx.arc(cx + cell * 0.45, cy - h * 0.08, cell * 0.035, 0, Math.PI * 2);
+  ctx.arc(cx + cell * 0.45, cy - h * 0.08, cell * 0.045, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#17171b";
+  ctx.beginPath();
+  ctx.arc(cx + cell * 0.46, cy - h * 0.08, cell * 0.02, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = "#ffd166";
   ctx.beginPath();
@@ -807,7 +823,7 @@ function interieurReine(cx: number, cy: number, w: number, h: number, t: number)
   ctx.closePath();
   ctx.fill();
   // antennes
-  ctx.strokeStyle = "#2b1608";
+  ctx.strokeStyle = "#4a2d13";
   ctx.lineWidth = 2;
   for (const cote of [-1, 1]) {
     ctx.beginPath();
@@ -839,48 +855,66 @@ function interieurNurserie(cx: number, cy: number, w: number, h: number, t: numb
 
 function interieurGrenier(cx: number, cy: number, w: number, h: number): void {
   const cap = stockMax(state);
-  const sol = cy + h * 0.38;
-  // pile de feuilles (grandit avec la réserve)
-  const nF = 2 + Math.round((state.res.feuilles / cap) * 6);
+  const sol = cy + h * 0.36;
+  // pile de feuilles, jamais vide, qui grossit avec la réserve
+  const ratioF = state.res.feuilles / cap;
   ctx.fillStyle = "#6f9c53";
-  for (let i = 0; i < nF; i++) {
-    ctx.beginPath();
-    ctx.ellipse(
-      cx - w * 0.26 + (i % 3) * cell * 0.12 - cell * 0.12,
-      sol - Math.floor(i / 3) * cell * 0.12,
-      cell * 0.2,
-      cell * 0.09,
-      (i % 3) * 0.3 - 0.3,
-      0,
-      Math.PI * 2
-    );
-    ctx.fill();
-  }
-  // tas de champignons séchés
-  const nC = Math.round((state.res.champignons / cap) * 9);
-  ctx.fillStyle = "#d9a05b";
-  for (let i = 0; i < nC; i++) {
+  const rangsF = 2 + Math.round(ratioF * 3);
+  for (let r = 0; r < rangsF; r++)
+    for (let i = 0; i < 3 - Math.min(2, r); i++) {
+      ctx.beginPath();
+      ctx.ellipse(
+        cx - w * 0.28 + (i - 1 + r * 0.3) * cell * 0.17,
+        sol - r * cell * 0.11,
+        cell * 0.17,
+        cell * 0.08,
+        (i - 1) * 0.35,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    }
+  ctx.strokeStyle = "#557a44";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - w * 0.34, sol);
+  ctx.lineTo(cx - w * 0.16, sol - cell * 0.12);
+  ctx.stroke();
+  // tas de graines dorées
+  const nG = 3 + Math.round((state.res.champignons / cap) * 8);
+  ctx.fillStyle = "#e0b054";
+  for (let i = 0; i < nG; i++) {
     ctx.beginPath();
     ctx.arc(
-      cx + w * 0.1 + (i % 3) * cell * 0.11,
-      sol - Math.floor(i / 3) * cell * 0.1 - cell * 0.04,
-      cell * 0.055,
+      cx + w * 0.06 + (i % 4) * cell * 0.09 - cell * 0.12,
+      sol - Math.floor(i / 4) * cell * 0.08,
+      cell * 0.05,
       0,
       Math.PI * 2
     );
     ctx.fill();
   }
-  // jarre de miellat, remplie selon la réserve
-  const jx = cx + w * 0.32;
-  ctx.fillStyle = "#c8b08e";
-  ctx.beginPath();
-  ctx.ellipse(jx, sol - cell * 0.12, cell * 0.11, cell * 0.16, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // jarres de miellat sur une petite étagère
+  for (const [ox, grande] of [
+    [0.26, true],
+    [0.38, false],
+  ] as const) {
+    const jx = cx + w * ox;
+    const rj = cell * (grande ? 0.11 : 0.08);
+    ctx.fillStyle = "#c8b08e";
+    ctx.beginPath();
+    ctx.ellipse(jx, sol - rj * 0.9, rj, rj * 1.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#8a6a45";
+    ctx.beginPath();
+    ctx.ellipse(jx, sol - rj * 2.2, rj * 0.5, rj * 0.22, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
   const niveau = Math.min(1, state.res.miellat / Math.max(60, cap * 0.2));
   if (niveau > 0.02) {
     ctx.fillStyle = "#e8a54b";
     ctx.beginPath();
-    ctx.ellipse(jx, sol - cell * 0.06 - niveau * cell * 0.08, cell * 0.08, cell * 0.1 * niveau, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx + w * 0.26, sol - cell * 0.1, cell * 0.075, cell * 0.1 * Math.max(0.3, niveau), 0, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -918,8 +952,8 @@ function interieurChampignonniere(cx: number, cy: number, w: number, h: number, 
 function interieurEtable(cx: number, cy: number, w: number, h: number, t: number, room: RoomState): void {
   const n = 2 + room.level;
   for (let i = 0; i < n; i++) {
-    const ax = cx + (speckle(room.uid * 5 + i) - 0.5) * w * 0.66;
-    const ay = cy + h * 0.24 + (speckle(room.uid * 9 + i) - 0.5) * h * 0.18;
+    const ax = cx + ((i / Math.max(1, n - 1)) - 0.5) * w * 0.55;
+    const ay = cy + h * 0.22 + (speckle(room.uid * 9 + i) - 0.5) * h * 0.1;
     // litière de paille
     ctx.fillStyle = "#caa54e";
     ctx.beginPath();
@@ -927,7 +961,7 @@ function interieurEtable(cx: number, cy: number, w: number, h: number, t: number
     ctx.fill();
     // puceron dodu qui respire
     const souffle = 1 + 0.07 * Math.sin(t * 1.4 + i * 2.3);
-    ctx.fillStyle = "#b9d39a";
+    ctx.fillStyle = "#cbe0ac";
     ctx.beginPath();
     ctx.ellipse(ax, ay, cell * 0.17, cell * 0.12 * souffle, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -1106,11 +1140,12 @@ function drawColonie(t: number): void {
 function drawFourmis(): void {
   for (const f of fourmis) {
     const px = gridX + (f.x + 0.5) * cell;
-    const py = gridY + (f.y + 0.5) * cell;
+    // en surface, les fourmis marchent SUR l'herbe, pas dedans
+    const py = f.surface ? gridY - cell * 0.09 : gridY + (f.y + 0.5) * cell;
     const dx = f.tx - f.x;
     const dy = f.ty - f.y;
-    const angle = Math.abs(dx) + Math.abs(dy) > 0.01 ? Math.atan2(dy, dx) : 0;
-    peindreFourmi(px, py, cell * (f.surface ? 0.4 : 0.46), angle, f.phase, "#241206", f.feuille);
+    const angle = f.surface ? (dx < 0 ? Math.PI : 0) : Math.abs(dx) + Math.abs(dy) > 0.01 ? Math.atan2(dy, dx) : 0;
+    peindreFourmi(px, py, cell * (f.surface ? 0.32 : 0.4), angle, f.phase, "#241206", f.feuille);
   }
 }
 
