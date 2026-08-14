@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140">
+  <!-- ciel et surface -->
+  <rect width="200" height="46" fill="#8ecae6"/>
+  <circle cx="164" cy="18" r="12" fill="#ffd166"/>
+  <rect y="42" width="200" height="8" fill="#588157"/>
+  <!-- terre -->
+  <rect y="50" width="200" height="90" fill="#6b4423"/>
+  <circle cx="30" cy="70" r="2.5" fill="#432b17"/>
+  <circle cx="170" cy="120" r="3" fill="#432b17"/>
+  <circle cx="60" cy="125" r="2" fill="#432b17"/>
+  <circle cx="150" cy="80" r="2" fill="#432b17"/>
+  <!-- dôme d'entrée -->
+  <path d="M 84 42 A 18 12 0 0 1 120 42 Z" fill="#7a5230"/>
+  <ellipse cx="102" cy="42" rx="6" ry="5" fill="#2a1a0e"/>
+  <!-- galeries -->
+  <path d="M102 44 v 22 M102 66 h -40 v 24 M102 66 h 36 v 30 M62 90 v 20" stroke="#2e1d10" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <!-- salles -->
+  <rect x="42" y="86" width="40" height="26" rx="9" fill="#3b2717"/>
+  <rect x="120" y="92" width="42" height="28" rx="9" fill="#3b2717"/>
+  <rect x="84" y="60" width="36" height="14" rx="7" fill="#3b2717"/>
+  <text x="62" y="105" font-size="16" text-anchor="middle">👑</text>
+  <text x="141" y="112" font-size="14" text-anchor="middle">🥚</text>
+  <!-- fourmis -->
+  <text x="34" y="40" font-size="11">🐜</text>
+  <text x="140" y="40" font-size="11">🐜</text>
+  <text x="98" y="86" font-size="10">🐜</text>
+  <!-- feuille portée -->
+  <text x="52" y="36" font-size="9">🍃</text>
+</svg>
