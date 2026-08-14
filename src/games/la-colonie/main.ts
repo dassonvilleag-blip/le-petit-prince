@@ -624,12 +624,13 @@ function teinteEt(remplissage: string | CanvasGradient, ox: number, oy: number):
   teinteCtx.save();
   teinteCtx.setTransform(1, 0, 0, 1, 0, 0);
   teinteCtx.clearRect(0, 0, teinteCanvas.width, teinteCanvas.height);
-  teinteCtx.globalCompositeOperation = "source-over";
   teinteCtx.drawImage(silCanvas, 0, 0);
-  teinteCtx.globalCompositeOperation = "source-in";
   teinteCtx.restore();
+  // source-in : la couleur ne se dépose QUE sur la silhouette du réseau
+  teinteCtx.globalCompositeOperation = "source-in";
   teinteCtx.fillStyle = remplissage;
   teinteCtx.fillRect(0, 0, W, H);
+  teinteCtx.globalCompositeOperation = "source-over";
   ctx.drawImage(teinteCanvas, ox, oy, W, H);
 }
 
