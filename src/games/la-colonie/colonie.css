@@ -258,6 +258,12 @@ body {
   gap: 8px;
 }
 
+/* les cartes gardent leur taille : c'est le panneau qui défile, jamais
+   les cartes qui s'écrasent (sinon les boutons disparaissent) */
+.panel-body > * {
+  flex-shrink: 0;
+}
+
 .note {
   font-size: 1.05rem;
   opacity: 0.75;
