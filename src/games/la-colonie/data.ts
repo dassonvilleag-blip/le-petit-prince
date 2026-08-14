@@ -296,6 +296,24 @@ export const SYMBIOTES: SymbioteDef[] = [
   },
 ];
 
+// ---- raids sur la colonie ----
+// Des vagues de guêpes attaquent périodiquement la fourmilière. La garnison
+// restée au nid (soldates surtout) défend ; une défaite coûte des ressources.
+
+export const RAID = {
+  premierDelaiMs: 2 * 3600_000, // premier raid ~2 h après la fondation
+  intervalleMinMs: 4 * 3600_000,
+  intervalleMaxMs: 8 * 3600_000,
+  volMax: 0.22, // fraction maximale volée par ressource en cas de défaite
+  alerteMs: 90 * 60_000, // le compte à rebours s'affiche sous 90 min
+};
+
+// puissance de la vague selon le niveau de la Reine (plus la colonie
+// prospère, plus elle attire les convoitises)
+export function puissanceRaid(reineLevel: number, alea: number): number {
+  return Math.round(12 + (reineLevel - 1) * 26 + alea * 18);
+}
+
 // ---- capacités ----
 
 export const STOCK_BASE = 300; // capacité de départ pour chaque ressource

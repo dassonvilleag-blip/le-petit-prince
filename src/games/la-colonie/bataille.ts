@@ -51,8 +51,9 @@ export function jouerBataille(rapport: Rapport, onFin: () => void): void {
     onFin();
     return;
   }
+  const estRaid = rapport.defId.startsWith("raid-");
   const def = EXPEDITION_PAR_ID.get(rapport.defId);
-  if (!def) {
+  if (!def && !estRaid) {
     onFin();
     return;
   }
@@ -61,18 +62,22 @@ export function jouerBataille(rapport: Rapport, onFin: () => void): void {
   overlay.classList.add("show");
   bBouton.textContent = "passer ▸";
 
+  const titre = estRaid ? "🐝 Raid sur la colonie !" : `${def!.emoji} ${def!.nom}`;
   const r = mulberry32(rapport.seed);
-  const ennemiType = ENNEMI_PAR_EXPEDITION[rapport.defId] ?? "criquet";
+  const ennemiType: EnnemiId = estRaid ? "guepe" : ENNEMI_PAR_EXPEDITION[rapport.defId] ?? "criquet";
   const decor = new Image();
-  decor.src = `../../colonie/${EXP_IMG[rapport.defId]}.jpg?v=2`;
+  decor.src = `../../colonie/${estRaid ? "reine" : EXP_IMG[rapport.defId]}.jpg?v=2`;
 
-  // effectifs : les alliés réels, des ennemis proportionnés à la difficulté
+  // effectifs : les alliés réels (plafonnés pour la scène), des ennemis
+  // proportionnés à la difficulté ou fournis par le rapport
   const combattants: Combattant[] = [];
   const effectif = rapport.effectif ?? { ouvriere: 0, soldate: 1 };
   const allies: UnitId[] = [];
   for (const [u, n] of Object.entries(effectif) as [UnitId, number][])
     for (let i = 0; i < n; i++) allies.push(u);
-  const nEnnemis = Math.max(1, Math.min(8, Math.round(def.difficulte / 9)));
+  allies.sort((a, b) => (a === "soldate" ? -1 : 0) - (b === "soldate" ? -1 : 0));
+  if (allies.length > 10) allies.length = 10;
+  const nEnnemis = rapport.nbEnnemis ?? Math.max(1, Math.min(8, Math.round((def?.difficulte ?? 20) / 9)));
 
   const range = (n: number, camp: "allie" | "ennemi"): { x: number; y: number }[] => {
     const out: { x: number; y: number }[] = [];
@@ -220,7 +225,7 @@ export function jouerBataille(rapport: Rapport, onFin: () => void): void {
     if (t < DEBUT_MELEE) {
       bCtx.font = `${Math.min(W, H) * 0.07}px "Pixelify Sans", "VT323", monospace`;
       bCtx.fillStyle = "rgba(255,253,244,0.95)";
-      bCtx.fillText(`${def.emoji} ${def.nom}`, W / 2, H * 0.16);
+      bCtx.fillText(titre, W / 2, H * 0.16);
     }
     if (t > FIN_MELEE + 0.3) {
       const a = Math.min(1, (t - FIN_MELEE - 0.3) / 0.5);
@@ -228,15 +233,26 @@ export function jouerBataille(rapport: Rapport, onFin: () => void): void {
       bCtx.fillRect(0, H * 0.32, W, H * 0.36);
       bCtx.font = `${Math.min(W, H) * 0.11}px "Pixelify Sans", "VT323", monospace`;
       bCtx.fillStyle = rapport.victoire ? `rgba(255,209,102,${a})` : `rgba(224,116,102,${a})`;
-      bCtx.fillText(rapport.victoire ? "⚔️ VICTOIRE !" : "💔 DÉFAITE…", W / 2, H * 0.44);
+      const banniere = estRaid
+        ? rapport.victoire
+          ? "🛡️ RAID REPOUSSÉ !"
+          : "💔 COLONIE PILLÉE…"
+        : rapport.victoire
+          ? "⚔️ VICTOIRE !"
+          : "💔 DÉFAITE…";
+      bCtx.fillText(banniere, W / 2, H * 0.44);
       bCtx.font = `${Math.min(W, H) * 0.052}px "VT323", monospace`;
       bCtx.fillStyle = `rgba(255,253,244,${a})`;
       const butin = Object.entries(rapport.butinGagne ?? {})
         .map(([res, n]) => `+${n} ${RESOURCES[res as ResourceId].emoji}`)
         .join("   ");
+      const vol = Object.entries(rapport.vole ?? {})
+        .map(([res, n]) => `−${n} ${RESOURCES[res as ResourceId].emoji}`)
+        .join("   ");
       const pertesTotal = Object.values(rapport.pertes ?? {}).reduce((s, n) => s + n, 0);
       const bilan: string[] = [];
       if (butin) bilan.push(butin);
+      if (vol) bilan.push(vol);
       bilan.push(pertesTotal > 0 ? `${pertesTotal} ${UNITE_PAR_ID.get("ouvriere")!.emoji} perdue(s)` : "aucune perte");
       bCtx.fillText(bilan.join("   ·   "), W / 2, H * 0.56);
       if (bBouton.textContent !== "continuer ✓") bBouton.textContent = "continuer ✓";

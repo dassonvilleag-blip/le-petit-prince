@@ -6,6 +6,7 @@ import {
   COLS,
   ROWS,
   ENTRANCE_COL,
+  RAID,
   CREUSE_COUT,
   CREUSE_SECONDES_BASE,
   CREUSE_SECONDES_PAR_RANG,
@@ -1171,7 +1172,10 @@ function renderHUD(): void {
       return `<span class="pill" title="${RESOURCES[r].nom} — +${prod[r].toFixed(1)}/min">${RESOURCES[r].emoji} ${Math.floor(state.res[r])}<small>/${cap}</small></span>`;
     })
     .join("");
-  hudPop.innerHTML = `🐜 ${popTotale(state)}<small>/${popMax(state)}</small> · ⛏️ ${chantiersEnCours(state)}<small>/${CHANTIERS_MAX}</small>`;
+  const avantRaid = state.prochaineAttaque - Date.now();
+  const alerte =
+    avantRaid < RAID.alerteMs ? ` · <span class="alerte-raid">🐝 raid dans ${fmtDuree(Math.max(0, avantRaid) / 1000)}</span>` : "";
+  hudPop.innerHTML = `🐜 ${popTotale(state)}<small>/${popMax(state)}</small> · ⛏️ ${chantiersEnCours(state)}<small>/${CHANTIERS_MAX}</small>${alerte}`;
   const nonLus = state.rapports.filter((r) => !r.lu).length;
   badgeRapports.textContent = nonLus ? String(nonLus) : "";
   badgeRapports.classList.toggle("show", nonLus > 0);
@@ -1231,7 +1235,7 @@ function panelNurserie(): void {
   const enFile = state.queue
     .map((q, i) => {
       const def = UNITE_PAR_ID.get(q.unit)!;
-      const reste = i === 0 && q.fin != null ? ` — ${resteMs(q.fin)}` : "";
+      const reste = i === 0 && q.fin != null ? ` — <span data-fin="${q.fin}">${resteMs(q.fin)}</span>` : "";
       return `<span class="pill">${def.emoji} ${def.nom}${reste}</span>`;
     })
     .join(" ");
@@ -1264,7 +1268,7 @@ function panelExpeditions(): void {
     .map((e) => {
       const def = EXPEDITIONS.find((d) => d.id === e.defId)!;
       return `<div class="carte exp off"><img class="carte-hero" src="${imgUrl(EXP_IMG[def.id])}" alt="" />
-        <span class="carte-corps"><b>${def.emoji} ${def.nom}</b><small>escouade en route — retour dans ${resteMs(e.fin)}</small></span></div>`;
+        <span class="carte-corps"><b>${def.emoji} ${def.nom}</b><small>escouade en route — retour dans <span data-fin="${e.fin}">${resteMs(e.fin)}</span></small></span></div>`;
     })
     .join("");
 
@@ -1377,7 +1381,7 @@ function ouvrirPopup(room: RoomState): void {
       <small>Le cœur de la colonie. Son niveau autorise salles, expéditions et cercles.</small>
       ${
         state.reineChantierFin !== null
-          ? `<small>✨ Mue en cours — ${resteMs(state.reineChantierFin)}</small>`
+          ? `<small>✨ Mue en cours — <span data-fin="${state.reineChantierFin}">${resteMs(state.reineChantierFin)}</span></small>`
           : suivant
             ? `${gains}<button class="go" data-ameliorer-reine ${peutPayer(state, suivant.cout) ? "" : "disabled"}>Passer niv. ${state.reineLevel + 1} — ${htmlCout(state, suivant.cout)} · ${fmtDuree(suivant.secondes)}</button>`
             : `<small>La Reine règne au sommet.</small>`
@@ -1400,7 +1404,7 @@ function ouvrirPopup(room: RoomState): void {
       <small>${def.description}</small>${prodTxt}
       ${
         room.chantierFin !== null
-          ? `<small>🔨 Chantier — ${resteMs(room.chantierFin)}</small>`
+          ? `<small>🔨 Chantier — <span data-fin="${room.chantierFin}">${resteMs(room.chantierFin)}</span></small>`
           : suivant
             ? room.level >= state.reineLevel
               ? `<small>🔒 👑 La Reine doit d'abord gagner un niveau.</small>`
@@ -1437,7 +1441,10 @@ function tick(): void {
     });
   }
   renderHUD();
-  if (panelOuvert === "nurserie" || panelOuvert === "expeditions") rafraichirPanel();
+  // les chronomètres se mettent à jour SUR PLACE : on ne reconstruit jamais
+  // un panneau pendant que le joueur clique dessus
+  for (const el of document.querySelectorAll<HTMLElement>("[data-fin]"))
+    el.textContent = resteMs(Number(el.dataset.fin));
 }
 
 // ---- interactions ----

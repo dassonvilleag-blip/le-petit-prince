@@ -93,6 +93,17 @@ body {
   font-size: 0.85em;
 }
 
+.alerte-raid {
+  color: #c62828;
+  animation: alerte-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes alerte-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
 /* ---- barre d'actions ---- */
 
 .barre {

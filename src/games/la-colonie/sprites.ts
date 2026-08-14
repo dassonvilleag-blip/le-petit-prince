@@ -90,7 +90,7 @@ export function peindreFourmi(
 
 // ---- bestiaire ennemi ----
 
-export type EnnemiId = "criquet" | "perce-oreille" | "coccinelle";
+export type EnnemiId = "criquet" | "perce-oreille" | "coccinelle" | "guepe";
 
 export const ENNEMI_PAR_EXPEDITION: Record<string, EnnemiId> = {
   clairiere: "criquet",
@@ -169,6 +169,58 @@ export function peindreEnnemi(
     ctx.beginPath();
     ctx.arc(taille * 0.46, -taille * 0.04, taille * 0.035, 0, Math.PI * 2);
     ctx.fill();
+  } else if (id === "guepe") {
+    // guêpe : abdomen rayé jaune et noir, ailes vrombissantes, dard
+    for (const cote of [-1, 1]) {
+      ctx.fillStyle = "rgba(220,235,255,0.55)";
+      ctx.beginPath();
+      ctx.ellipse(
+        -taille * 0.05,
+        cote * taille * 0.16,
+        taille * 0.3,
+        taille * 0.12,
+        cote * (0.5 + Math.sin(phase * 4) * 0.35),
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    }
+    ctx.fillStyle = "#e8b13a";
+    ctx.beginPath();
+    ctx.ellipse(-taille * 0.24, 0, taille * 0.3, taille * 0.17, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#241206";
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.ellipse(-taille * (0.12 + i * 0.14), 0, taille * 0.045, taille * 0.16, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // dard
+    ctx.strokeStyle = "#241206";
+    ctx.lineWidth = Math.max(1.2, taille * 0.07);
+    ctx.beginPath();
+    ctx.moveTo(-taille * 0.52, 0);
+    ctx.lineTo(-taille * 0.66, 0);
+    ctx.stroke();
+    // thorax et tête
+    ctx.fillStyle = "#3a2210";
+    ctx.beginPath();
+    ctx.arc(taille * 0.08, 0, taille * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(taille * 0.34, 0, taille * 0.13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fffdf4";
+    ctx.beginPath();
+    ctx.arc(taille * 0.38, -taille * 0.04, taille * 0.04, 0, Math.PI * 2);
+    ctx.fill();
+    // sourcil fâché
+    ctx.strokeStyle = "#fffdf4";
+    ctx.lineWidth = Math.max(1, taille * 0.045);
+    ctx.beginPath();
+    ctx.moveTo(taille * 0.3, -taille * 0.12);
+    ctx.lineTo(taille * 0.42, -taille * 0.07);
+    ctx.stroke();
   } else {
     // coccinelle : dôme rouge à points, air sévère
     ctx.strokeStyle = "#2b1608";

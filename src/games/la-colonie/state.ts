@@ -7,6 +7,7 @@ import {
   COLS,
   ROWS,
   ENTRANCE_COL,
+  RAID,
   REINE,
   REINE_W,
   REINE_H,
@@ -14,6 +15,7 @@ import {
   UNITE_PAR_ID,
   EXPEDITION_PAR_ID,
   STOCK_BASE,
+  puissanceRaid,
   type Cost,
   type ResourceId,
   type UnitId,
@@ -58,6 +60,8 @@ export interface Rapport {
   effectif?: Record<UnitId, number>; // escouade au départ
   pertes?: Record<UnitId, number>;
   butinGagne?: Partial<Record<ResourceId, number>>;
+  vole?: Partial<Record<ResourceId, number>>; // pillé par l'ennemi (raids)
+  nbEnnemis?: number; // effectif ennemi à montrer dans la scène
 }
 
 export interface ColonyState {
@@ -75,6 +79,7 @@ export interface ColonyState {
   expeditions: ExpeditionState[];
   symbiotes: string[];
   rapports: Rapport[];
+  prochaineAttaque: number; // date du prochain raid de guêpes
 }
 
 const STORAGE_KEY = "la-colonie-v1";
@@ -104,6 +109,7 @@ export function newColony(now: number): ColonyState {
     expeditions: [],
     symbiotes: [],
     rapports: [],
+    prochaineAttaque: now + RAID.premierDelaiMs,
   };
 }
 
@@ -112,7 +118,11 @@ export function load(now: number): ColonyState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const s = JSON.parse(raw) as ColonyState;
-      if (s.version === 1) return s;
+      if (s.version === 1) {
+        // migration : les sauvegardes d'avant les raids n'ont pas la date
+        if (!s.prochaineAttaque) s.prochaineAttaque = now + RAID.premierDelaiMs;
+        return s;
+      }
     }
   } catch {
     // sauvegarde illisible : on repart de zéro
@@ -337,6 +347,66 @@ function resoudreExpedition(s: ColonyState, e: ExpeditionState, evts: string[]):
   evts.push(`${def.emoji} ${def.nom} : ${victoire ? "victoire !" : "défaite…"}`);
 }
 
+// Un raid de guêpes frappe la colonie : la garnison restée au nid défend.
+function resoudreRaid(s: ColonyState, t: number, evts: string[]): void {
+  const seed = ((t / 1000) ^ (s.reineLevel * 7919)) >>> 0;
+  const r = mulberry32(seed);
+  const puissance = puissanceRaid(s.reineLevel, r());
+  const defense = s.units.soldate * UNITE_PAR_ID.get("soldate")!.force + s.units.ouvriere * 1.5;
+  const ratio = (defense * (0.85 + 0.3 * r())) / puissance;
+  const victoire = ratio >= 1;
+  const lignes: string[] = [];
+  lignes.push(`Des guêpes ont fondu sur la fourmilière (force ${puissance} contre ${Math.round(defense)}).`);
+
+  // pertes de la garnison : les soldates encaissent, les ouvrières fuient
+  const taux = Math.min(0.7, Math.max(0, 0.4 / Math.max(ratio, 0.1) - 0.28));
+  const pertes: Record<UnitId, number> = { ouvriere: 0, soldate: 0 };
+  for (let i = 0; i < s.units.soldate; i++) if (r() < taux) pertes.soldate++;
+  for (let i = 0; i < s.units.ouvriere; i++) if (r() < taux * 0.3) pertes.ouvriere++;
+  pertes.ouvriere = Math.min(pertes.ouvriere, Math.max(0, s.units.ouvriere - 1)); // il reste toujours une ouvrière
+  const effectif: Record<UnitId, number> = { ...s.units };
+  s.units.soldate -= pertes.soldate;
+  s.units.ouvriere -= pertes.ouvriere;
+  const totalPertes = pertes.soldate + pertes.ouvriere;
+
+  const vole: Partial<Record<ResourceId, number>> = {};
+  if (victoire) {
+    lignes.push("La garnison a tenu bon : le raid est repoussé !");
+  } else {
+    const part = Math.min(RAID.volMax, 0.08 + 0.15 * (1 - Math.min(1, ratio)));
+    for (const res of Object.keys(s.res) as ResourceId[]) {
+      const n = Math.floor(s.res[res] * part);
+      if (n > 0) {
+        s.res[res] -= n;
+        vole[res] = n;
+      }
+    }
+    const listeVol = (Object.entries(vole) as [ResourceId, number][])
+      .map(([res, n]) => `${n} ${res === "feuilles" ? "🍃" : res === "champignons" ? "🍄" : "🍯"}`)
+      .join(", ");
+    lignes.push(listeVol ? `Les guêpes ont pillé la colonie : ${listeVol} emportés.` : "Les guêpes n'ont rien trouvé à piller.");
+  }
+  lignes.push(totalPertes > 0 ? `${totalPertes} fourmi(s) sont tombées en défendant le nid.` : "Aucune perte dans la garnison.");
+  if (s.units.soldate === 0) lignes.push("Conseil : élève des soldates, elles portent la défense du nid.");
+
+  s.rapports.unshift({
+    titre: "Raid sur la colonie",
+    emoji: "🐝",
+    lignes,
+    lu: false,
+    defId: "raid-guepes",
+    seed,
+    victoire,
+    effectif,
+    pertes,
+    vole,
+    nbEnnemis: Math.max(2, Math.min(8, 1 + s.reineLevel + Math.floor(r() * 3))),
+  });
+  if (s.rapports.length > 8) s.rapports.length = 8;
+  evts.push(victoire ? "🐝 Raid de guêpes repoussé !" : "🐝 La colonie a été pillée par les guêpes…");
+  s.prochaineAttaque = t + RAID.intervalleMinMs + r() * (RAID.intervalleMaxMs - RAID.intervalleMinMs);
+}
+
 // Fait avancer la colonie jusqu'à `now`. Retourne les événements survenus
 // (pour les toasts et le résumé de retour).
 export function advance(s: ColonyState, now: number): string[] {
@@ -351,6 +421,7 @@ export function advance(s: ColonyState, now: number): string[] {
     for (const r of s.rooms) if (r.chantierFin !== null) best = Math.min(best, r.chantierFin);
     if (s.queue[0]?.fin != null) best = Math.min(best, s.queue[0].fin);
     for (const e of s.expeditions) best = Math.min(best, e.fin);
+    best = Math.min(best, s.prochaineAttaque);
     if (best > now) break;
 
     accumuler(s, t, best);
@@ -390,6 +461,10 @@ export function advance(s: ColonyState, now: number): string[] {
     if (exp) {
       s.expeditions.splice(s.expeditions.indexOf(exp), 1);
       resoudreExpedition(s, exp, evts);
+      continue;
+    }
+    if (s.prochaineAttaque <= t) {
+      resoudreRaid(s, t, evts);
       continue;
     }
     break; // sécurité : rien à traiter alors qu'un événement était daté
