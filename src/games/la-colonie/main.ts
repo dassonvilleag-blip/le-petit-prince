@@ -957,25 +957,25 @@ function interieurEtable(cx: number, cy: number, w: number, h: number, t: number
     // litière de paille
     ctx.fillStyle = "#caa54e";
     ctx.beginPath();
-    ctx.ellipse(ax, ay + cell * 0.09, cell * 0.24, cell * 0.07, 0, 0, Math.PI * 2);
+    ctx.ellipse(ax, ay + cell * 0.07, cell * 0.18, cell * 0.055, 0, 0, Math.PI * 2);
     ctx.fill();
     // puceron dodu qui respire
     const souffle = 1 + 0.07 * Math.sin(t * 1.4 + i * 2.3);
     ctx.fillStyle = "#cbe0ac";
     ctx.beginPath();
-    ctx.ellipse(ax, ay, cell * 0.17, cell * 0.12 * souffle, 0, 0, Math.PI * 2);
+    ctx.ellipse(ax, ay, cell * 0.12, cell * 0.085 * souffle, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#9ab97e";
     for (let d = 0; d < 3; d++) {
       ctx.beginPath();
-      ctx.arc(ax - cell * 0.08 + d * cell * 0.08, ay - cell * 0.04, cell * 0.022, 0, Math.PI * 2);
+      ctx.arc(ax - cell * 0.06 + d * cell * 0.06, ay - cell * 0.03, cell * 0.016, 0, Math.PI * 2);
       ctx.fill();
     }
     // œil fermé (il dort)
     ctx.strokeStyle = "#5c7a48";
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.arc(ax + cell * 0.11, ay - cell * 0.02, cell * 0.03, 0.2, Math.PI - 0.2);
+    ctx.arc(ax + cell * 0.08, ay - cell * 0.015, cell * 0.022, 0.2, Math.PI - 0.2);
     ctx.stroke();
   }
   // goutte de miellat qui perle près de la lanterne
@@ -1145,7 +1145,7 @@ function drawFourmis(): void {
     const dx = f.tx - f.x;
     const dy = f.ty - f.y;
     const angle = f.surface ? (dx < 0 ? Math.PI : 0) : Math.abs(dx) + Math.abs(dy) > 0.01 ? Math.atan2(dy, dx) : 0;
-    peindreFourmi(px, py, cell * (f.surface ? 0.32 : 0.4), angle, f.phase, "#241206", f.feuille);
+    peindreFourmi(px, py, cell * (f.surface ? 0.18 : 0.24), angle, f.phase, "#241206", f.feuille);
   }
 }
 
