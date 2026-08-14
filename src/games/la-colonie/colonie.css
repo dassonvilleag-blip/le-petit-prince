@@ -552,6 +552,57 @@ button.carte:hover:not(:disabled) {
   font-family: "Pixelify Sans", "VT323", monospace;
 }
 
+/* ---- scène de bataille ---- */
+
+.bataille {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 8, 2, 0.72);
+}
+
+.bataille.show {
+  display: flex;
+}
+
+.bataille-cadre {
+  position: relative;
+  width: min(94vw, 760px);
+  aspect-ratio: 16 / 9;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
+  background: #2b1a0d;
+}
+
+#bataille-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#bataille-bouton {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  font-family: "VT323", monospace;
+  font-size: 1.15rem;
+  padding: 6px 14px;
+  background: var(--card);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#bataille-bouton:hover {
+  background: var(--yellow);
+}
+
 /* ---- intro & toast ---- */
 
 .hint {

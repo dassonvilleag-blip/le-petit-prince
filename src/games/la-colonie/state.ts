@@ -51,6 +51,13 @@ export interface Rapport {
   emoji: string;
   lignes: string[];
   lu: boolean;
+  // données de la bataille, pour la rejouer en scène animée
+  defId?: string;
+  seed?: number;
+  victoire?: boolean;
+  effectif?: Record<UnitId, number>; // escouade au départ
+  pertes?: Record<UnitId, number>;
+  butinGagne?: Partial<Record<ResourceId, number>>;
 }
 
 export interface ColonyState {
@@ -271,12 +278,14 @@ function resoudreExpedition(s: ColonyState, e: ExpeditionState, evts: string[]):
   // pertes : nulles si écrasante victoire, lourdes en cas de déroute
   const tauxPertes = Math.min(0.8, Math.max(0, 0.45 / Math.max(ratio, 0.1) - 0.3));
   const survivants: Record<UnitId, number> = { ouvriere: 0, soldate: 0 };
+  const mortsParUnite: Record<UnitId, number> = { ouvriere: 0, soldate: 0 };
   let pertes = 0;
   for (const [u, n] of Object.entries(e.escouade) as [UnitId, number][]) {
     let morts = 0;
     for (let i = 0; i < n; i++) if (r() < tauxPertes) morts++;
     if (victoire && morts === n && n > 0) morts = n - 1; // une victoire ramène toujours quelqu'un
     survivants[u] = n - morts;
+    mortsParUnite[u] = morts;
     pertes += morts;
   }
   s.units.ouvriere += survivants.ouvriere;
@@ -286,10 +295,12 @@ function resoudreExpedition(s: ColonyState, e: ExpeditionState, evts: string[]):
   const part = victoire ? 1 : Math.min(0.35, ratio * 0.35);
   const cap = stockMax(s);
   const butin: string[] = [];
+  const butinGagne: Partial<Record<ResourceId, number>> = {};
   for (const [res, n] of Object.entries(def.butin) as [ResourceId, number][]) {
     const gain = Math.round(n * part);
     if (gain > 0) {
       s.res[res] = Math.min(cap, s.res[res] + gain);
+      butinGagne[res] = gain;
       butin.push(`${gain} ${res === "feuilles" ? "🍃" : res === "champignons" ? "🍄" : "🍯"}`);
     }
   }
@@ -310,7 +321,18 @@ function resoudreExpedition(s: ColonyState, e: ExpeditionState, evts: string[]):
   if (pertes > 0) lignes.push(`${pertes} fourmi(s) ne rentreront pas.`);
   else lignes.push("Aucune perte, toutes les fourmis sont rentrées.");
 
-  s.rapports.unshift({ titre: def.nom, emoji: def.emoji, lignes, lu: false });
+  s.rapports.unshift({
+    titre: def.nom,
+    emoji: def.emoji,
+    lignes,
+    lu: false,
+    defId: def.id,
+    seed: e.seed,
+    victoire,
+    effectif: { ...e.escouade },
+    pertes: mortsParUnite,
+    butinGagne,
+  });
   if (s.rapports.length > 8) s.rapports.length = 8;
   evts.push(`${def.emoji} ${def.nom} : ${victoire ? "victoire !" : "défaite…"}`);
 }

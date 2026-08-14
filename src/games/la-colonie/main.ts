@@ -53,6 +53,9 @@ import {
   htmlCout,
   pronostic,
 } from "./previews";
+import { EXP_IMG, peindreFourmi } from "./sprites";
+import { batailleEnCours, jouerBataille } from "./bataille";
+import { cellDansSalle } from "./state";
 
 // ---- illustrations (générées, voir public/colonie/) ----
 
@@ -94,11 +97,6 @@ for (const id of [
 ])
   image(id);
 
-const EXP_IMG: Record<string, string> = {
-  clairiere: "exp-clairiere",
-  "vieux-chene": "exp-vieux-chene",
-  "capture-pucerons": "exp-pucerons",
-};
 
 // ---- DOM ----
 
@@ -188,10 +186,33 @@ interface Fourmi {
   vitesse: number;
   phase: number; // animation des pattes
   surface: boolean;
+  soldate: boolean;
   feuille: boolean; // porte une feuille (récolte en surface)
 }
 
 const fourmis: Fourmi[] = [];
+
+// escouade en partance : petit défilé sur l'herbe vers le bord de l'écran
+interface Marcheur {
+  x: number;
+  vitesse: number;
+  phase: number;
+  soldate: boolean;
+}
+
+const marcheurs: Marcheur[] = [];
+
+export function lancerMarche(escouade: Record<UnitId, number>): void {
+  let i = 0;
+  for (const [u, n] of Object.entries(escouade) as [UnitId, number][])
+    for (let k = 0; k < n; k++, i++)
+      marcheurs.push({
+        x: gridX + (ENTRANCE_COL + 0.5) * cell - i * cell * 0.5,
+        vitesse: (55 + Math.random() * 15) * (cell / 48),
+        phase: Math.random() * 7,
+        soldate: u === "soldate",
+      });
+}
 
 const VOISINS4 = [
   [0, -1],
@@ -230,6 +251,7 @@ function syncFourmis(): void {
       vitesse: 0.55 + Math.random() * 0.65,
       phase: Math.random() * Math.PI * 2,
       surface,
+      soldate: Math.random() < state.units.soldate / Math.max(1, state.units.soldate + state.units.ouvriere),
       feuille: false,
     });
   }
@@ -237,6 +259,12 @@ function syncFourmis(): void {
 }
 
 function bougeFourmis(dt: number): void {
+  for (let i = marcheurs.length - 1; i >= 0; i--) {
+    const m = marcheurs[i];
+    m.x += m.vitesse * dt;
+    m.phase += dt * 11;
+    if (m.x > W + cell) marcheurs.splice(i, 1);
+  }
   for (const f of fourmis) {
     f.phase += dt * (6 + f.vitesse * 6);
     const dx = f.tx - f.x;
@@ -623,6 +651,26 @@ function traceReseau(cc: CanvasRenderingContext2D): void {
     cc.fill();
   }
 
+  // deux salles mitoyennes s'ouvrent l'une sur l'autre
+  for (let y = 0; y < ROWS; y++)
+    for (let x = 0; x < COLS; x++) {
+      const a = cellDansSalle(state, x, y);
+      if (!a) continue;
+      for (const [dx, dy] of [
+        [1, 0],
+        [0, 1],
+      ]) {
+        const b = cellDansSalle(state, x + dx, y + dy);
+        if (b && b !== a) {
+          cc.lineWidth = cell * 0.8;
+          cc.beginPath();
+          cc.moveTo(gridX + (x + 0.5) * cell, gridY + (y + 0.5) * cell);
+          cc.lineTo(gridX + (x + dx + 0.5) * cell, gridY + (y + dy + 0.5) * cell);
+          cc.stroke();
+        }
+      }
+    }
+
   for (const room of state.rooms) traceSalle(cc, room);
 }
 
@@ -674,68 +722,6 @@ function chip(px: number, py: number, lignes: string[], ok: boolean): void {
   ctx.fill();
   ctx.fillStyle = "#fffdf4";
   lignes.forEach((l, i) => ctx.fillText(l, bx + pad, by + pad / 2 + lh * (i + 0.5)));
-}
-
-// une fourmi stylisée : trois segments, pattes animées, antennes
-function peindreFourmi(
-  px: number,
-  py: number,
-  taille: number,
-  angle: number,
-  phase: number,
-  teinte = "#241206",
-  feuille = false
-): void {
-  ctx.save();
-  ctx.translate(px, py);
-  ctx.rotate(angle);
-  ctx.strokeStyle = teinte;
-  ctx.fillStyle = teinte;
-  ctx.lineWidth = Math.max(1, taille * 0.09);
-  // pattes : trois paires qui trottinent
-  for (let i = 0; i < 3; i++) {
-    const balance = Math.sin(phase + i * 2.1) * 0.45;
-    for (const cote of [-1, 1]) {
-      ctx.beginPath();
-      ctx.moveTo((i - 1) * taille * 0.22, 0);
-      ctx.lineTo((i - 1) * taille * 0.22 + balance * taille * 0.3, cote * taille * 0.34);
-      ctx.stroke();
-    }
-  }
-  // abdomen, thorax, tête
-  ctx.beginPath();
-  ctx.ellipse(-taille * 0.34, 0, taille * 0.3, taille * 0.2, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(0, 0, taille * 0.16, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(taille * 0.28, 0, taille * 0.15, 0, Math.PI * 2);
-  ctx.fill();
-  // antennes
-  for (const cote of [-1, 1]) {
-    ctx.beginPath();
-    ctx.moveTo(taille * 0.38, cote * taille * 0.04);
-    ctx.quadraticCurveTo(taille * 0.55, cote * taille * 0.22, taille * 0.62, cote * taille * 0.14);
-    ctx.stroke();
-  }
-  // reflet sur l'abdomen
-  ctx.fillStyle = "rgba(255,255,255,0.18)";
-  ctx.beginPath();
-  ctx.ellipse(-taille * 0.4, -taille * 0.07, taille * 0.1, taille * 0.05, -0.4, 0, Math.PI * 2);
-  ctx.fill();
-  if (feuille) {
-    ctx.fillStyle = "#7cb268";
-    ctx.beginPath();
-    ctx.ellipse(taille * 0.1, -taille * 0.3, taille * 0.34, taille * 0.18, -0.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#5e9a53";
-    ctx.beginPath();
-    ctx.moveTo(-taille * 0.12, -taille * 0.18);
-    ctx.lineTo(taille * 0.32, -taille * 0.44);
-    ctx.stroke();
-  }
-  ctx.restore();
 }
 
 // halo lumineux chaleureux (lanternes, champignons)
@@ -1145,8 +1131,11 @@ function drawFourmis(): void {
     const dx = f.tx - f.x;
     const dy = f.ty - f.y;
     const angle = f.surface ? (dx < 0 ? Math.PI : 0) : Math.abs(dx) + Math.abs(dy) > 0.01 ? Math.atan2(dy, dx) : 0;
-    peindreFourmi(px, py, cell * (f.surface ? 0.18 : 0.24), angle, f.phase, "#241206", f.feuille);
+    peindreFourmi(ctx, px, py, cell * (f.surface ? 0.18 : 0.24), angle, f.phase, f.soldate, f.feuille);
   }
+  // l'escouade en partance défile sur l'herbe vers le bord de l'écran
+  for (const m of marcheurs)
+    peindreFourmi(ctx, m.x, gridY - cell * 0.09, cell * 0.2, 0, m.phase, m.soldate);
 }
 
 let lastT = 0;
@@ -1356,13 +1345,14 @@ function panelCercles(): void {
 function panelRapports(): void {
   const html = state.rapports.length
     ? state.rapports
-        .map((r) => {
+        .map((r, i) => {
           const def = EXPEDITIONS.find((d) => d.nom === r.titre);
           const vignette = def
             ? `<img class="carte-img" src="${imgUrl(EXP_IMG[def.id])}" alt="" />`
             : `<span class="carte-emoji">${r.emoji}</span>`;
+          const rejouer = r.defId ? `<button class="go" data-rejouer="${i}">⚔️ revoir la bataille</button>` : "";
           return `<div class="carte">${vignette}
-          <span class="carte-corps"><b>${r.emoji} ${r.titre}</b>${r.lignes.map((l) => `<small>${l}</small>`).join("")}</span></div>`;
+          <span class="carte-corps"><b>${r.emoji} ${r.titre}</b>${r.lignes.map((l) => `<small>${l}</small>`).join("")}${rejouer}</span></div>`;
         })
         .join("")
     : `<p class="note">Aucun rapport pour l'instant — envoie une escouade en expédition !</p>`;
@@ -1436,6 +1426,15 @@ function tick(): void {
   if (evts.length) {
     syncFourmis();
     rafraichirPanel();
+  }
+  // une expédition vient de se résoudre : on joue la bataille sous les yeux
+  const frais = state.rapports.find((r) => !r.lu && r.defId);
+  if (frais && !batailleEnCours()) {
+    jouerBataille(frais, () => {
+      frais.lu = true;
+      renderHUD();
+      syncFourmis();
+    });
   }
   renderHUD();
   if (panelOuvert === "nurserie" || panelOuvert === "expeditions") rafraichirPanel();
@@ -1524,11 +1523,20 @@ document.addEventListener("click", (ev) => {
     if (err) toast(err);
     else {
       toast("🐜 L'escouade s'ébranle !");
+      lancerMarche(esc);
       escouades.set(btn.dataset.partir, { ouvriere: 0, soldate: 0 });
       syncFourmis();
     }
     panelExpeditions();
     renderHUD();
+    return;
+  }
+  if (btn.dataset.rejouer !== undefined) {
+    const rapport = state.rapports[Number(btn.dataset.rejouer)];
+    if (rapport && !batailleEnCours()) {
+      fermerPanel();
+      jouerBataille(rapport, () => renderHUD());
+    }
     return;
   }
   if (btn.dataset.ameliorer) {
