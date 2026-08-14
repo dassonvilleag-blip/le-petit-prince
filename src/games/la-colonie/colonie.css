@@ -314,6 +314,160 @@ button.carte:hover:not(:disabled) {
   padding: 4px;
 }
 
+/* vignettes illustrées */
+
+.carte-img {
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: #fff8e1;
+}
+
+.carte-img.grise {
+  filter: grayscale(0.85) opacity(0.7);
+}
+
+.carte.exp {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0 0 10px;
+  overflow: hidden;
+}
+
+.carte.exp .carte-corps {
+  padding: 8px 12px 0;
+}
+
+.carte-hero {
+  width: 100%;
+  height: 96px;
+  object-fit: cover;
+  border-bottom: 3px solid var(--ink);
+  display: block;
+}
+
+.carte.off .carte-hero,
+.carte.off .carte-img {
+  filter: grayscale(0.85) opacity(0.75);
+}
+
+/* coûts annotés : payable ou non */
+
+.cout {
+  white-space: nowrap;
+}
+
+.cout.ok {
+  color: #33691e;
+}
+
+.cout.manque {
+  color: #c62828;
+  font-weight: bold;
+}
+
+.go .cout.ok,
+.go .cout.manque {
+  color: inherit;
+}
+
+.go .cout.manque {
+  text-decoration: underline wavy;
+}
+
+/* pronostic d'expédition */
+
+.prono {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.prono-barre {
+  height: 10px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #e8e0c9;
+  overflow: hidden;
+}
+
+.prono-barre span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.15s ease;
+}
+
+.prono-vert .prono-barre span {
+  background: #74c46b;
+}
+
+.prono-jaune .prono-barre span {
+  background: var(--yellow);
+}
+
+.prono-rouge .prono-barre span {
+  background: #e0574a;
+}
+
+.prono small {
+  font-size: 1rem;
+}
+
+.prono-vert small {
+  color: #33691e;
+}
+
+.prono-jaune small {
+  color: #8a6d00;
+}
+
+.prono-rouge small {
+  color: #c62828;
+}
+
+/* aperçu avant → après dans les popups */
+
+.apercu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  background: #fff8e1;
+  border: 2px dashed var(--ink);
+  border-radius: 8px;
+}
+
+.apercu small {
+  font-size: 1rem;
+}
+
+.popup-img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+}
+
+.hint-img {
+  width: min(60vw, 230px);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.go:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
 /* steppers d'escouade */
 
 .steppers {
