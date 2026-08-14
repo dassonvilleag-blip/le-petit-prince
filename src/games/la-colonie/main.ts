@@ -145,9 +145,10 @@ function fmtCout(cout: Cost): string {
 }
 
 function fmtDuree(secondes: number): string {
-  if (secondes < 60) return `${Math.ceil(secondes)}s`;
-  if (secondes < 3600) return `${Math.floor(secondes / 60)}min ${Math.ceil(secondes % 60)}s`;
-  return `${Math.floor(secondes / 3600)}h ${Math.floor((secondes % 3600) / 60)}min`;
+  const s = Math.ceil(secondes);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return s % 60 === 0 ? `${s / 60}min` : `${Math.floor(s / 60)}min ${s % 60}s`;
+  return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}min`;
 }
 
 function resteMs(fin: number): string {
@@ -1311,7 +1312,9 @@ function panelExpeditions(): void {
                   <span class="prono-barre"><span style="width:${Math.round(prono.chance * 100)}%"></span></span>
                   <small>force ${prono.force} — ${prono.verdict}${pertes ? ` · ${pertes}` : ""}</small>
                 </span>
-                <button class="go" data-partir="${def.id}" ${partable ? "" : "disabled"}>${offrandeOk ? "Partir" : "offrande impayable"}</button>`
+                <button class="go" data-partir="${def.id}" ${partable ? "" : "disabled"}>${
+                  !offrandeOk ? "offrande impayable" : prono.force === 0 ? "ajoute des fourmis ↑" : "Partir ⚔️"
+                }</button>`
           }
         </span>
       </div>`;
