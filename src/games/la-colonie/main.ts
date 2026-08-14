@@ -29,12 +29,12 @@ import {
 import {
   advance,
   chantiersEnCours,
-  constructible,
   creusable,
   estCreusee,
   fileMax,
   load,
   nbSalles,
+  peutPayer,
   popMax,
   popTotale,
   prodParMinute,
@@ -44,6 +44,60 @@ import {
   type RoomState,
 } from "./state";
 import { ameliorerReine, ameliorerSalle, construire, creuser, lancerExpedition, pondre } from "./actions";
+import {
+  apercuReine,
+  apercuSalle,
+  avisConstruction,
+  avisCreuse,
+  coutCreuse,
+  htmlCout,
+  pronostic,
+} from "./previews";
+
+// ---- illustrations (générées, voir public/colonie/) ----
+
+const IMG_BASE = "../../colonie/"; // relatif à /games/la-colonie/, suit la base Vite
+const IMAGES = new Map<string, HTMLImageElement>();
+
+function image(id: string): HTMLImageElement | null {
+  let im = IMAGES.get(id);
+  if (!im) {
+    im = new Image();
+    im.src = `${IMG_BASE}${id}.jpg`;
+    IMAGES.set(id, im);
+  }
+  return im.complete && im.naturalWidth > 0 ? im : null;
+}
+
+function imgUrl(id: string): string {
+  return `${IMG_BASE}${id}.jpg`;
+}
+
+// préchargement
+for (const id of [
+  "reine",
+  "nurserie",
+  "grenier",
+  "champignonniere",
+  "etable",
+  "ouvriere",
+  "soldate",
+  "exp-clairiere",
+  "exp-vieux-chene",
+  "exp-pucerons",
+  "sp-pucerons",
+  "sp-lucioles",
+  "sp-scarabees",
+  "sp-abeilles",
+  "sp-mante",
+])
+  image(id);
+
+const EXP_IMG: Record<string, string> = {
+  clairiere: "exp-clairiere",
+  "vieux-chene": "exp-vieux-chene",
+  "capture-pucerons": "exp-pucerons",
+};
 
 // ---- DOM ----
 
@@ -273,6 +327,52 @@ function cavite(x: number, y: number, w: number, h: number): void {
   ctx.fill();
 }
 
+// dessine une illustration en remplissant la cavité (recadrage type « cover »)
+function dioramaSalle(id: string, x: number, y: number, w: number, h: number, alpha: number): boolean {
+  const im = image(id);
+  if (!im) return false;
+  const px = gridX + x * cell + 2;
+  const py = gridY + y * cell + 2;
+  const pw = w * cell - 4;
+  const ph = h * cell - 4;
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(px, py, pw, ph, cell * 0.22);
+  ctx.clip();
+  const s = Math.max(pw / im.naturalWidth, ph / im.naturalHeight);
+  const dw = im.naturalWidth * s;
+  const dh = im.naturalHeight * s;
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(im, px + (pw - dw) / 2, py + (ph - dh) / 2, dw, dh);
+  ctx.globalAlpha = 1;
+  // léger vignettage pour asseoir le diorama dans la terre
+  ctx.strokeStyle = "rgba(46,29,16,0.75)";
+  ctx.lineWidth = 6;
+  ctx.stroke();
+  ctx.restore();
+  return true;
+}
+
+// petite étiquette d'information dessinée près d'une case (préviews de mode)
+function chip(px: number, py: number, lignes: string[], ok: boolean): void {
+  ctx.font = `${Math.max(13, cell * 0.32)}px "VT323", monospace`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  const pad = 8;
+  const lh = Math.max(15, cell * 0.36);
+  const wMax = Math.max(...lignes.map((l) => ctx.measureText(l).width));
+  let bx = px + cell * 0.6;
+  let by = py - lh * lignes.length - 10;
+  bx = Math.min(bx, W - wMax - pad * 2 - 8);
+  by = Math.max(by, 8);
+  ctx.fillStyle = ok ? "rgba(23,23,27,0.88)" : "rgba(120,30,30,0.9)";
+  ctx.beginPath();
+  ctx.roundRect(bx, by, wMax + pad * 2, lh * lignes.length + pad, 8);
+  ctx.fill();
+  ctx.fillStyle = "#fffdf4";
+  lignes.forEach((l, i) => ctx.fillText(l, bx + pad, by + pad / 2 + lh * (i + 0.5)));
+}
+
 function drawGrille(t: number): void {
   // tunnels creusés
   ctx.fillStyle = "#2e1d10";
@@ -319,10 +419,16 @@ function drawGrille(t: number): void {
       cavite(room.x, room.y, w, h);
     }
 
-    ctx.font = `${cell * (est ? 1.0 : 0.8)}px sans-serif`;
+    // diorama illustré, avec repli sur l'emoji tant que l'image charge
+    const illustree = dioramaSalle(est ? "reine" : room.type, room.x, room.y, w, h, room.level === 0 ? 0.35 : 1);
+    if (!illustree) {
+      ctx.font = `${cell * (est ? 1.0 : 0.8)}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(est ? "👑" : def!.emoji, px + (w * cell) / 2, py + (h * cell) / 2);
+    }
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(est ? "👑" : def!.emoji, px + (w * cell) / 2, py + (h * cell) / 2);
 
     // pastilles de niveau
     if (room.level > 0 && !est) {
@@ -359,11 +465,24 @@ function drawGrille(t: number): void {
       for (let x = 0; x < COLS; x++)
         if (creusable(state, x, y))
           ctx.strokeRect(gridX + x * cell + 3, gridY + y * cell + 3, cell - 6, cell - 6);
+    // préview sous le curseur : coût, durée, et pourquoi c'est impossible
+    if (hover) {
+      const avis = avisCreuse(state, hover.x, hover.y);
+      const { cout, secondes } = coutCreuse(hover.y);
+      ctx.fillStyle = avis.ok ? "rgba(128,222,120,0.35)" : "rgba(230,80,70,0.3)";
+      ctx.fillRect(gridX + hover.x * cell, gridY + hover.y * cell, cell, cell);
+      chip(
+        gridX + hover.x * cell,
+        gridY + hover.y * cell,
+        avis.ok ? [`⛏️ ${cout} 🍃 · ${secondes}s`] : [`✕ ${avis.raison}`],
+        avis.ok
+      );
+    }
   }
   if (mode.type === "build" && hover) {
     const { w, h } = mode.def;
-    const ok = constructible(state, hover.x, hover.y, w, h);
-    ctx.fillStyle = ok ? "rgba(128,222,120,0.35)" : "rgba(230,80,70,0.35)";
+    const avis = avisConstruction(state, mode.def.id, hover.x, hover.y);
+    ctx.fillStyle = avis.ok ? "rgba(128,222,120,0.35)" : "rgba(230,80,70,0.35)";
     ctx.fillRect(gridX + hover.x * cell, gridY + hover.y * cell, w * cell, h * cell);
     ctx.font = `${cell * 0.7}px sans-serif`;
     ctx.textAlign = "center";
@@ -371,6 +490,14 @@ function drawGrille(t: number): void {
     ctx.globalAlpha = 0.7;
     ctx.fillText(mode.def.emoji, gridX + (hover.x + w / 2) * cell, gridY + (hover.y + h / 2) * cell);
     ctx.globalAlpha = 1;
+    chip(
+      gridX + hover.x * cell,
+      gridY + hover.y * cell,
+      avis.ok
+        ? [`${mode.def.emoji} ${mode.def.nom} — ${fmtCout(mode.def.niveaux[0].cout)} · ${fmtDuree(mode.def.niveaux[0].secondes)}`]
+        : [`✕ ${avis.raison}`],
+      avis.ok
+    );
   }
 }
 
@@ -454,15 +581,13 @@ function panelConstruire(): void {
     const bloqueMax = n >= max;
     const dispo = !bloqueSymbiote && !bloqueMax;
     const raison = bloqueSymbiote
-      ? "réservée aux alliés du Cercle I — voir les expéditions"
+      ? `<small class="carte-cout">🔒 réservée aux alliés du Cercle I — voir les expéditions</small>`
       : bloqueMax
-        ? max === 0
-          ? "la Reine doit gagner un niveau"
-          : `limite atteinte (${n}/${max})`
-        : `${fmtCout(def.niveaux[0].cout)} · ${fmtDuree(def.niveaux[0].secondes)} · ${def.w}×${def.h}`;
+        ? `<small class="carte-cout">🔒 ${max === 0 ? "la Reine doit gagner un niveau" : `limite atteinte (${n}/${max})`}</small>`
+        : `<small class="carte-cout">${htmlCout(state, def.niveaux[0].cout)} · ${fmtDuree(def.niveaux[0].secondes)} · ${def.w}×${def.h}</small>`;
     return `<button class="carte ${dispo ? "" : "off"}" data-salle="${def.id}" ${dispo ? "" : "disabled"}>
-      <span class="carte-emoji">${def.emoji}</span>
-      <span class="carte-corps"><b>${def.nom}</b><small>${def.description}</small><small class="carte-cout">${raison}</small></span>
+      <img class="carte-img" src="${imgUrl(def.id)}" alt="" />
+      <span class="carte-corps"><b>${def.emoji} ${def.nom}</b><small>${def.description}</small>${raison}</span>
     </button>`;
   }).join("");
   ouvrirPanel(
@@ -483,12 +608,21 @@ function panelNurserie(): void {
       return `<span class="pill">${def.emoji} ${def.nom}${reste}</span>`;
     })
     .join(" ");
-  const html = UNITES.map(
-    (def) => `<button class="carte" data-pondre="${def.id}">
-      <span class="carte-emoji">${def.emoji}</span>
-      <span class="carte-corps"><b>${def.nom}</b><small>${def.description}</small><small class="carte-cout">${fmtCout(def.cout)} · ${fmtDuree(def.secondes)}</small></span>
-    </button>`
-  ).join("");
+  const plein = state.queue.length >= fileMax(state);
+  const surpop = popTotale(state) >= popMax(state);
+  const html = UNITES.map((def) => {
+    const payable = peutPayer(state, def.cout);
+    const dispo = payable && !plein && !surpop;
+    const blocage = surpop
+      ? `<small class="carte-cout">🔒 colonie au complet — améliore la Reine</small>`
+      : plein
+        ? `<small class="carte-cout">🔒 la file de la nurserie est pleine</small>`
+        : "";
+    return `<button class="carte ${dispo ? "" : "off"}" data-pondre="${def.id}" ${dispo ? "" : "disabled"}>
+      <img class="carte-img" src="${imgUrl(def.id)}" alt="" />
+      <span class="carte-corps"><b>${def.emoji} ${def.nom}</b><small>${def.description}</small><small>force ${def.force}${def.recolte ? ` · récolte ${def.recolte} 🍃/min` : ""}</small><small class="carte-cout">${htmlCout(state, def.cout)} · ${fmtDuree(def.secondes)}</small>${blocage}</span>
+    </button>`;
+  }).join("");
   ouvrirPanel(
     "nurserie",
     "🥚 Nurserie",
@@ -502,8 +636,8 @@ function panelExpeditions(): void {
   const enCours = state.expeditions
     .map((e) => {
       const def = EXPEDITIONS.find((d) => d.id === e.defId)!;
-      return `<div class="carte off"><span class="carte-emoji">${def.emoji}</span>
-        <span class="carte-corps"><b>${def.nom}</b><small>escouade en route — retour dans ${resteMs(e.fin)}</small></span></div>`;
+      return `<div class="carte exp off"><img class="carte-hero" src="${imgUrl(EXP_IMG[def.id])}" alt="" />
+        <span class="carte-corps"><b>${def.emoji} ${def.nom}</b><small>escouade en route — retour dans ${resteMs(e.fin)}</small></span></div>`;
     })
     .join("");
 
@@ -512,17 +646,27 @@ function panelExpeditions(): void {
       if (!escouades.has(def.id)) escouades.set(def.id, { ouvriere: 0, soldate: 0 });
       const esc = escouades.get(def.id)!;
       const bloque = state.reineLevel < def.reineMin;
-      const force = esc.ouvriere * UNITE_PAR_ID.get("ouvriere")!.force + esc.soldate * UNITE_PAR_ID.get("soldate")!.force;
-      const jauge = force === 0 ? "" : force >= def.difficulte * 1.2 ? "🟢 sûr" : force >= def.difficulte ? "🟡 jouable" : "🔴 risqué";
-      const offrande = def.offrande ? ` · offrande ${fmtCout(def.offrande)}` : "";
-      return `<div class="carte ${bloque ? "off" : ""}">
-        <span class="carte-emoji">${def.emoji}</span>
+      const prono = pronostic(esc, def.difficulte);
+      const offrandeOk = !def.offrande || peutPayer(state, def.offrande);
+      const partable = prono.force > 0 && offrandeOk;
+      const offrande = def.offrande ? ` · offrande ${htmlCout(state, def.offrande)}` : "";
+      const pertes =
+        prono.force === 0
+          ? ""
+          : prono.pertesMax === 0
+            ? "aucune perte à prévoir"
+            : `pertes estimées : ${prono.pertesMin === prono.pertesMax ? prono.pertesMax : `${prono.pertesMin} à ${prono.pertesMax}`} 🐜`;
+      const butin = (Object.entries(def.butin) as [keyof typeof RESOURCES, number][])
+        .map(([r, n]) => `${n} ${RESOURCES[r].emoji}`)
+        .join(" · ");
+      return `<div class="carte exp ${bloque ? "off" : ""}">
+        <img class="carte-hero" src="${imgUrl(EXP_IMG[def.id])}" alt="" />
         <span class="carte-corps">
-          <b>${def.nom}</b><small>${def.description}</small>
-          <small class="carte-cout">durée ${fmtDuree(def.secondes)} · difficulté ${def.difficulte}${offrande}</small>
+          <b>${def.emoji} ${def.nom}</b><small>${def.description}</small>
+          <small class="carte-cout">durée ${fmtDuree(def.secondes)} · difficulté ${def.difficulte} · butin ${butin}${offrande}</small>
           ${
             bloque
-              ? `<small class="carte-cout">👑 Reine niv. ${def.reineMin} requise</small>`
+              ? `<small class="carte-cout">🔒 👑 Reine niv. ${def.reineMin} requise</small>`
               : `<span class="steppers">
                   ${UNITES.map(
                     (u) => `<span class="stepper">${u.emoji}
@@ -531,9 +675,12 @@ function panelExpeditions(): void {
                       <button data-esc="${def.id}" data-unit="${u.id}" data-delta="1">+</button>
                     </span>`
                   ).join("")}
-                  <span class="jauge">${jauge}</span>
-                  <button class="go" data-partir="${def.id}">Partir</button>
-                </span>`
+                </span>
+                <span class="prono prono-${prono.couleur}">
+                  <span class="prono-barre"><span style="width:${Math.round(prono.chance * 100)}%"></span></span>
+                  <small>force ${prono.force} — ${prono.verdict}${pertes ? ` · ${pertes}` : ""}</small>
+                </span>
+                <button class="go" data-partir="${def.id}" ${partable ? "" : "disabled"}>${offrandeOk ? "Partir" : "offrande impayable"}</button>`
           }
         </span>
       </div>`;
@@ -548,8 +695,8 @@ function panelCercles(): void {
     const recrutee = state.symbiotes.includes(sp.id);
     const etat = recrutee ? "✅ alliée de la colonie" : sp.disponible ? `🎯 ${sp.effort}` : "🌫️ à venir";
     const carte = `<div class="carte ${recrutee ? "" : "off"}">
-      <span class="carte-emoji">${sp.emoji}</span>
-      <span class="carte-corps"><b>${sp.nom}</b><small>${sp.apporte}</small><small class="carte-cout">${etat}</small></span>
+      <img class="carte-img ${recrutee ? "" : "grise"}" src="${imgUrl(`sp-${sp.id}`)}" alt="" />
+      <span class="carte-corps"><b>${sp.emoji} ${sp.nom}</b><small>${sp.apporte}</small><small class="carte-cout">${etat}</small></span>
     </div>`;
     if (!parCercle.has(sp.cercle)) parCercle.set(sp.cercle, []);
     parCercle.get(sp.cercle)!.push(carte);
@@ -571,10 +718,14 @@ function panelCercles(): void {
 function panelRapports(): void {
   const html = state.rapports.length
     ? state.rapports
-        .map(
-          (r) => `<div class="carte"><span class="carte-emoji">${r.emoji}</span>
-          <span class="carte-corps"><b>${r.titre}</b>${r.lignes.map((l) => `<small>${l}</small>`).join("")}</span></div>`
-        )
+        .map((r) => {
+          const def = EXPEDITIONS.find((d) => d.nom === r.titre);
+          const vignette = def
+            ? `<img class="carte-img" src="${imgUrl(EXP_IMG[def.id])}" alt="" />`
+            : `<span class="carte-emoji">${r.emoji}</span>`;
+          return `<div class="carte">${vignette}
+          <span class="carte-corps"><b>${r.emoji} ${r.titre}</b>${r.lignes.map((l) => `<small>${l}</small>`).join("")}</span></div>`;
+        })
         .join("")
     : `<p class="note">Aucun rapport pour l'instant — envoie une escouade en expédition !</p>`;
   for (const r of state.rapports) r.lu = true;
@@ -588,13 +739,19 @@ function ouvrirPopup(room: RoomState): void {
   let html: string;
   if (room.type === "reine") {
     const suivant = state.reineLevel < REINE_MAX ? REINE[state.reineLevel] : null;
-    html = `<b>👑 Chambre de la Reine — niv. ${state.reineLevel}</b>
+    const gains = suivant
+      ? `<div class="apercu">${apercuReine(state.reineLevel)
+          .map((g) => `<small>▸ ${g}</small>`)
+          .join("")}</div>`
+      : "";
+    html = `<img class="popup-img" src="${imgUrl("reine")}" alt="" />
+      <b>👑 Chambre de la Reine — niv. ${state.reineLevel}</b>
       <small>Le cœur de la colonie. Son niveau autorise salles, expéditions et cercles.</small>
       ${
         state.reineChantierFin !== null
           ? `<small>✨ Mue en cours — ${resteMs(state.reineChantierFin)}</small>`
           : suivant
-            ? `<button class="go" data-ameliorer-reine>Passer niv. ${state.reineLevel + 1} — ${fmtCout(suivant.cout)} · ${fmtDuree(suivant.secondes)}</button>`
+            ? `${gains}<button class="go" data-ameliorer-reine ${peutPayer(state, suivant.cout) ? "" : "disabled"}>Passer niv. ${state.reineLevel + 1} — ${htmlCout(state, suivant.cout)} · ${fmtDuree(suivant.secondes)}</button>`
             : `<small>La Reine règne au sommet.</small>`
       }`;
   } else {
@@ -604,15 +761,22 @@ function ouvrirPopup(room: RoomState): void {
       def.prodRes && room.level > 0
         ? `<small>Production : ${def.niveaux[room.level - 1].prodParMinute} ${RESOURCES[def.prodRes].emoji}/min</small>`
         : "";
-    html = `<b>${def.emoji} ${def.nom}${room.level > 0 ? ` — niv. ${room.level}` : ""}</b>
+    const apercu =
+      suivant && room.chantierFin === null && room.level < state.reineLevel
+        ? `<div class="apercu">${apercuSalle(room.type, room.level)
+            .map((l) => `<small>▸ ${l.label} : ${l.avant} → <b>${l.apres}</b></small>`)
+            .join("")}</div>`
+        : "";
+    html = `<img class="popup-img" src="${imgUrl(room.type)}" alt="" />
+      <b>${def.emoji} ${def.nom}${room.level > 0 ? ` — niv. ${room.level}` : ""}</b>
       <small>${def.description}</small>${prodTxt}
       ${
         room.chantierFin !== null
           ? `<small>🔨 Chantier — ${resteMs(room.chantierFin)}</small>`
           : suivant
             ? room.level >= state.reineLevel
-              ? `<small>👑 La Reine doit d'abord gagner un niveau.</small>`
-              : `<button class="go" data-ameliorer="${room.uid}">Améliorer — ${fmtCout(suivant.cout)} · ${fmtDuree(suivant.secondes)}</button>`
+              ? `<small>🔒 👑 La Reine doit d'abord gagner un niveau.</small>`
+              : `${apercu}<button class="go" data-ameliorer="${room.uid}" ${peutPayer(state, suivant.cout) ? "" : "disabled"}>Améliorer — ${htmlCout(state, suivant.cout)} · ${fmtDuree(suivant.secondes)}</button>`
             : `<small>Niveau maximum atteint.</small>`
       }`;
   }
