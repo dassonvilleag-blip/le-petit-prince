@@ -90,6 +90,7 @@ for (const id of [
   "sp-scarabees",
   "sp-abeilles",
   "sp-mante",
+  "sol",
 ])
   image(id);
 
@@ -281,15 +282,28 @@ function drawFond(t: number): void {
   ctx.fillStyle = terre;
   ctx.fillRect(0, gridY, W, H - gridY);
 
-  // mouchetures (cailloux, racines)
-  ctx.fillStyle = "rgba(0,0,0,0.16)";
-  for (let i = 0; i < 140; i++) {
-    const sx = speckle(i) * W;
-    const sy = gridY + speckle(i + 500) * (H - gridY);
-    const r = 1 + speckle(i + 900) * 2.5;
-    ctx.beginPath();
-    ctx.arc(sx, sy, r, 0, Math.PI * 2);
-    ctx.fill();
+  // texture de sol peinte (avec repli sur des mouchetures procédurales)
+  const sol = image("sol");
+  if (sol) {
+    ctx.globalAlpha = 0.4;
+    ctx.drawImage(sol, 0, gridY, W, H - gridY);
+    ctx.globalAlpha = 1;
+    // on garde l'assombrissement en profondeur par-dessus la texture
+    const ombre = ctx.createLinearGradient(0, gridY, 0, H);
+    ombre.addColorStop(0, "rgba(0,0,0,0)");
+    ombre.addColorStop(1, "rgba(0,0,0,0.35)");
+    ctx.fillStyle = ombre;
+    ctx.fillRect(0, gridY, W, H - gridY);
+  } else {
+    ctx.fillStyle = "rgba(0,0,0,0.16)";
+    for (let i = 0; i < 140; i++) {
+      const sx = speckle(i) * W;
+      const sy = gridY + speckle(i + 500) * (H - gridY);
+      const r = 1 + speckle(i + 900) * 2.5;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   // herbe
@@ -339,16 +353,24 @@ function dioramaSalle(id: string, x: number, y: number, w: number, h: number, al
   ctx.beginPath();
   ctx.roundRect(px, py, pw, ph, cell * 0.22);
   ctx.clip();
-  const s = Math.max(pw / im.naturalWidth, ph / im.naturalHeight);
+  // sur-cadrage volontaire : on rogne les bords de l'illustration pour que
+  // seul son cœur apparaisse, fondu dans la terre
+  const s = Math.max(pw / im.naturalWidth, ph / im.naturalHeight) * 1.15;
   const dw = im.naturalWidth * s;
   const dh = im.naturalHeight * s;
   ctx.globalAlpha = alpha;
   ctx.drawImage(im, px + (pw - dw) / 2, py + (ph - dh) / 2, dw, dh);
   ctx.globalAlpha = 1;
-  // léger vignettage pour asseoir le diorama dans la terre
-  ctx.strokeStyle = "rgba(46,29,16,0.75)";
-  ctx.lineWidth = 6;
-  ctx.stroke();
+  // les bords de l'illustration se fondent dans la terre environnante
+  const cx = px + pw / 2;
+  const cy = py + ph / 2;
+  const rMin = Math.min(pw, ph) * 0.42;
+  const rMax = Math.hypot(pw, ph) * 0.62;
+  const fondu = ctx.createRadialGradient(cx, cy, rMin, cx, cy, rMax);
+  fondu.addColorStop(0, "rgba(59,39,23,0)");
+  fondu.addColorStop(1, "rgba(59,39,23,0.9)");
+  ctx.fillStyle = fondu;
+  ctx.fillRect(px, py, pw, ph);
   ctx.restore();
   return true;
 }
