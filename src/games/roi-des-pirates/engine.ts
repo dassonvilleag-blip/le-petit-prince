@@ -11,6 +11,33 @@ export function resolveDuel(
   return "blessure-grave";
 }
 
+export function filterChoices(choices: Choice[], flags: Set<string>): Choice[] {
+  return choices.filter((c) => {
+    if (c.requiresFlags?.some((f) => !flags.has(f))) return false;
+    if (c.forbidsFlags?.some((f) => flags.has(f))) return false;
+    return true;
+  });
+}
+
+export function resolveText(
+  text: string | ((flags: Set<string>) => string),
+  flags: Set<string>,
+): string {
+  return typeof text === "function" ? text(flags) : text;
+}
+
+const INJURY_LABELS: Record<string, string> = {
+  "bras-coupe": "ton bras manquant",
+  "main-brisee": "ta main qui ne se referme plus tout à fait",
+  "jambe-blessee": "ta jambe qui traîne un peu, certains soirs",
+};
+
+export function describeInjuries(flags: Set<string>): string[] {
+  return Object.entries(INJURY_LABELS)
+    .filter(([flag]) => flags.has(flag))
+    .map(([, label]) => label);
+}
+
 let nodes: Record<string, StoryNode>;
 let stats: Stats;
 let currentNodeId: string;
