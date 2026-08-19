@@ -148,3 +148,29 @@ test("validateStoryGraph : suit aussi les cibles de duel et de fruit en attente"
   assert.ok(errors.some((e) => e.includes("victoire-manquante")));
   assert.ok(errors.some((e) => e.includes("manger-manquant")));
 });
+
+test("validateStoryGraph : signale un choix sans aucun routage (ni next, ni duel, ni eatPendingFruit)", () => {
+  const nodes: StoryNode[] = [
+    {
+      id: "a",
+      text: "A",
+      svg: "",
+      choices: [{ text: "choix orphelin", effects: {} }],
+    },
+  ];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.some((e) => e.includes("aucun routage")));
+});
+
+test("validateStoryGraph : un choix pickFruitCandidate accompagné de next n'est pas signalé", () => {
+  const nodes: StoryNode[] = [
+    {
+      id: "a",
+      text: "A",
+      svg: "",
+      choices: [{ text: "ouvrir", effects: {}, pickFruitCandidate: {}, next: "b" }],
+    },
+    { id: "b", text: "B", svg: "", choices: [], isEnding: true },
+  ];
+  assert.deepEqual(validateStoryGraph(nodes), []);
+});

@@ -62,6 +62,10 @@ export function validateStoryGraph(storyNodes: StoryNode[]): string[] {
     }
 
     for (const choice of node.choices) {
+      if (!choice.duel && !choice.eatPendingFruit && !choice.next) {
+        errors.push(`${node.id}: le choix "${choice.text}" n'a aucun routage (ni next, ni duel, ni eatPendingFruit).`);
+      }
+
       const targets: string[] = [];
       if (choice.duel) targets.push(choice.duel.win, choice.duel.loseMinor, choice.duel.loseMajor);
       if (choice.eatPendingFruit) targets.push(choice.eatPendingFruit.next);
