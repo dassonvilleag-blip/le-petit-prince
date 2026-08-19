@@ -1,4 +1,5 @@
-import type { Stats, StoryNode, Choice, EndingId } from "./types";
+import type { Stats, StoryNode, Choice, EndingId, Fruit } from "./types";
+import { pickRandomFruit } from "./fruits.ts";
 
 export function resolveDuel(
   playerStat: number,
@@ -80,6 +81,12 @@ export function validateStoryGraph(storyNodes: StoryNode[]): string[] {
 let nodes: Record<string, StoryNode>;
 let stats: Stats;
 let currentNodeId: string;
+let flags: Set<string>;
+let pendingFruit: Fruit | undefined;
+
+export function getPendingFruit(): Fruit | undefined {
+  return pendingFruit;
+}
 
 const ARC_LABELS: Record<string, string> = {
   "east-blue": "East Blue",
@@ -143,7 +150,7 @@ function renderNode(): void {
   }
 
   illustEl.innerHTML = node.svg;
-  textEl.textContent = node.text;
+  textEl.textContent = resolveText(node.text, flags);
   choicesEl.innerHTML = "";
   replayEl.hidden = true;
 
@@ -154,7 +161,7 @@ function renderNode(): void {
     return;
   }
 
-  for (const choice of node.choices) {
+  for (const choice of filterChoices(node.choices, flags)) {
     const btn = document.createElement("button");
     btn.className = "choice-btn";
     const textSpan = document.createElement("span");
@@ -174,11 +181,44 @@ function renderNode(): void {
 
 function navigate(choice: Choice): void {
   applyEffects(choice.effects);
+  for (const flag of choice.setFlags ?? []) flags.add(flag);
 
-  if (choice.next === "__ending__") {
+  if (choice.duel) {
+    const stat = choice.duel.statUsed ?? "force";
+    const outcome = resolveDuel(stats[stat], choice.duel.opponentPower);
+    if (outcome === "victoire") {
+      for (const flag of choice.duel.winFlags ?? []) flags.add(flag);
+      if (choice.duel.winPicksFruit !== undefined) {
+        pendingFruit = pickRandomFruit(
+          choice.duel.winPicksFruit === "any" ? undefined : choice.duel.winPicksFruit,
+        );
+      }
+      currentNodeId = choice.duel.win;
+    } else if (outcome === "defaite-legere") {
+      if (choice.duel.loseMinorPicksFruit !== undefined) {
+        pendingFruit = pickRandomFruit(
+          choice.duel.loseMinorPicksFruit === "any" ? undefined : choice.duel.loseMinorPicksFruit,
+        );
+      }
+      currentNodeId = choice.duel.loseMinor;
+    } else {
+      if (choice.duel.injuryFlag) flags.add(choice.duel.injuryFlag);
+      currentNodeId = choice.duel.loseMajor;
+    }
+  } else if (choice.pickFruitCandidate) {
+    pendingFruit = pickRandomFruit(choice.pickFruitCandidate.type);
+    currentNodeId = choice.next!;
+  } else if (choice.eatPendingFruit) {
+    if (pendingFruit) {
+      applyEffects(pendingFruit.effects);
+      flags.add(`fruit-${pendingFruit.id}`);
+      flags.add("a-mange-un-fruit");
+    }
+    currentNodeId = choice.eatPendingFruit.next;
+  } else if (choice.next === "__ending__") {
     currentNodeId = computeEndingId();
   } else {
-    currentNodeId = choice.next;
+    currentNodeId = choice.next!;
   }
 
   renderNode();
@@ -188,12 +228,16 @@ function navigate(choice: Choice): void {
 export function startEngine(storyNodes: StoryNode[]): void {
   nodes = Object.fromEntries(storyNodes.map((n) => [n.id, n]));
   stats = { force: 0, notoriete: 0, equipage: 0, fruitDuDemon: 0 };
+  flags = new Set();
+  pendingFruit = undefined;
   currentNodeId = "intro";
 
   const replayBtn = document.getElementById("replay-btn");
   if (replayBtn) {
     replayBtn.addEventListener("click", () => {
       stats = { force: 0, notoriete: 0, equipage: 0, fruitDuDemon: 0 };
+      flags = new Set();
+      pendingFruit = undefined;
       currentNodeId = "intro";
       renderNode();
       window.scrollTo({ top: 0, behavior: "smooth" });
