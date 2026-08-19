@@ -165,12 +165,13 @@ export const STORY: StoryNode[] = [
         text: "Le défier en duel, pour de vrai. Jauger sa force avant de lui faire confiance.",
         effects: {},
         duel: {
-          opponentPower: 55,
+          opponentPower: 35,
           win: "eb-epeiste-duel-victoire",
           winFlags: ["epeiste-recrute"],
           loseMinor: "eb-epeiste-duel-defaite",
           loseMajor: "eb-epeiste-duel-blessure",
-          injuryFlag: "bras-coupe",
+          injuryFlag: "cicatrice-epeiste",
+          counterFruitTypes: ["Logia"],
         },
       },
       {
@@ -210,7 +211,7 @@ export const STORY: StoryNode[] = [
     id: "eb-epeiste-duel-blessure",
     arc: "east-blue",
     title: "East Blue — Le prix de l'orgueil",
-    text: "Il est meilleur que tu ne le pensais — bien meilleur. Sa lame trouve ton bras avant que tu ne comprennes ton erreur. La blessure ne guérira jamais tout à fait. Il s'excuse, presque sincère, et s'en va sans se retourner. Tu repars avec une leçon, et un bras en moins.",
+    text: "Il est meilleur que tu ne le pensais — bien meilleur. Sa lame te marque avant que tu ne comprennes ton erreur : une entaille profonde le long du bras, pas mortelle, mais qui laissera une trace. Il s'excuse, presque sincère, et s'en va sans se retourner. Tu repars avec une leçon, et une cicatrice pour te la rappeler.",
     svg: SVG_EAST_BLUE,
     choices: [{ text: "Continuer, tant bien que mal.", effects: {}, next: "eb-marine" }],
   },
@@ -327,7 +328,7 @@ export const STORY: StoryNode[] = [
         text: "L'affronter pour le lui prendre.",
         effects: {},
         duel: {
-          opponentPower: 60,
+          opponentPower: 45,
           win: "gl-vol-fruit-butin",
           winPicksFruit: "any",
           loseMinor: "gl-vol-fruit-echec",
@@ -472,7 +473,7 @@ export const STORY: StoryNode[] = [
         text: "Partir à sa recherche, coûte que coûte.",
         effects: {},
         duel: {
-          opponentPower: 65,
+          opponentPower: 45,
           statUsed: "notoriete",
           win: "nm-fruit-ope-ope-trouve",
           loseMinor: "nm-quete-fruit-inconnu",

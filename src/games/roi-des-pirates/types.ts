@@ -39,6 +39,8 @@ export interface DuelOutcome {
   loseMinorPicksFruit?: FruitType | "any";
   /** Drapeau de blessure permanente posé en cas de défaite grave. */
   injuryFlag?: string;
+  /** Si le fruit déjà mangé par le joueur est d'un de ces types, victoire automatique (contre un adversaire sans Haki). */
+  counterFruitTypes?: FruitType[];
 }
 
 export interface Choice {

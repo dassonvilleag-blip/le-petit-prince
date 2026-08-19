@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resolveDuel, filterChoices, resolveText, describeInjuries } from "../engine.ts";
+import { resolveDuel, filterChoices, resolveText, describeInjuries, fruitCounters } from "../engine.ts";
 import type { Choice } from "../types.ts";
 
 test("resolveDuel : victoire nette si la stat du joueur domine largement", () => {
@@ -69,9 +69,28 @@ test("describeInjuries : liste vide sans blessure", () => {
 });
 
 test("describeInjuries : décrit chaque blessure connue posée", () => {
-  const result = describeInjuries(new Set(["bras-coupe", "jambe-blessee"]));
+  const result = describeInjuries(new Set(["cicatrice-epeiste", "jambe-blessee"]));
   assert.equal(result.length, 2);
   assert.ok(result.every((s) => typeof s === "string" && s.length > 0));
+});
+
+test("fruitCounters : un fruit du bon type l'emporte", () => {
+  const fruit = { id: "mera-feu", nom: "Mera Mera no Mi", type: "Logia" as const, description: "", effects: {} };
+  assert.equal(fruitCounters(fruit, ["Logia"]), true);
+});
+
+test("fruitCounters : un fruit d'un autre type ne compte pas", () => {
+  const fruit = { id: "ope-ope", nom: "Ope Ope no Mi", type: "Paramecia" as const, description: "", effects: {} };
+  assert.equal(fruitCounters(fruit, ["Logia"]), false);
+});
+
+test("fruitCounters : sans fruit mangé, pas de contre", () => {
+  assert.equal(fruitCounters(undefined, ["Logia"]), false);
+});
+
+test("fruitCounters : sans liste de contre définie, pas de contre", () => {
+  const fruit = { id: "mera-feu", nom: "Mera Mera no Mi", type: "Logia" as const, description: "", effects: {} };
+  assert.equal(fruitCounters(fruit, undefined), false);
 });
 
 import { validateStoryGraph } from "../engine.ts";

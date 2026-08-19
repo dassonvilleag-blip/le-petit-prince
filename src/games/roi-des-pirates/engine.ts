@@ -1,5 +1,5 @@
-import type { Stats, StoryNode, Choice, EndingId, Fruit } from "./types";
-import { pickRandomFruit } from "./fruits.ts";
+import type { Stats, StoryNode, Choice, EndingId, Fruit, FruitType } from "./types";
+import { pickRandomFruit, findEatenFruit } from "./fruits.ts";
 
 export function resolveDuel(
   playerStat: number,
@@ -28,10 +28,17 @@ export function resolveText(
 }
 
 const INJURY_LABELS: Record<string, string> = {
-  "bras-coupe": "ton bras manquant",
+  "cicatrice-epeiste": "une cicatrice sur le bras, qui te rappelle ce premier combat",
   "main-brisee": "ta main qui ne se referme plus tout à fait",
   "jambe-blessee": "ta jambe qui traîne un peu, certains soirs",
 };
+
+export function fruitCounters(
+  eatenFruit: Fruit | undefined,
+  counterFruitTypes: FruitType[] | undefined,
+): boolean {
+  return Boolean(eatenFruit && counterFruitTypes?.includes(eatenFruit.type));
+}
 
 export function describeInjuries(flags: Set<string>): string[] {
   return Object.entries(INJURY_LABELS)
@@ -189,7 +196,9 @@ function navigate(choice: Choice): void {
 
   if (choice.duel) {
     const stat = choice.duel.statUsed ?? "force";
-    const outcome = resolveDuel(stats[stat], choice.duel.opponentPower);
+    const outcome = fruitCounters(findEatenFruit(flags), choice.duel.counterFruitTypes)
+      ? "victoire"
+      : resolveDuel(stats[stat], choice.duel.opponentPower);
     if (outcome === "victoire") {
       for (const flag of choice.duel.winFlags ?? []) flags.add(flag);
       if (choice.duel.winPicksFruit !== undefined) {
