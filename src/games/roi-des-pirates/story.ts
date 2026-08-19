@@ -264,8 +264,140 @@ export const STORY: StoryNode[] = [
     text: "Le Log Pose pointe. Derrière toi, East Blue — les mers les plus calmes du monde. Devant, la Grand Line. Un passage étroit, des îles où la météo délire, des créatures qui ont oublié la taille raisonnable. Tu sens la différence immédiatement. L'air est plus dense, plus chargé, comme si le monde respirait autrement ici.",
     svg: SVG_GRAND_LINE,
     choices: [
-      { text: "Avancer.", effects: {}, next: "gl-grand-choix" },
+      { text: "Avancer.", effects: {}, next: "gl-epeiste-retour" },
     ],
+  },
+
+  {
+    id: "gl-epeiste-retour",
+    arc: "grand-line",
+    title: "Grand Line — Un visage familier ?",
+    text: (flags) =>
+      flags.has("epeiste-recrute")
+        ? "Sur le pont, ton épéiste aiguise sa lame sans un mot, les yeux fixés sur l'horizon nouveau. La Grand Line ne l'impressionne pas — ou il le cache bien."
+        : "Sur les quais d'une île de passage, tu croises à nouveau ce même épéiste d'East Blue, plus loin de chez lui que toi. Il te reconnaît, hausse un sourcil. \"Toujours vivant, à ce que je vois.\"",
+    svg: SVG_GRAND_LINE,
+    choices: [
+      {
+        text: "Lui proposer, une seconde fois, de rejoindre l'équipage.",
+        sub: "+Équipage, +Force",
+        effects: { equipage: 15, force: 8 },
+        setFlags: ["epeiste-recrute"],
+        forbidsFlags: ["epeiste-recrute"],
+        next: "gl-rencontre-navigatrice",
+      },
+      {
+        text: "Continuer sa route.",
+        effects: {},
+        next: "gl-rencontre-navigatrice",
+      },
+    ],
+  },
+
+  {
+    id: "gl-rencontre-navigatrice",
+    arc: "grand-line",
+    title: "Grand Line — Une navigatrice pour les mers folles",
+    text: "Sur ce même quai, une jeune femme discute avec un marchand de cartes marines, l'air de connaître les courants mieux que quiconque à cent lieues à la ronde. La Grand Line dévore les navigateurs médiocres. Un bon connaît la différence entre une accalmie et un piège.",
+    svg: SVG_GRAND_LINE,
+    choices: [
+      {
+        text: "L'embarquer. Tu jugeras de sa valeur plus tard, sur le terrain.",
+        sub: "+Équipage — sa vraie valeur reste à découvrir.",
+        effects: { equipage: 10 },
+        setFlags: ["navigatrice-recrute"],
+        next: "gl-vol-fruit-rencontre",
+      },
+      {
+        text: "Refuser. Un problème de plus à nourrir sur un bateau déjà trop plein.",
+        effects: {},
+        next: "gl-vol-fruit-rencontre",
+      },
+    ],
+  },
+
+  {
+    id: "gl-vol-fruit-rencontre",
+    arc: "grand-line",
+    title: "Grand Line — Un coffre bien gardé",
+    text: "Un pirate isolé, la démarche trop assurée pour être honnête, traîne un petit coffre verrouillé qu'il ne quitte jamais des yeux. La rumeur du port dit qu'il contient un Fruit du Démon. La rumeur du port dit beaucoup de choses, mais celle-ci sent le vrai.",
+    svg: SVG_ALLIANCE,
+    choices: [
+      {
+        text: "L'affronter pour le lui prendre.",
+        effects: {},
+        duel: {
+          opponentPower: 60,
+          win: "gl-vol-fruit-butin",
+          winPicksFruit: "any",
+          loseMinor: "gl-vol-fruit-echec",
+          loseMajor: "gl-vol-fruit-blessure",
+          injuryFlag: "main-brisee",
+        },
+      },
+      {
+        text: "Le laisser partir. Pas la peine du risque, cette fois.",
+        effects: {},
+        next: "gl-grand-choix",
+      },
+    ],
+  },
+
+  {
+    id: "gl-vol-fruit-butin",
+    arc: "grand-line",
+    title: "Grand Line — Le coffre, enfin ouvert",
+    text: (flags) => {
+      const fruit = getPendingFruit();
+      if (fruit && revealsFruit(flags, fruit)) {
+        return `Le pirate au sol, tu ouvres le coffre : un ${fruit.nom}. ${fruit.description} Le voler ne le rend pas moins tentant.`;
+      }
+      return "Le pirate au sol, tu ouvres le coffre : un fruit que tu ne reconnais pas, aux couleurs qui ne ressemblent à rien de familier. Voler un pouvoir, c'est aussi voler l'incertitude qui va avec.";
+    },
+    svg: SVG_ALLIANCE,
+    choices: [
+      {
+        text: "Le manger.",
+        effects: {},
+        forbidsFlags: ["a-mange-un-fruit"],
+        eatPendingFruit: { next: "gl-post-vol-fruit-mange" },
+      },
+      {
+        text: "Le garder pour plus tard, sans le manger.",
+        effects: {},
+        next: "gl-grand-choix",
+      },
+    ],
+  },
+
+  {
+    id: "gl-post-vol-fruit-mange",
+    arc: "grand-line",
+    title: "Grand Line — Un pouvoir volé",
+    text: (flags) => {
+      const fruit = findEatenFruit(flags);
+      return `${fruit?.nom ?? "Le pouvoir"} coule en toi, arraché plutôt que trouvé. Ça ne change rien à l'effet. ${fruit?.description ?? ""}`;
+    },
+    svg: SVG_ALLIANCE,
+    choices: [{ text: "Continuer.", effects: {}, next: "gl-grand-choix" }],
+  },
+
+  {
+    id: "gl-vol-fruit-echec",
+    arc: "grand-line",
+    title: "Grand Line — Le coffre s'échappe",
+    text: "Le combat tourne mal. Le pirate profite d'une ouverture, ramasse son coffre et disparaît dans la foule du port. Tu restes debout, les mains vides, avec juste ta fierté écornée.",
+    svg: SVG_ALLIANCE,
+    choices: [{ text: "Continuer.", effects: {}, next: "gl-grand-choix" }],
+  },
+
+  {
+    id: "gl-vol-fruit-blessure",
+    arc: "grand-line",
+    title: "Grand Line — Mauvais calcul",
+    text: "Il se défend mieux que son allure de vantard ne le laissait deviner. Un coup mal paré, et ta main ne se refermera plus jamais tout à fait comme avant. Il s'enfuit avec son coffre, et toi avec la leçon.",
+    svg: SVG_ALLIANCE,
+    choices: [{ text: "Continuer, la main serrée contre toi.", effects: {}, next: "gl-grand-choix" }],
   },
 
   {
