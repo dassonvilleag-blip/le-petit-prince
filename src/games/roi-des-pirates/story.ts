@@ -435,8 +435,117 @@ export const STORY: StoryNode[] = [
     text: "De l'autre côté de Fishman Island, le Nouveau Monde t'attend. Ici, même la pluie peut brûler. Les quatre Empereurs tiennent ces mers comme leurs jardins privés. Kaido de la Bête domine Wano. Barbe Noire s'étend. Et quelque part, sur un bout de carte que personne ne partage vraiment, le One Piece attend. Tu es plus fort qu'à East Blue. Pas encore assez.",
     svg: SVG_NOUVEAU_MONDE,
     choices: [
-      { text: "S'y aventurer.", effects: {}, next: "nm-wano" },
+      { text: "S'y aventurer.", effects: {}, next: "nm-rencontre-medecin" },
     ],
+  },
+
+  {
+    id: "nm-rencontre-medecin",
+    arc: "nouveau-monde",
+    title: "Nouveau Monde — Un médecin sans navire",
+    text: "Sur une île à moitié engloutie, un médecin erre depuis le naufrage de son propre équipage. Il connaît les blessures de guerre, les poisons des Logia, et — détail qu'il glisse presque timidement — les Fruits du Démon, qu'il a étudiés toute sa vie.",
+    svg: SVG_NOUVEAU_MONDE,
+    choices: [
+      {
+        text: "L'accueillir à bord.",
+        sub: "+Équipage, +Force — et une vraie connaissance des fruits.",
+        effects: { equipage: 15, force: 5 },
+        setFlags: ["medecin-recrute", "compagnon-connaisseur"],
+        next: "nm-quete-fruit",
+      },
+      {
+        text: "Continuer seul. Une bouche de plus à nourrir, si près du but.",
+        effects: {},
+        next: "nm-quete-fruit",
+      },
+    ],
+  },
+
+  {
+    id: "nm-quete-fruit",
+    arc: "nouveau-monde",
+    title: "Nouveau Monde — La légende du bistouri",
+    text: "Une rumeur revient sans cesse dans les ports du Nouveau Monde : quelque part circule l'Ope Ope no Mi, le fruit du \"Chirurgien de la Mort\", capable — dit-on — de vendre jusqu'à l'immortalité elle-même. Le trouver prendrait du temps. Et rien ne garantit que la rumeur dise vrai.",
+    svg: SVG_NOUVEAU_MONDE,
+    choices: [
+      {
+        text: "Partir à sa recherche, coûte que coûte.",
+        effects: {},
+        duel: {
+          opponentPower: 65,
+          statUsed: "notoriete",
+          win: "nm-fruit-ope-ope-trouve",
+          loseMinor: "nm-quete-fruit-inconnu",
+          loseMinorPicksFruit: "any",
+          loseMajor: "nm-quete-fruit-echec",
+          injuryFlag: "jambe-blessee",
+        },
+      },
+      {
+        text: "Laisser cette légende à d'autres.",
+        effects: {},
+        next: "nm-wano",
+      },
+    ],
+  },
+
+  {
+    id: "nm-fruit-ope-ope-trouve",
+    arc: "nouveau-monde",
+    title: "Nouveau Monde — L'Ope Ope no Mi",
+    text: "La rumeur disait vrai. Après des semaines de recherche, tu tiens enfin l'Ope Ope no Mi entre tes mains — le fruit le plus recherché des mers, celui que même les Empereurs se disputent en silence.",
+    svg: SVG_NOUVEAU_MONDE,
+    choices: [
+      {
+        text: "Le dévorer. Ce pouvoir sera tien.",
+        sub: "+Notoriété (beaucoup), +Force",
+        effects: { notoriete: 30, force: 5, fruitDuDemon: 15 },
+        setFlags: ["fruit-ope-ope", "a-mange-un-fruit"],
+        forbidsFlags: ["a-mange-un-fruit"],
+        next: "nm-wano",
+      },
+      {
+        text: "Le garder sans le manger. Pas encore prêt à porter ce poids.",
+        effects: {},
+        next: "nm-wano",
+      },
+    ],
+  },
+
+  {
+    id: "nm-quete-fruit-inconnu",
+    arc: "nouveau-monde",
+    title: "Nouveau Monde — Une autre trouvaille",
+    text: (flags) => {
+      const fruit = getPendingFruit();
+      if (fruit && revealsFruit(flags, fruit)) {
+        return `L'Ope Ope no Mi reste introuvable. Mais au fond d'une grotte oubliée, tu tombes sur autre chose : un ${fruit.nom}. ${fruit.description}`;
+      }
+      return "L'Ope Ope no Mi reste introuvable. Mais au fond d'une grotte oubliée, tu tombes sur un autre fruit — inconnu, celui-là, sans la moindre légende pour te préparer à ce qu'il cache.";
+    },
+    svg: SVG_NOUVEAU_MONDE,
+    choices: [
+      {
+        text: "Le manger, puisqu'il est là.",
+        effects: {},
+        forbidsFlags: ["a-mange-un-fruit"],
+        eatPendingFruit: { next: "nm-wano" },
+      },
+      {
+        text: "Le laisser. Une légende à la fois suffit.",
+        effects: {},
+        next: "nm-wano",
+      },
+    ],
+  },
+
+  {
+    id: "nm-quete-fruit-echec",
+    arc: "nouveau-monde",
+    title: "Nouveau Monde — La quête de trop",
+    text: "La recherche tourne au désastre. Un éboulement, une chute mal négociée, et ta jambe ne te portera plus jamais aussi bien qu'avant. L'Ope Ope no Mi restera une légende parmi d'autres — pour toi, en tout cas.",
+    svg: SVG_NOUVEAU_MONDE,
+    choices: [{ text: "Continuer, en boitant.", effects: {}, next: "nm-wano" }],
   },
 
   {
@@ -450,21 +559,49 @@ export const STORY: StoryNode[] = [
         text: "Chercher les Road Ponéglyphes. Connaître la route avant de courir.",
         sub: "+Notoriété, +Force",
         effects: { notoriete: 20, force: 5 },
-        next: "arc-final",
+        next: "nm-avant-laugh-tale",
       },
       {
         text: "Libérer Wano d'abord. Un Roi des Pirates doit d'abord servir.",
         sub: "+Équipage, +Notoriété",
         effects: { equipage: 20, notoriete: 15 },
-        next: "arc-final",
+        next: "nm-avant-laugh-tale",
       },
       {
         text: "Défier Kaido ici, maintenant. C'est ça ou rien.",
         sub: "+Force, +Notoriété",
         effects: { force: 20, notoriete: 25 },
-        next: "arc-final",
+        next: "nm-avant-laugh-tale",
       },
     ],
+  },
+
+  {
+    id: "nm-avant-laugh-tale",
+    arc: "nouveau-monde",
+    title: "Nouveau Monde — Avant la dernière ligne droite",
+    text: (flags) => {
+      const compagnons: string[] = [];
+      if (flags.has("epeiste-recrute")) compagnons.push("ton épéiste");
+      if (flags.has("navigatrice-recrute")) compagnons.push("ta navigatrice");
+      if (flags.has("medecin-recrute")) compagnons.push("ton médecin");
+
+      const morceaux = ["Wano derrière toi, Laugh Tale devant. Le silence, avant la dernière tempête."];
+      if (compagnons.length > 0) {
+        morceaux.push(`Sur le pont, ${compagnons.join(", ")} attendent, aussi silencieux que toi.`);
+      }
+      const injuries = describeInjuries(flags);
+      if (injuries.length > 0) {
+        morceaux.push(`Le voyage t'a laissé ${injuries.join(" et ")} — le prix payé pour arriver jusqu'ici.`);
+      }
+      const fruit = findEatenFruit(flags);
+      if (fruit) {
+        morceaux.push(`${fruit.nom} bat toujours en toi, prêt à servir une dernière fois.`);
+      }
+      return morceaux.join(" ");
+    },
+    svg: SVG_NOUVEAU_MONDE,
+    choices: [{ text: "Voguer vers Laugh Tale.", effects: {}, next: "arc-final" }],
   },
 
   {
