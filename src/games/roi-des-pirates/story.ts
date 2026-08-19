@@ -1,4 +1,6 @@
 import type { StoryNode } from "./types.ts";
+import { getPendingFruit, describeInjuries } from "./engine.ts";
+import { revealsFruit, findEatenFruit } from "./fruits.ts";
 import {
   SVG_INTRO,
   SVG_EAST_BLUE,
@@ -41,8 +43,9 @@ export const STORY: StoryNode[] = [
       },
       {
         text: "D'une famille noble tombée en disgrâce.",
-        sub: "Tu as appris à sourire dans les salons, à survivre dans la rue.",
+        sub: "Tu as appris à sourire dans les salons, à survivre dans la rue — et à reconnaître certains fruits dans les livres de ton père.",
         effects: { notoriete: 15, equipage: 5 },
+        setFlags: ["origine-noble"],
         next: "eb-choix-fondateur",
       },
       {
@@ -58,19 +61,46 @@ export const STORY: StoryNode[] = [
     id: "eb-choix-fondateur",
     arc: "east-blue",
     title: "East Blue — Le choix fondateur",
-    text: "Sur l'épave d'un navire pirate coulé, parmi les caisses brisées et le sel, tu trouves un coffret en bois rare. À l'intérieur : un fruit violet aux spirales étranges. Un Fruit du Démon. Sa valeur est inestimable. Sa malédiction aussi — jamais plus tu ne pourras nager. Tu refermes le coffret. Ou pas.",
+    text: "Sur l'épave d'un navire pirate coulé, parmi les caisses brisées et le sel, tu trouves un coffret en bois rare. À l'intérieur : un fruit aux couleurs étranges, que tu ne reconnais pas. Personne, sur ce quai désert, ne pourrait te dire ce qu'il fait. Il n'y a qu'une façon de le savoir.",
     svg: SVG_DEVIL_FRUIT,
     choices: [
       {
-        text: "L'avaler. Peu importe le prix.",
-        sub: "Puissance absolue. La mer te tuera si tu tombes à l'eau.",
-        effects: { fruitDuDemon: 50, force: 5 },
-        next: "eb-avec-fruit",
+        text: "Ouvrir le coffret, l'examiner de plus près.",
+        effects: {},
+        pickFruitCandidate: {},
+        next: "eb-fruit-trouvaille",
       },
       {
-        text: "Rester humain. Le vrai pouvoir vient du corps, de l'esprit, de la volonté.",
+        text: "Refermer le coffret. Le vrai pouvoir vient du corps, de l'esprit, de la volonté.",
         sub: "La voie du Haki. Plus longue, plus profonde.",
         effects: { force: 20 },
+        next: "eb-avec-haki",
+      },
+    ],
+  },
+
+  {
+    id: "eb-fruit-trouvaille",
+    arc: "east-blue",
+    title: "East Blue — Le fruit inconnu",
+    text: (flags) => {
+      const fruit = getPendingFruit();
+      if (fruit && revealsFruit(flags, fruit)) {
+        return `Tu tournes le fruit entre tes doigts. Tu le reconnais : un ${fruit.nom}. ${fruit.description} À toi de décider si tu le veux vraiment.`;
+      }
+      return "Tu tournes le fruit entre tes doigts, sans la moindre idée de ce qu'il cache. Aucun livre, aucune rumeur de taverne ne t'a jamais préparé à celui-là. Manger un fruit inconnu, c'est signer un pacte à l'aveugle.";
+    },
+    svg: SVG_DEVIL_FRUIT,
+    choices: [
+      {
+        text: "Le manger. Peu importe le prix.",
+        sub: "Puissance — la mer te tuera si tu tombes à l'eau.",
+        effects: {},
+        eatPendingFruit: { next: "eb-avec-fruit" },
+      },
+      {
+        text: "Le laisser. Refermer le coffret et repartir.",
+        effects: {},
         next: "eb-avec-haki",
       },
     ],
@@ -80,20 +110,24 @@ export const STORY: StoryNode[] = [
     id: "eb-avec-fruit",
     arc: "east-blue",
     title: "East Blue — L'éveil du Fruit",
-    text: "Le monde explose. Le pouvoir coule dans tes veines comme un fleuve de feu. Mais quand tu tombes à l'eau par accident, tu coules comme une pierre. La mer est ton ennemie jurée, désormais. Des compagnons se présentent — un jeune épéiste trop ambitieux, une navigatrice qui lit les étoiles. Ensemble ou seul ?",
+    text: (flags) => {
+      const fruit = findEatenFruit(flags);
+      const nom = fruit?.nom ?? "pouvoir";
+      return `${nom} explose en toi. Le monde change de couleur l'espace d'un instant. Mais quand tu tombes à l'eau par accident, tu coules comme une pierre — la mer est ton ennemie jurée, désormais. Ce prix payé, il ne te reste plus qu'à apprendre à vivre avec.`;
+    },
     svg: SVG_DEVIL_FRUIT,
     choices: [
       {
         text: "Bâtir un équipage. Tes faiblesses, leurs forces.",
         sub: "+Équipage, +Notoriété",
         effects: { equipage: 25, notoriete: 15 },
-        next: "eb-marine",
+        next: "eb-rencontre-epeiste",
       },
       {
         text: "Maîtriser ton Fruit jusqu'à la perfection. Seul, pour l'instant.",
         sub: "+Fruit du Démon, +Force",
         effects: { fruitDuDemon: 15, force: 10 },
-        next: "eb-marine",
+        next: "eb-rencontre-epeiste",
       },
     ],
   },
@@ -109,15 +143,76 @@ export const STORY: StoryNode[] = [
         text: "Rassembler des alliés pour affronter la Grand Line.",
         sub: "+Équipage, +Notoriété",
         effects: { equipage: 20, notoriete: 10 },
-        next: "eb-marine",
+        next: "eb-rencontre-epeiste",
       },
       {
         text: "Continuer seul. Un roi n'a besoin de personne au départ.",
         sub: "+Force",
         effects: { force: 15 },
+        next: "eb-rencontre-epeiste",
+      },
+    ],
+  },
+
+  {
+    id: "eb-rencontre-epeiste",
+    arc: "east-blue",
+    title: "East Blue — Un épéiste dans une taverne",
+    text: "Dans l'arrière-salle d'une taverne qui sent la sciure et le rhum bon marché, un jeune épéiste vient de mettre trois hommes au tapis pour une histoire de dette impayée. Il te regarde, amusé, comme s'il te jaugeait déjà.",
+    svg: SVG_EAST_BLUE,
+    choices: [
+      {
+        text: "Le défier en duel, pour de vrai. Jauger sa force avant de lui faire confiance.",
+        effects: {},
+        duel: {
+          opponentPower: 55,
+          win: "eb-epeiste-duel-victoire",
+          winFlags: ["epeiste-recrute"],
+          loseMinor: "eb-epeiste-duel-defaite",
+          loseMajor: "eb-epeiste-duel-blessure",
+          injuryFlag: "bras-coupe",
+        },
+      },
+      {
+        text: "Lui proposer directement de rejoindre l'équipage, sans épreuve.",
+        sub: "+Équipage, +Force — un pari sur la confiance.",
+        effects: { equipage: 20, force: 10 },
+        setFlags: ["epeiste-recrute"],
+        next: "eb-marine",
+      },
+      {
+        text: "Continuer sa route. Pas le temps pour les bagarres de comptoir.",
+        effects: {},
         next: "eb-marine",
       },
     ],
+  },
+
+  {
+    id: "eb-epeiste-duel-victoire",
+    arc: "east-blue",
+    title: "East Blue — Un serment de lame",
+    text: "Tu le mets à terre, la pointe de ta lame — ou de ton poing — sous sa gorge. Il éclate de rire au lieu de supplier. \"C'est bon, tu m'as convaincu.\" Il se relève, tend la main. Un équipage vient de gagner son épéiste.",
+    svg: SVG_EAST_BLUE,
+    choices: [{ text: "Continuer.", effects: {}, next: "eb-marine" }],
+  },
+
+  {
+    id: "eb-epeiste-duel-defaite",
+    arc: "east-blue",
+    title: "East Blue — Un duel serré, perdu de peu",
+    text: "Le combat est plus long que prévu. Tu finis à terre, essoufflé, mais entier. Il te tend la main pour t'aider à te relever. \"Pas mal. Mais je ne rejoins pas les épaves.\" Il s'en va en sifflotant. Tu croiseras peut-être sa route ailleurs, un jour.",
+    svg: SVG_EAST_BLUE,
+    choices: [{ text: "Continuer.", effects: {}, next: "eb-marine" }],
+  },
+
+  {
+    id: "eb-epeiste-duel-blessure",
+    arc: "east-blue",
+    title: "East Blue — Le prix de l'orgueil",
+    text: "Il est meilleur que tu ne le pensais — bien meilleur. Sa lame trouve ton bras avant que tu ne comprennes ton erreur. La blessure ne guérira jamais tout à fait. Il s'excuse, presque sincère, et s'en va sans se retourner. Tu repars avec une leçon, et un bras en moins.",
+    svg: SVG_EAST_BLUE,
+    choices: [{ text: "Continuer, tant bien que mal.", effects: {}, next: "eb-marine" }],
   },
 
   {
@@ -131,15 +226,35 @@ export const STORY: StoryNode[] = [
         text: "Le vaincre en public. Laisser une prime sur ta tête et un souvenir dans les mémoires.",
         sub: "+Notoriété — le combat coûte",
         effects: { notoriete: 25, force: -5 },
-        next: "gl-arrivee",
+        next: "eb-depart",
       },
       {
         text: "Disparaître dans les ruelles. L'esquive aussi est une forme de sagesse.",
         sub: "+Force, +Équipage",
         effects: { force: 5, equipage: 5 },
-        next: "gl-arrivee",
+        next: "eb-depart",
       },
     ],
+  },
+
+  {
+    id: "eb-depart",
+    arc: "east-blue",
+    title: "East Blue — Dernier regard vers le port",
+    text: (flags) => {
+      const morceaux = ["East Blue rétrécit derrière toi, plus petit à chaque vague."];
+      if (flags.has("epeiste-recrute")) {
+        morceaux.push("Ton épéiste s'entraîne déjà sur le pont, imperturbable.");
+      }
+      const injuries = describeInjuries(flags);
+      if (injuries.length > 0) {
+        morceaux.push(`Tu pars avec ${injuries.join(" et ")} — un souvenir qui ne s'efface pas.`);
+      }
+      morceaux.push("Devant toi : la Grand Line, et tout ce qu'elle refuse d'annoncer à l'avance.");
+      return morceaux.join(" ");
+    },
+    svg: SVG_EAST_BLUE,
+    choices: [{ text: "Mettre le cap sur la Grand Line.", effects: {}, next: "gl-arrivee" }],
   },
 
   {
