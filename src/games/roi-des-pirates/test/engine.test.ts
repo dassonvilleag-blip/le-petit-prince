@@ -73,3 +73,78 @@ test("describeInjuries : décrit chaque blessure connue posée", () => {
   assert.equal(result.length, 2);
   assert.ok(result.every((s) => typeof s === "string" && s.length > 0));
 });
+
+import { validateStoryGraph } from "../engine.ts";
+import type { StoryNode } from "../types.ts";
+
+test("validateStoryGraph : accepte un graphe valide à deux nœuds", () => {
+  const nodes: StoryNode[] = [
+    { id: "a", text: "A", svg: "", choices: [{ text: "aller à b", effects: {}, next: "b" }] },
+    { id: "b", text: "B", svg: "", choices: [], isEnding: true },
+  ];
+  assert.deepEqual(validateStoryGraph(nodes), []);
+});
+
+test("validateStoryGraph : signale une référence next vers un id inexistant", () => {
+  const nodes: StoryNode[] = [
+    { id: "a", text: "A", svg: "", choices: [{ text: "x", effects: {}, next: "n-existe-pas" }] },
+  ];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.some((e) => e.includes("n-existe-pas")));
+});
+
+test("validateStoryGraph : signale des identifiants dupliqués", () => {
+  const nodes: StoryNode[] = [
+    { id: "a", text: "A", svg: "", choices: [], isEnding: true },
+    { id: "a", text: "A bis", svg: "", choices: [], isEnding: true },
+  ];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.some((e) => e.includes("dupliqué")));
+});
+
+test("validateStoryGraph : signale un nœud non-fin sans aucun choix", () => {
+  const nodes: StoryNode[] = [{ id: "a", text: "A", svg: "", choices: [] }];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.some((e) => e.includes("aucun choix")));
+});
+
+test("validateStoryGraph : signale un nœud dont tous les choix sont conditionnels", () => {
+  const nodes: StoryNode[] = [
+    {
+      id: "a",
+      text: "A",
+      svg: "",
+      choices: [{ text: "x", effects: {}, next: "b", requiresFlags: ["flag"] }],
+    },
+    { id: "b", text: "B", svg: "", choices: [], isEnding: true },
+  ];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.some((e) => e.includes("inconditionnel")));
+});
+
+test("validateStoryGraph : suit aussi les cibles de duel et de fruit en attente", () => {
+  const nodes: StoryNode[] = [
+    {
+      id: "a",
+      text: "A",
+      svg: "",
+      choices: [
+        {
+          text: "duel",
+          effects: {},
+          duel: {
+            opponentPower: 10,
+            win: "victoire-manquante",
+            loseMinor: "b",
+            loseMajor: "b",
+          },
+        },
+        { text: "manger", effects: {}, eatPendingFruit: { next: "manger-manquant" } },
+      ],
+    },
+    { id: "b", text: "B", svg: "", choices: [], isEnding: true },
+  ];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.some((e) => e.includes("victoire-manquante")));
+  assert.ok(errors.some((e) => e.includes("manger-manquant")));
+});

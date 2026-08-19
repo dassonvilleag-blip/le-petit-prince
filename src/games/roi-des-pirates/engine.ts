@@ -38,6 +38,45 @@ export function describeInjuries(flags: Set<string>): string[] {
     .map(([, label]) => label);
 }
 
+export function validateStoryGraph(storyNodes: StoryNode[]): string[] {
+  const errors: string[] = [];
+  const ids = new Set(storyNodes.map((n) => n.id));
+  if (ids.size !== storyNodes.length) {
+    errors.push("Des identifiants de nœuds sont dupliqués.");
+  }
+
+  for (const node of storyNodes) {
+    if (node.isEnding) continue;
+
+    if (node.choices.length === 0) {
+      errors.push(`${node.id}: aucun choix défini alors que ce n'est pas une fin.`);
+      continue;
+    }
+
+    const hasUnconditional = node.choices.some(
+      (c) => !c.requiresFlags?.length && !c.forbidsFlags?.length,
+    );
+    if (!hasUnconditional) {
+      errors.push(`${node.id}: aucun choix inconditionnel disponible (risque d'écran bloqué).`);
+    }
+
+    for (const choice of node.choices) {
+      const targets: string[] = [];
+      if (choice.duel) targets.push(choice.duel.win, choice.duel.loseMinor, choice.duel.loseMajor);
+      if (choice.eatPendingFruit) targets.push(choice.eatPendingFruit.next);
+      if (choice.next) targets.push(choice.next);
+
+      for (const target of targets) {
+        if (target !== "__ending__" && !ids.has(target)) {
+          errors.push(`${node.id}: la cible "${target}" ne correspond à aucun nœud.`);
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
 let nodes: Record<string, StoryNode>;
 let stats: Stats;
 let currentNodeId: string;
