@@ -155,6 +155,7 @@ export default defineConfig({
         abysse: resolve(__dirname, "games/abysse/index.html"),
         lesDesMenteurs: resolve(__dirname, "games/les-des-menteurs/index.html"),
         laColonie: resolve(__dirname, "games/la-colonie/index.html"),
+        roiDesPirates: resolve(__dirname, "games/roi-des-pirates/index.html"),
       },
     },
   },
