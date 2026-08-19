@@ -723,6 +723,7 @@ function navigate(choice: Choice): void {
     if (pendingFruit) {
       applyEffects(pendingFruit.effects);
       flags.add(`fruit-${pendingFruit.id}`);
+      flags.add("a-mange-un-fruit");
     }
     currentNodeId = choice.eatPendingFruit.next;
   } else if (choice.next === "__ending__") {
@@ -735,6 +736,8 @@ function navigate(choice: Choice): void {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 ```
+
+Note : `flags.add("a-mange-un-fruit")` (posé en plus de `fruit-<id>` quand un fruit est mangé via `eatPendingFruit`) sert de garde-fou narratif — dans le lore, manger un deuxième Fruit du Démon est fatal, et `findEatenFruit` (Task 5) ne retrouve de toute façon que le premier fruit mangé. Les tâches 9 et 10 (Grand Line, Nouveau Monde) posent `forbidsFlags: ["a-mange-un-fruit"]` sur leurs choix "manger" pour empêcher d'en manger un second une fois ce drapeau posé.
 
 - [ ] **Step 5: Initialiser et réinitialiser `flags`/`pendingFruit` dans `startEngine`**
 
@@ -1229,6 +1232,7 @@ par :
       {
         text: "Le manger.",
         effects: {},
+        forbidsFlags: ["a-mange-un-fruit"],
         eatPendingFruit: { next: "gl-post-vol-fruit-mange" },
       },
       {
@@ -1380,7 +1384,8 @@ par :
         text: "Le dévorer. Ce pouvoir sera tien.",
         sub: "+Notoriété (beaucoup), +Force",
         effects: { notoriete: 30, force: 5, fruitDuDemon: 15 },
-        setFlags: ["fruit-ope-ope"],
+        setFlags: ["fruit-ope-ope", "a-mange-un-fruit"],
+        forbidsFlags: ["a-mange-un-fruit"],
         next: "nm-wano",
       },
       {
@@ -1407,6 +1412,7 @@ par :
       {
         text: "Le manger, puisqu'il est là.",
         effects: {},
+        forbidsFlags: ["a-mange-un-fruit"],
         eatPendingFruit: { next: "nm-wano" },
       },
       {
