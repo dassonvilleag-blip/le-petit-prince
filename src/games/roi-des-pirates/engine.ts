@@ -1,5 +1,16 @@
 import type { Stats, StoryNode, Choice, EndingId } from "./types";
 
+export function resolveDuel(
+  playerStat: number,
+  opponentPower: number,
+  rng: () => number = Math.random,
+): "victoire" | "defaite-legere" | "blessure-grave" {
+  const roll = playerStat - opponentPower + (rng() * 30 - 15);
+  if (roll > 15) return "victoire";
+  if (roll > -10) return "defaite-legere";
+  return "blessure-grave";
+}
+
 let nodes: Record<string, StoryNode>;
 let stats: Stats;
 let currentNodeId: string;
