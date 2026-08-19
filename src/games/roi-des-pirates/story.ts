@@ -1,4 +1,4 @@
-import type { StoryNode } from "./types";
+import type { StoryNode } from "./types.ts";
 import {
   SVG_INTRO,
   SVG_EAST_BLUE,
@@ -14,7 +14,7 @@ import {
   SVG_FIN_LEGENDE,
   SVG_FIN_RETRAITE,
   SVG_FIN_CAPTURE,
-} from "./illustrations";
+} from "./illustrations.ts";
 
 export const STORY: StoryNode[] = [
   {
