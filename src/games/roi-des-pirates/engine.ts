@@ -217,6 +217,7 @@ function navigate(choice: Choice): void {
       applyEffects(pendingFruit.effects);
       flags.add(`fruit-${pendingFruit.id}`);
       flags.add("a-mange-un-fruit");
+      pendingFruit = undefined;
     }
     currentNodeId = choice.eatPendingFruit.next;
   } else if (choice.next === "__ending__") {
