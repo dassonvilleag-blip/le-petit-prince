@@ -274,6 +274,7 @@ export const STORY: StoryNode[] = [
     id: "gl-arrivee",
     arc: "grand-line",
     title: "Grand Line — Le Paradis",
+    subtitle: "Le seuil de la Grand Line",
     text: "Le Log Pose pointe. Derrière toi, East Blue — les mers les plus calmes du monde. Devant, la Grand Line. Un passage étroit, des îles où la météo délire, des créatures qui ont oublié la taille raisonnable. Tu sens la différence immédiatement. L'air est plus dense, plus chargé, comme si le monde respirait autrement ici.",
     svg: SVG_GRAND_LINE,
     choices: [
@@ -285,6 +286,7 @@ export const STORY: StoryNode[] = [
     id: "gl-epeiste-retour",
     arc: "grand-line",
     title: "Grand Line — Un visage familier ?",
+    subtitle: "Une seconde chance de recruter",
     text: (flags) =>
       flags.has("epeiste-recrute")
         ? "Sur le pont, ton épéiste aiguise sa lame sans un mot, les yeux fixés sur l'horizon nouveau. La Grand Line ne l'impressionne pas — ou il le cache bien."
@@ -311,6 +313,7 @@ export const STORY: StoryNode[] = [
     id: "gl-rencontre-navigatrice",
     arc: "grand-line",
     title: "Grand Line — Une navigatrice pour les mers folles",
+    subtitle: "Une navigatrice à embarquer",
     text: "Sur ce même quai, une jeune femme discute avec un marchand de cartes marines, l'air de connaître les courants mieux que quiconque à cent lieues à la ronde. La Grand Line dévore les navigateurs médiocres. Un bon connaît la différence entre une accalmie et un piège.",
     svg: SVG_GRAND_LINE,
     choices: [
@@ -333,6 +336,7 @@ export const STORY: StoryNode[] = [
     id: "gl-vol-fruit-rencontre",
     arc: "grand-line",
     title: "Grand Line — Un coffre bien gardé",
+    subtitle: "Voler un Fruit du Démon",
     text: "Un pirate isolé, la démarche trop assurée pour être honnête, traîne un petit coffre verrouillé qu'il ne quitte jamais des yeux. La rumeur du port dit qu'il contient un Fruit du Démon. La rumeur du port dit beaucoup de choses, mais celle-ci sent le vrai.",
     svg: SVG_ALLIANCE,
     choices: [
@@ -360,6 +364,7 @@ export const STORY: StoryNode[] = [
     id: "gl-vol-fruit-butin",
     arc: "grand-line",
     title: "Grand Line — Le coffre, enfin ouvert",
+    subtitle: "Le butin, à manger ou non",
     text: (flags) => {
       const fruit = getPendingFruit();
       if (fruit && revealsFruit(flags, fruit)) {
@@ -387,6 +392,7 @@ export const STORY: StoryNode[] = [
     id: "gl-post-vol-fruit-mange",
     arc: "grand-line",
     title: "Grand Line — Un pouvoir volé",
+    subtitle: "Un pouvoir volé, désormais tien",
     text: (flags) => {
       const fruit = findEatenFruit(flags);
       return `${fruit?.nom ?? "Le pouvoir"} coule en toi, arraché plutôt que trouvé. Ça ne change rien à l'effet. ${fruit?.description ?? ""}`;
@@ -399,6 +405,7 @@ export const STORY: StoryNode[] = [
     id: "gl-vol-fruit-echec",
     arc: "grand-line",
     title: "Grand Line — Le coffre s'échappe",
+    subtitle: "Le coffre t'échappe",
     text: "Le combat tourne mal. Le pirate profite d'une ouverture, ramasse son coffre et disparaît dans la foule du port. Tu restes debout, les mains vides, avec juste ta fierté écornée.",
     svg: SVG_ALLIANCE,
     choices: [{ text: "Continuer.", effects: {}, next: "gl-grand-choix" }],
@@ -408,6 +415,7 @@ export const STORY: StoryNode[] = [
     id: "gl-vol-fruit-blessure",
     arc: "grand-line",
     title: "Grand Line — Mauvais calcul",
+    subtitle: "Une main brisée pour rien",
     text: "Il se défend mieux que son allure de vantard ne le laissait deviner. Un coup mal paré, et ta main ne se refermera plus jamais tout à fait comme avant. Il s'enfuit avec son coffre, et toi avec la leçon.",
     svg: SVG_ALLIANCE,
     choices: [{ text: "Continuer, la main serrée contre toi.", effects: {}, next: "gl-grand-choix" }],
@@ -417,6 +425,7 @@ export const STORY: StoryNode[] = [
     id: "gl-grand-choix",
     arc: "grand-line",
     title: "Grand Line — Choisir son camp",
+    subtitle: "Choisir un camp — ou aucun",
     text: "À Loguetown, trois propositions arrivent presque en même temps. Crocodile, ex-Corsaire au sable entre les doigts, t'offre une alliance discrète. Big Mom, Emperatrice du sucre et de la mort, a entendu parler de toi — frapper son territoire serait une déclaration de guerre qui ferait trembler les mers. Ou tu refuses les deux et traces ta propre ligne.",
     svg: SVG_ALLIANCE,
     choices: [
