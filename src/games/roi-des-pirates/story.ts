@@ -454,6 +454,7 @@ export const STORY: StoryNode[] = [
     id: "nm-arrivee",
     arc: "nouveau-monde",
     title: "Nouveau Monde",
+    subtitle: "Le seuil du Nouveau Monde",
     text: "De l'autre côté de Fishman Island, le Nouveau Monde t'attend. Ici, même la pluie peut brûler. Les quatre Empereurs tiennent ces mers comme leurs jardins privés. Kaido de la Bête domine Wano. Barbe Noire s'étend. Et quelque part, sur un bout de carte que personne ne partage vraiment, le One Piece attend. Tu es plus fort qu'à East Blue. Pas encore assez.",
     svg: SVG_NOUVEAU_MONDE,
     choices: [
@@ -465,6 +466,7 @@ export const STORY: StoryNode[] = [
     id: "nm-rencontre-medecin",
     arc: "nouveau-monde",
     title: "Nouveau Monde — Un médecin sans navire",
+    subtitle: "Un médecin à recruter",
     text: "Sur une île à moitié engloutie, un médecin erre depuis le naufrage de son propre équipage. Il connaît les blessures de guerre, les poisons des Logia, et — détail qu'il glisse presque timidement — les Fruits du Démon, qu'il a étudiés toute sa vie.",
     svg: SVG_NOUVEAU_MONDE,
     choices: [
@@ -487,6 +489,7 @@ export const STORY: StoryNode[] = [
     id: "nm-quete-fruit",
     arc: "nouveau-monde",
     title: "Nouveau Monde — La légende du bistouri",
+    subtitle: "Partir en quête de l'Ope Ope no Mi",
     text: "Une rumeur revient sans cesse dans les ports du Nouveau Monde : quelque part circule l'Ope Ope no Mi, le fruit du \"Chirurgien de la Mort\", capable — dit-on — de vendre jusqu'à l'immortalité elle-même. Le trouver prendrait du temps. Et rien ne garantit que la rumeur dise vrai.",
     svg: SVG_NOUVEAU_MONDE,
     choices: [
@@ -515,6 +518,7 @@ export const STORY: StoryNode[] = [
     id: "nm-fruit-ope-ope-trouve",
     arc: "nouveau-monde",
     title: "Nouveau Monde — L'Ope Ope no Mi",
+    subtitle: "Le fruit le plus recherché des mers",
     text: "La rumeur disait vrai. Après des semaines de recherche, tu tiens enfin l'Ope Ope no Mi entre tes mains — le fruit le plus recherché des mers, celui que même les Empereurs se disputent en silence.",
     svg: SVG_NOUVEAU_MONDE,
     choices: [
@@ -538,6 +542,7 @@ export const STORY: StoryNode[] = [
     id: "nm-quete-fruit-inconnu",
     arc: "nouveau-monde",
     title: "Nouveau Monde — Une autre trouvaille",
+    subtitle: "Une trouvaille de consolation",
     text: (flags) => {
       const fruit = getPendingFruit();
       if (fruit && revealsFruit(flags, fruit)) {
@@ -565,6 +570,7 @@ export const STORY: StoryNode[] = [
     id: "nm-quete-fruit-echec",
     arc: "nouveau-monde",
     title: "Nouveau Monde — La quête de trop",
+    subtitle: "La quête qui a coûté une jambe",
     text: "La recherche tourne au désastre. Un éboulement, une chute mal négociée, et ta jambe ne te portera plus jamais aussi bien qu'avant. L'Ope Ope no Mi restera une légende parmi d'autres — pour toi, en tout cas.",
     svg: SVG_NOUVEAU_MONDE,
     choices: [{ text: "Continuer, en boitant.", effects: {}, next: "nm-wano" }],
@@ -574,6 +580,7 @@ export const STORY: StoryNode[] = [
     id: "nm-wano",
     arc: "nouveau-monde",
     title: "Nouveau Monde — Wano",
+    subtitle: "Trois chemins à Wano",
     text: "Wano. Un pays fermé au monde, étouffé sous la botte de Kaido depuis vingt ans. Ses habitants résistent en silence. C'est ici que tout peut basculer — ou se terminer. Trois chemins s'ouvrent devant toi.",
     svg: SVG_WANO,
     choices: [
@@ -602,6 +609,7 @@ export const STORY: StoryNode[] = [
     id: "nm-avant-laugh-tale",
     arc: "nouveau-monde",
     title: "Nouveau Monde — Avant la dernière ligne droite",
+    subtitle: "Le calme avant Laugh Tale",
     text: (flags) => {
       const compagnons: string[] = [];
       if (flags.has("epeiste-recrute")) compagnons.push("ton épéiste");
@@ -630,6 +638,7 @@ export const STORY: StoryNode[] = [
     id: "arc-final",
     arc: "final",
     title: "Laugh Tale — La fin du monde",
+    subtitle: "Le dernier voyage",
     text: "Tu y es presque. Après tout ça — les tempêtes, les trahisons, les dieux marins et les Amiaux, les cicatrices qui ne s'effacent pas — tu approches de Laugh Tale. L'île que personne n'a atteinte depuis Gold Roger. Tu penses à ceux qui t'ont aidé. À ceux que tu as perdus. Tu réalises que tu n'es plus le même qu'au début du voyage. Le One Piece t'attend. Mais lequel des pirates que tu es devenu va l'atteindre ?",
     svg: SVG_FINAL,
     choices: [
@@ -641,6 +650,7 @@ export const STORY: StoryNode[] = [
     id: "fin-roi-des-pirates",
     arc: "final",
     title: "Roi des Pirates",
+    subtitle: "Le rêve accompli",
     text: "Le One Piece existait vraiment. Personne n'y croyait vraiment — même toi, au fond, tu n'osais pas trop y penser. Et là, devant tes yeux, c'est réel. Gold Roger l'a laissé ici il y a des décennies, en riant. Tu comprends pourquoi. Tu ris aussi. Le Roi des Pirates est mort. Vive le Roi des Pirates.",
     svg: SVG_FIN_ROI,
     isEnding: true,
@@ -652,6 +662,7 @@ export const STORY: StoryNode[] = [
     id: "fin-legende",
     arc: "final",
     title: "La Légende des Mers",
+    subtitle: "Une légende, pas un roi",
     text: "Tu n'as pas trouvé le One Piece — pas encore, peut-être jamais. Mais ta prime dépasse celle de la plupart des Empereurs. Ton nom fait trembler les Amiraux. Dans les tavernes de chaque île de la Grand Line, on raconte des histoires sur toi — certaines vraies, d'autres inventées, toutes impressionnantes. Tu n'es pas le Roi. Tu es peut-être quelque chose de plus grand.",
     svg: SVG_FIN_LEGENDE,
     isEnding: true,
@@ -663,6 +674,7 @@ export const STORY: StoryNode[] = [
     id: "fin-retraite",
     arc: "final",
     title: "Le Trésor trouvé",
+    subtitle: "Le choix de s'arrêter",
     text: "Ton équipage t'a sauvé la vie douze fois. Tu les as sauvés treize. Un soir, au large d'une île dont personne ne connaît le nom, tu décides que c'est assez. Le monde a tellement de trésors. Pas besoin que ce soit le One Piece. Vous vous installez. La mer est là, toujours là. Et c'est suffisant.",
     svg: SVG_FIN_RETRAITE,
     isEnding: true,
@@ -674,6 +686,7 @@ export const STORY: StoryNode[] = [
     id: "fin-capture",
     arc: "final",
     title: "Impel Down",
+    subtitle: "Enchaîné, pas vaincu",
     text: "La Marine t'a eu. Pas par la force — ils auraient perdu. Mais ils sont malins, et tu étais au mauvais endroit. Les chaînes Seastone coupent ta volonté en deux. Dans ta cellule d'Impel Down, tu comptes tes jours. Et tu commences déjà à planifier l'évasion. Parce que c'est ce que font les pirates. Ils ne s'arrêtent jamais vraiment.",
     svg: SVG_FIN_CAPTURE,
     isEnding: true,
