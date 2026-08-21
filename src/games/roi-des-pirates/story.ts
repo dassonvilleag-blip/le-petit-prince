@@ -21,6 +21,7 @@ import {
 export const STORY: StoryNode[] = [
   {
     id: "intro",
+    subtitle: "L'appel du large",
     text: "La mer. Elle t'a toujours appelé. Depuis l'enfance sur ce quai de bois vermoulu, tu regardais les voiles disparaître à l'horizon en te disant : un jour, ce sera moi. Ce jour est arrivé. Tu as dix-sept ans. Un couteau à la ceinture, quelques Berry dans la poche, et cette conviction qui brûle dans ta poitrine. Tu deviendras Roi des Pirates. Tu trouveras le One Piece. Personne ne te croit. Parfait.",
     svg: SVG_INTRO,
     choices: [
@@ -32,6 +33,7 @@ export const STORY: StoryNode[] = [
     id: "eb-origines",
     arc: "east-blue",
     title: "East Blue — Les origines",
+    subtitle: "D'où tu viens",
     text: "Mais d'où viens-tu, exactement ? Cette question, les recruteurs de la Marine la posent toujours en premier. Et dans les tavernes de pirates, elle vaut son pesant de Berry. Ton passé définit qui tu es — ou qui tu étais. Avant.",
     svg: SVG_EAST_BLUE,
     choices: [
@@ -61,6 +63,7 @@ export const STORY: StoryNode[] = [
     id: "eb-choix-fondateur",
     arc: "east-blue",
     title: "East Blue — Le choix fondateur",
+    subtitle: "Une épave, un coffret, un mystère",
     text: "Sur l'épave d'un navire pirate coulé, parmi les caisses brisées et le sel, tu trouves un coffret en bois rare. À l'intérieur : un fruit aux couleurs étranges, que tu ne reconnais pas. Personne, sur ce quai désert, ne pourrait te dire ce qu'il fait. Il n'y a qu'une façon de le savoir.",
     svg: SVG_DEVIL_FRUIT,
     choices: [
@@ -83,6 +86,7 @@ export const STORY: StoryNode[] = [
     id: "eb-fruit-trouvaille",
     arc: "east-blue",
     title: "East Blue — Le fruit inconnu",
+    subtitle: "Manger l'inconnu",
     text: (flags) => {
       const fruit = getPendingFruit();
       if (fruit && revealsFruit(flags, fruit)) {
@@ -110,6 +114,7 @@ export const STORY: StoryNode[] = [
     id: "eb-avec-fruit",
     arc: "east-blue",
     title: "East Blue — L'éveil du Fruit",
+    subtitle: "Vivre avec le pouvoir payé cher",
     text: (flags) => {
       const fruit = findEatenFruit(flags);
       const nom = fruit?.nom ?? "pouvoir";
@@ -136,6 +141,7 @@ export const STORY: StoryNode[] = [
     id: "eb-avec-haki",
     arc: "east-blue",
     title: "East Blue — L'éveil du Haki",
+    subtitle: "La voie du corps et de la volonté",
     text: "Des mois passent. Tu saignes, tu recommences. Un vieux maître de mer t'initie aux rudiments du Haki d'Observation — voir sans yeux, sentir sans toucher. Lentement, quelque chose s'éveille. Quelque chose que peu de pirates connaissent. Tu n'as pas de Fruit, mais tu commences à comprendre ce que signifie vraiment la force.",
     svg: SVG_HAKI,
     choices: [
@@ -158,6 +164,7 @@ export const STORY: StoryNode[] = [
     id: "eb-rencontre-epeiste",
     arc: "east-blue",
     title: "East Blue — Un épéiste dans une taverne",
+    subtitle: "Un épéiste à convaincre",
     text: "Dans l'arrière-salle d'une taverne qui sent la sciure et le rhum bon marché, un jeune épéiste vient de mettre trois hommes au tapis pour une histoire de dette impayée. Il te regarde, amusé, comme s'il te jaugeait déjà.",
     svg: SVG_EAST_BLUE,
     choices: [
@@ -193,6 +200,7 @@ export const STORY: StoryNode[] = [
     id: "eb-epeiste-duel-victoire",
     arc: "east-blue",
     title: "East Blue — Un serment de lame",
+    subtitle: "Un adversaire convaincu",
     text: "Tu le mets à terre, la pointe de ta lame — ou de ton poing — sous sa gorge. Il éclate de rire au lieu de supplier. \"C'est bon, tu m'as convaincu.\" Il se relève, tend la main. Un équipage vient de gagner son épéiste.",
     svg: SVG_EAST_BLUE,
     choices: [{ text: "Continuer.", effects: {}, next: "eb-marine" }],
@@ -202,6 +210,7 @@ export const STORY: StoryNode[] = [
     id: "eb-epeiste-duel-defaite",
     arc: "east-blue",
     title: "East Blue — Un duel serré, perdu de peu",
+    subtitle: "Une défaite honorable",
     text: "Le combat est plus long que prévu. Tu finis à terre, essoufflé, mais entier. Il te tend la main pour t'aider à te relever. \"Pas mal. Mais je ne rejoins pas les épaves.\" Il s'en va en sifflotant. Tu croiseras peut-être sa route ailleurs, un jour.",
     svg: SVG_EAST_BLUE,
     choices: [{ text: "Continuer.", effects: {}, next: "eb-marine" }],
@@ -211,6 +220,7 @@ export const STORY: StoryNode[] = [
     id: "eb-epeiste-duel-blessure",
     arc: "east-blue",
     title: "East Blue — Le prix de l'orgueil",
+    subtitle: "Une cicatrice en prime",
     text: "Il est meilleur que tu ne le pensais — bien meilleur. Sa lame te marque avant que tu ne comprennes ton erreur : une entaille profonde le long du bras, pas mortelle, mais qui laissera une trace. Il s'excuse, presque sincère, et s'en va sans se retourner. Tu repars avec une leçon, et une cicatrice pour te la rappeler.",
     svg: SVG_EAST_BLUE,
     choices: [{ text: "Continuer, tant bien que mal.", effects: {}, next: "eb-marine" }],
@@ -220,6 +230,7 @@ export const STORY: StoryNode[] = [
     id: "eb-marine",
     arc: "east-blue",
     title: "East Blue — Première confrontation",
+    subtitle: "Affronter la Marine ou s'éclipser",
     text: "Un capitaine de la Marine te coupe la route. Il est fier, arrogant, et il a un mandat d'arrestation avec ton nom dessus. Une petite foule de villageois regarde depuis le quai. Ce moment pourrait définir qui tu es — ou du moins ce que les autres diront de toi.",
     svg: SVG_MARINE,
     choices: [
@@ -242,6 +253,7 @@ export const STORY: StoryNode[] = [
     id: "eb-depart",
     arc: "east-blue",
     title: "East Blue — Dernier regard vers le port",
+    subtitle: "Cap sur la Grand Line",
     text: (flags) => {
       const morceaux = ["East Blue rétrécit derrière toi, plus petit à chaque vague."];
       if (flags.has("epeiste-recrute")) {
