@@ -94,6 +94,7 @@ export const SALLES: RoomDef[] = [
       { cout: { feuilles: 80 }, secondes: 45, stockBonus: 250 },
       { cout: { feuilles: 300, champignons: 50 }, secondes: 180, stockBonus: 500 },
       { cout: { feuilles: 900, champignons: 250, miellat: 30 }, secondes: 600, stockBonus: 1000 },
+      { cout: { feuilles: 2200, champignons: 600, miellat: 80 }, secondes: 1200, stockBonus: 1700 },
     ],
   },
   {
