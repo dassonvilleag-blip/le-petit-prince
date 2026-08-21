@@ -54,6 +54,10 @@ export function validateStoryGraph(storyNodes: StoryNode[]): string[] {
   }
 
   for (const node of storyNodes) {
+    if (!node.subtitle?.trim()) {
+      errors.push(`${node.id}: aucun sous-titre défini.`);
+    }
+
     if (node.isEnding) continue;
 
     if (node.choices.length === 0) {

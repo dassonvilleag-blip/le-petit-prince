@@ -98,15 +98,15 @@ import type { StoryNode } from "../types.ts";
 
 test("validateStoryGraph : accepte un graphe valide à deux nœuds", () => {
   const nodes: StoryNode[] = [
-    { id: "a", text: "A", svg: "", choices: [{ text: "aller à b", effects: {}, next: "b" }] },
-    { id: "b", text: "B", svg: "", choices: [], isEnding: true },
+    { id: "a", subtitle: "x", text: "A", svg: "", choices: [{ text: "aller à b", effects: {}, next: "b" }] },
+    { id: "b", subtitle: "x", text: "B", svg: "", choices: [], isEnding: true },
   ];
   assert.deepEqual(validateStoryGraph(nodes), []);
 });
 
 test("validateStoryGraph : signale une référence next vers un id inexistant", () => {
   const nodes: StoryNode[] = [
-    { id: "a", text: "A", svg: "", choices: [{ text: "x", effects: {}, next: "n-existe-pas" }] },
+    { id: "a", subtitle: "x", text: "A", svg: "", choices: [{ text: "x", effects: {}, next: "n-existe-pas" }] },
   ];
   const errors = validateStoryGraph(nodes);
   assert.ok(errors.some((e) => e.includes("n-existe-pas")));
@@ -114,15 +114,31 @@ test("validateStoryGraph : signale une référence next vers un id inexistant", 
 
 test("validateStoryGraph : signale des identifiants dupliqués", () => {
   const nodes: StoryNode[] = [
-    { id: "a", text: "A", svg: "", choices: [], isEnding: true },
-    { id: "a", text: "A bis", svg: "", choices: [], isEnding: true },
+    { id: "a", subtitle: "x", text: "A", svg: "", choices: [], isEnding: true },
+    { id: "a", subtitle: "x", text: "A bis", svg: "", choices: [], isEnding: true },
   ];
   const errors = validateStoryGraph(nodes);
   assert.ok(errors.some((e) => e.includes("dupliqué")));
 });
 
+test("validateStoryGraph : signale un nœud sans sous-titre", () => {
+  const nodes: StoryNode[] = [
+    { id: "a", subtitle: "", text: "A", svg: "", choices: [], isEnding: true },
+  ];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.some((e) => e.includes("sous-titre")));
+});
+
+test("validateStoryGraph : une fin sans sous-titre est aussi signalée", () => {
+  const nodes: StoryNode[] = [
+    { id: "a", subtitle: "  ", text: "A", svg: "", choices: [], isEnding: true },
+  ];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.some((e) => e.includes("a: aucun sous-titre défini.")));
+});
+
 test("validateStoryGraph : signale un nœud non-fin sans aucun choix", () => {
-  const nodes: StoryNode[] = [{ id: "a", text: "A", svg: "", choices: [] }];
+  const nodes: StoryNode[] = [{ id: "a", subtitle: "x", text: "A", svg: "", choices: [] }];
   const errors = validateStoryGraph(nodes);
   assert.ok(errors.some((e) => e.includes("aucun choix")));
 });
@@ -131,11 +147,12 @@ test("validateStoryGraph : signale un nœud dont tous les choix sont conditionne
   const nodes: StoryNode[] = [
     {
       id: "a",
+      subtitle: "x",
       text: "A",
       svg: "",
       choices: [{ text: "x", effects: {}, next: "b", requiresFlags: ["flag"] }],
     },
-    { id: "b", text: "B", svg: "", choices: [], isEnding: true },
+    { id: "b", subtitle: "x", text: "B", svg: "", choices: [], isEnding: true },
   ];
   const errors = validateStoryGraph(nodes);
   assert.ok(errors.some((e) => e.includes("inconditionnel")));
@@ -145,6 +162,7 @@ test("validateStoryGraph : suit aussi les cibles de duel et de fruit en attente"
   const nodes: StoryNode[] = [
     {
       id: "a",
+      subtitle: "x",
       text: "A",
       svg: "",
       choices: [
@@ -161,7 +179,7 @@ test("validateStoryGraph : suit aussi les cibles de duel et de fruit en attente"
         { text: "manger", effects: {}, eatPendingFruit: { next: "manger-manquant" } },
       ],
     },
-    { id: "b", text: "B", svg: "", choices: [], isEnding: true },
+    { id: "b", subtitle: "x", text: "B", svg: "", choices: [], isEnding: true },
   ];
   const errors = validateStoryGraph(nodes);
   assert.ok(errors.some((e) => e.includes("victoire-manquante")));
@@ -172,6 +190,7 @@ test("validateStoryGraph : signale un choix sans aucun routage (ni next, ni duel
   const nodes: StoryNode[] = [
     {
       id: "a",
+      subtitle: "x",
       text: "A",
       svg: "",
       choices: [{ text: "choix orphelin", effects: {} }],
@@ -185,11 +204,12 @@ test("validateStoryGraph : un choix pickFruitCandidate accompagné de next n'est
   const nodes: StoryNode[] = [
     {
       id: "a",
+      subtitle: "x",
       text: "A",
       svg: "",
       choices: [{ text: "ouvrir", effects: {}, pickFruitCandidate: {}, next: "b" }],
     },
-    { id: "b", text: "B", svg: "", choices: [], isEnding: true },
+    { id: "b", subtitle: "x", text: "B", svg: "", choices: [], isEnding: true },
   ];
   assert.deepEqual(validateStoryGraph(nodes), []);
 });
