@@ -54,6 +54,10 @@ export function validateStoryGraph(storyNodes: StoryNode[]): string[] {
   }
 
   for (const node of storyNodes) {
+    if (!node.subtitle?.trim()) {
+      errors.push(`${node.id}: aucun sous-titre défini.`);
+    }
+
     if (node.isEnding) continue;
 
     if (node.choices.length === 0) {
@@ -159,6 +163,9 @@ function renderNode(): void {
     const titleEl = document.getElementById("node-title");
     if (titleEl) titleEl.textContent = "";
   }
+
+  const subtitleEl = document.getElementById("node-subtitle");
+  if (subtitleEl) subtitleEl.textContent = node.subtitle;
 
   illustEl.innerHTML = node.svg;
   textEl.textContent = resolveText(node.text, flags);
