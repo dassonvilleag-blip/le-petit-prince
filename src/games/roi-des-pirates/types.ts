@@ -67,6 +67,7 @@ export interface StoryNode {
   id: string;
   arc?: ArcId;
   title?: string;
+  subtitle: string;
   text: string | ((flags: Set<string>) => string);
   svg: string;
   choices: Choice[];
