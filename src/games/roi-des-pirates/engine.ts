@@ -160,6 +160,9 @@ function renderNode(): void {
     if (titleEl) titleEl.textContent = "";
   }
 
+  const subtitleEl = document.getElementById("node-subtitle");
+  if (subtitleEl) subtitleEl.textContent = node.subtitle;
+
   illustEl.innerHTML = node.svg;
   textEl.textContent = resolveText(node.text, flags);
   choicesEl.innerHTML = "";
