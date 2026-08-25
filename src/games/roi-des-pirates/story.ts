@@ -33,7 +33,7 @@ export const STORY: StoryNode[] = [
   {
     id: "intro",
     subtitle: "L'appel du large",
-    text: "La mer. Elle t'a toujours appelé. Depuis l'enfance sur ce quai de bois vermoulu, tu regardais les voiles disparaître à l'horizon en te disant : un jour, ce sera moi. Ce jour est arrivé. Tu as dix-sept ans. Un couteau à la ceinture, quelques Berry dans la poche, et cette conviction qui brûle dans ta poitrine. Tu deviendras Roi des Pirates. Tu trouveras le One Piece. Personne ne te croit. Parfait.",
+    text: "La mer. Elle t'a toujours appelé. Depuis l'enfance sur ce quai de bois vermoulu, tu regardais les voiles disparaître à l'horizon en te disant : un jour, ce sera moi. Ce jour est arrivé. Tu as dix-sept ans. Un couteau à la ceinture, quelques Berry dans la poche, et cette conviction qui brûle dans ta poitrine. Tu deviendras {le Roi/la Reine} des Pirates. Tu trouveras le One Piece. Personne ne te croit. Parfait.",
     svg: SVG_INTRO,
     choices: [
       { text: "Embarquer", effects: {}, next: "eb-origines" },
@@ -50,7 +50,7 @@ export const STORY: StoryNode[] = [
     choices: [
       {
         text: "D'un village côtier. Un soir, Shanks le Roux y a fait escale.",
-        sub: "Il t'a dit quelque chose en riant. Tu n'as jamais oublié.",
+        sub: "Il t'a appelé {prenom} en riant, avant de lâcher une phrase que tu n'as jamais oubliée.",
         effects: { force: 15, notoriete: 5 },
         next: "eb-choix-fondateur",
       },
@@ -176,7 +176,7 @@ export const STORY: StoryNode[] = [
     arc: "east-blue",
     title: "East Blue — Un épéiste dans une taverne",
     subtitle: "Un épéiste à convaincre",
-    text: "Dans l'arrière-salle d'une taverne qui sent la sciure et le rhum bon marché, un jeune épéiste vient de mettre trois hommes au tapis pour une histoire de dette impayée. Il te regarde, amusé, comme s'il te jaugeait déjà.",
+    text: "Dans l'arrière-salle d'une taverne qui sent la sciure et le rhum bon marché, un jeune épéiste vient de mettre trois hommes au tapis pour une histoire de dette impayée. Il te regarde, amusé, comme s'il jaugeait déjà un {espece} qui vient d'entrer.",
     svg: SVG_EAST_BLUE,
     choices: [
       {
@@ -212,7 +212,7 @@ export const STORY: StoryNode[] = [
     arc: "east-blue",
     title: "East Blue — Un serment de lame",
     subtitle: "Un adversaire convaincu",
-    text: "Tu le mets à terre, la pointe de ta lame — ou de ton poing — sous sa gorge. Il éclate de rire au lieu de supplier. \"C'est bon, tu m'as convaincu.\" Il se relève, tend la main. Un équipage vient de gagner son épéiste.",
+    text: "Tu le mets à terre, la pointe de ta lame — ou de ton poing — sous sa gorge. Il éclate de rire au lieu de supplier. \"C'est bon, tu m'as convaincu.\" Il se relève, tend la main. \"{Enchanté/Enchantée}, {prenom}.\" Un équipage vient de gagner son épéiste.",
     svg: SVG_EAST_BLUE,
     choices: [{ text: "Continuer.", effects: {}, next: "eb-marine" }],
   },
@@ -222,7 +222,7 @@ export const STORY: StoryNode[] = [
     arc: "east-blue",
     title: "East Blue — Un duel serré, perdu de peu",
     subtitle: "Une défaite honorable",
-    text: "Le combat est plus long que prévu. Tu finis à terre, essoufflé, mais entier. Il te tend la main pour t'aider à te relever. \"Pas mal. Mais je ne rejoins pas les épaves.\" Il s'en va en sifflotant. Tu croiseras peut-être sa route ailleurs, un jour.",
+    text: "Le combat est plus long que prévu. Tu finis à terre, {essoufflé/essoufflée}, mais {entier/entière}. Il te tend la main pour t'aider à te relever. \"Pas mal. Mais je ne rejoins pas les épaves.\" Il s'en va en sifflotant. Tu croiseras peut-être sa route ailleurs, un jour.",
     svg: SVG_EAST_BLUE,
     choices: [{ text: "Continuer.", effects: {}, next: "eb-marine" }],
   },
@@ -242,7 +242,7 @@ export const STORY: StoryNode[] = [
     arc: "east-blue",
     title: "East Blue — Première confrontation",
     subtitle: "Affronter la Marine ou s'éclipser",
-    text: "Un capitaine de la Marine te coupe la route. Il est fier, arrogant, et il a un mandat d'arrestation avec ton nom dessus. Une petite foule de villageois regarde depuis le quai. Ce moment pourrait définir qui tu es — ou du moins ce que les autres diront de toi.",
+    text: "Un capitaine de la Marine te coupe la route. Il est fier, arrogant, et il brandit un mandat d'arrestation où on peut lire, en toutes lettres : {prenom}. Une petite foule de villageois regarde depuis le quai. Ce moment pourrait définir qui tu es — ou du moins ce que les autres diront de toi.",
     svg: SVG_MARINE,
     choices: [
       {
