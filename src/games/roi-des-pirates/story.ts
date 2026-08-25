@@ -20,6 +20,17 @@ import {
 
 export const STORY: StoryNode[] = [
   {
+    id: "creation-personnage",
+    characterForm: true,
+    subtitle: "Qui es-tu ?",
+    text: "Avant de prendre la mer, une dernière chose : qui es-tu ?",
+    svg: SVG_INTRO,
+    choices: [
+      { text: "Embarquer", effects: {}, next: "intro" },
+    ],
+  },
+
+  {
     id: "intro",
     subtitle: "L'appel du large",
     text: "La mer. Elle t'a toujours appelé. Depuis l'enfance sur ce quai de bois vermoulu, tu regardais les voiles disparaître à l'horizon en te disant : un jour, ce sera moi. Ce jour est arrivé. Tu as dix-sept ans. Un couteau à la ceinture, quelques Berry dans la poche, et cette conviction qui brûle dans ta poitrine. Tu deviendras Roi des Pirates. Tu trouveras le One Piece. Personne ne te croit. Parfait.",
