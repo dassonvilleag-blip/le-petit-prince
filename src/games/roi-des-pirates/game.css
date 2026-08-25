@@ -207,6 +207,88 @@ body {
   opacity: 0.8;
 }
 
+.choice-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Character creation form ── */
+.character-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 32px;
+}
+
+.form-row {
+  display: flex;
+  gap: 8px;
+}
+
+.name-input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 12px 14px;
+  font-family: Georgia, serif;
+  font-size: 16px;
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: var(--arc-color);
+}
+
+.name-input::placeholder {
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+.dice-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 18px;
+  padding: 0 16px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.dice-btn:hover:not(:disabled) {
+  border-color: var(--arc-color);
+}
+.dice-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.option-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.option-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 10px 16px;
+  cursor: pointer;
+  font-family: sans-serif;
+  font-size: 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.option-btn:hover {
+  border-color: var(--arc-color);
+}
+.option-btn.selected {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--arc-color);
+  color: var(--arc-color);
+}
+
 /* ── Replay button (ending) ── */
 #replay-btn {
   display: block;
