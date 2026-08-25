@@ -46,6 +46,12 @@ export function describeInjuries(flags: Set<string>): string[] {
     .map(([, label]) => label);
 }
 
+function hasUnbalancedPlaceholder(text: string): boolean {
+  const open = (text.match(/\{/g) ?? []).length;
+  const close = (text.match(/\}/g) ?? []).length;
+  return open !== close;
+}
+
 export function validateStoryGraph(storyNodes: StoryNode[]): string[] {
   const errors: string[] = [];
   const ids = new Set(storyNodes.map((n) => n.id));
@@ -53,9 +59,20 @@ export function validateStoryGraph(storyNodes: StoryNode[]): string[] {
     errors.push("Des identifiants de nœuds sont dupliqués.");
   }
 
+  const creation = storyNodes.find((n) => n.id === "creation-personnage");
+  if (!creation) {
+    errors.push("Le nœud creation-personnage est manquant.");
+  } else if (creation.characterForm !== true) {
+    errors.push("Le nœud creation-personnage doit avoir characterForm: true.");
+  }
+
   for (const node of storyNodes) {
     if (!node.subtitle?.trim()) {
       errors.push(`${node.id}: aucun sous-titre défini.`);
+    }
+
+    if (typeof node.text === "string" && hasUnbalancedPlaceholder(node.text)) {
+      errors.push(`${node.id}: accolade de placeholder non refermée dans le texte.`);
     }
 
     if (node.isEnding) continue;
@@ -73,6 +90,13 @@ export function validateStoryGraph(storyNodes: StoryNode[]): string[] {
     }
 
     for (const choice of node.choices) {
+      if (hasUnbalancedPlaceholder(choice.text)) {
+        errors.push(`${node.id}: accolade de placeholder non refermée dans le choix "${choice.text}".`);
+      }
+      if (choice.sub && hasUnbalancedPlaceholder(choice.sub)) {
+        errors.push(`${node.id}: accolade de placeholder non refermée dans le sous-texte du choix "${choice.text}".`);
+      }
+
       if (!choice.duel && !choice.eatPendingFruit && !choice.next) {
         errors.push(`${node.id}: le choix "${choice.text}" n'a aucun routage (ni next, ni duel, ni eatPendingFruit).`);
       }
