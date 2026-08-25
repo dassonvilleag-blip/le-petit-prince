@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resolveDuel, filterChoices, resolveText, describeInjuries, fruitCounters } from "../engine.ts";
-import type { Choice } from "../types.ts";
+import { resolveDuel, filterChoices, resolveText, describeInjuries, fruitCounters, validateStoryGraph } from "../engine.ts";
+import type { Choice, StoryNode } from "../types.ts";
 
 test("resolveDuel : victoire nette si la stat du joueur domine largement", () => {
   assert.equal(resolveDuel(80, 20, () => 0.5), "victoire");
@@ -93,11 +93,9 @@ test("fruitCounters : sans liste de contre définie, pas de contre", () => {
   assert.equal(fruitCounters(fruit, undefined), false);
 });
 
-import { validateStoryGraph } from "../engine.ts";
-import type { StoryNode } from "../types.ts";
-
 test("validateStoryGraph : accepte un graphe valide à deux nœuds", () => {
   const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "x", text: "CP", svg: "", choices: [{ text: "continuer", effects: {}, next: "a" }] },
     { id: "a", subtitle: "x", text: "A", svg: "", choices: [{ text: "aller à b", effects: {}, next: "b" }] },
     { id: "b", subtitle: "x", text: "B", svg: "", choices: [], isEnding: true },
   ];
@@ -106,6 +104,7 @@ test("validateStoryGraph : accepte un graphe valide à deux nœuds", () => {
 
 test("validateStoryGraph : signale une référence next vers un id inexistant", () => {
   const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "x", text: "CP", svg: "", choices: [] , isEnding: true },
     { id: "a", subtitle: "x", text: "A", svg: "", choices: [{ text: "x", effects: {}, next: "n-existe-pas" }] },
   ];
   const errors = validateStoryGraph(nodes);
@@ -114,6 +113,7 @@ test("validateStoryGraph : signale une référence next vers un id inexistant", 
 
 test("validateStoryGraph : signale des identifiants dupliqués", () => {
   const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "x", text: "CP", svg: "", choices: [], isEnding: true },
     { id: "a", subtitle: "x", text: "A", svg: "", choices: [], isEnding: true },
     { id: "a", subtitle: "x", text: "A bis", svg: "", choices: [], isEnding: true },
   ];
@@ -123,6 +123,7 @@ test("validateStoryGraph : signale des identifiants dupliqués", () => {
 
 test("validateStoryGraph : signale un nœud sans sous-titre", () => {
   const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "x", text: "CP", svg: "", choices: [], isEnding: true },
     { id: "a", subtitle: "", text: "A", svg: "", choices: [], isEnding: true },
   ];
   const errors = validateStoryGraph(nodes);
@@ -131,6 +132,7 @@ test("validateStoryGraph : signale un nœud sans sous-titre", () => {
 
 test("validateStoryGraph : une fin sans sous-titre est aussi signalée", () => {
   const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "x", text: "CP", svg: "", choices: [], isEnding: true },
     { id: "a", subtitle: "  ", text: "A", svg: "", choices: [], isEnding: true },
   ];
   const errors = validateStoryGraph(nodes);
@@ -138,13 +140,17 @@ test("validateStoryGraph : une fin sans sous-titre est aussi signalée", () => {
 });
 
 test("validateStoryGraph : signale un nœud non-fin sans aucun choix", () => {
-  const nodes: StoryNode[] = [{ id: "a", subtitle: "x", text: "A", svg: "", choices: [] }];
+  const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "x", text: "CP", svg: "", choices: [], isEnding: true },
+    { id: "a", subtitle: "x", text: "A", svg: "", choices: [] }
+  ];
   const errors = validateStoryGraph(nodes);
   assert.ok(errors.some((e) => e.includes("aucun choix")));
 });
 
 test("validateStoryGraph : signale un nœud dont tous les choix sont conditionnels", () => {
   const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "x", text: "CP", svg: "", choices: [{ text: "continuer", effects: {}, next: "a" }] },
     {
       id: "a",
       subtitle: "x",
@@ -160,6 +166,7 @@ test("validateStoryGraph : signale un nœud dont tous les choix sont conditionne
 
 test("validateStoryGraph : suit aussi les cibles de duel et de fruit en attente", () => {
   const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "x", text: "CP", svg: "", choices: [{ text: "continuer", effects: {}, next: "a" }] },
     {
       id: "a",
       subtitle: "x",
@@ -188,6 +195,7 @@ test("validateStoryGraph : suit aussi les cibles de duel et de fruit en attente"
 
 test("validateStoryGraph : signale un choix sans aucun routage (ni next, ni duel, ni eatPendingFruit)", () => {
   const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "x", text: "CP", svg: "", choices: [] , isEnding: true },
     {
       id: "a",
       subtitle: "x",
@@ -202,6 +210,7 @@ test("validateStoryGraph : signale un choix sans aucun routage (ni next, ni duel
 
 test("validateStoryGraph : un choix pickFruitCandidate accompagné de next n'est pas signalé", () => {
   const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "x", text: "CP", svg: "", choices: [{ text: "continuer", effects: {}, next: "a" }] },
     {
       id: "a",
       subtitle: "x",
@@ -212,4 +221,65 @@ test("validateStoryGraph : un choix pickFruitCandidate accompagné de next n'est
     { id: "b", subtitle: "x", text: "B", svg: "", choices: [], isEnding: true },
   ];
   assert.deepEqual(validateStoryGraph(nodes), []);
+});
+
+test("validateStoryGraph : signale l'absence du nœud creation-personnage", () => {
+  const nodes: StoryNode[] = [
+    { id: "intro", subtitle: "s", text: "t", svg: "", choices: [], isEnding: true },
+  ];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.includes("Le nœud creation-personnage est manquant."));
+});
+
+test("validateStoryGraph : signale un creation-personnage sans characterForm", () => {
+  const nodes: StoryNode[] = [
+    { id: "creation-personnage", subtitle: "s", text: "t", svg: "", choices: [], isEnding: true },
+  ];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.includes("Le nœud creation-personnage doit avoir characterForm: true."));
+});
+
+test("validateStoryGraph : signale une accolade de placeholder non refermée dans le texte d'un nœud", () => {
+  const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "s", text: "t", svg: "", choices: [], isEnding: true },
+    {
+      id: "a",
+      subtitle: "s",
+      text: "Bonjour { prenom",
+      svg: "",
+      choices: [{ text: "Continuer", effects: {}, next: "creation-personnage" }],
+    },
+  ];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.some((e) => e.includes("accolade de placeholder non refermée dans le texte")));
+});
+
+test("validateStoryGraph : signale une accolade non refermée dans le texte d'un choix", () => {
+  const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "s", text: "t", svg: "", choices: [], isEnding: true },
+    {
+      id: "a",
+      subtitle: "s",
+      text: "t",
+      svg: "",
+      choices: [{ text: "Un {prenom mal fermé", effects: {}, next: "creation-personnage" }],
+    },
+  ];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.some((e) => e.includes("accolade de placeholder non refermée dans le choix")));
+});
+
+test("validateStoryGraph : signale une accolade non refermée dans le sous-texte d'un choix", () => {
+  const nodes: StoryNode[] = [
+    { id: "creation-personnage", characterForm: true, subtitle: "s", text: "t", svg: "", choices: [], isEnding: true },
+    {
+      id: "a",
+      subtitle: "s",
+      text: "t",
+      svg: "",
+      choices: [{ text: "Continuer", sub: "Avec {sous-texte mal fermé", effects: {}, next: "creation-personnage" }],
+    },
+  ];
+  const errors = validateStoryGraph(nodes);
+  assert.ok(errors.some((e) => e.includes("accolade de placeholder non refermée dans le sous-texte")));
 });

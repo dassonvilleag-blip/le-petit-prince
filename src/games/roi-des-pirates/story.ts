@@ -20,9 +20,20 @@ import {
 
 export const STORY: StoryNode[] = [
   {
+    id: "creation-personnage",
+    characterForm: true,
+    subtitle: "Qui es-tu ?",
+    text: "Avant de prendre la mer, une dernière chose : qui es-tu ?",
+    svg: SVG_INTRO,
+    choices: [
+      { text: "Embarquer", effects: {}, next: "intro" },
+    ],
+  },
+
+  {
     id: "intro",
     subtitle: "L'appel du large",
-    text: "La mer. Elle t'a toujours appelé. Depuis l'enfance sur ce quai de bois vermoulu, tu regardais les voiles disparaître à l'horizon en te disant : un jour, ce sera moi. Ce jour est arrivé. Tu as dix-sept ans. Un couteau à la ceinture, quelques Berry dans la poche, et cette conviction qui brûle dans ta poitrine. Tu deviendras Roi des Pirates. Tu trouveras le One Piece. Personne ne te croit. Parfait.",
+    text: "La mer. Elle t'a toujours appelé. Depuis l'enfance sur ce quai de bois vermoulu, tu regardais les voiles disparaître à l'horizon en te disant : un jour, ce sera moi. Ce jour est arrivé. Tu as dix-sept ans. Un couteau à la ceinture, quelques Berry dans la poche, et cette conviction qui brûle dans ta poitrine. Tu deviendras {le Roi/la Reine} des Pirates. Tu trouveras le One Piece. Personne ne te croit. Parfait.",
     svg: SVG_INTRO,
     choices: [
       { text: "Embarquer", effects: {}, next: "eb-origines" },
@@ -39,7 +50,7 @@ export const STORY: StoryNode[] = [
     choices: [
       {
         text: "D'un village côtier. Un soir, Shanks le Roux y a fait escale.",
-        sub: "Il t'a dit quelque chose en riant. Tu n'as jamais oublié.",
+        sub: "Il t'a appelé {prenom} en riant, avant de lâcher une phrase que tu n'as jamais oubliée.",
         effects: { force: 15, notoriete: 5 },
         next: "eb-choix-fondateur",
       },
@@ -165,7 +176,7 @@ export const STORY: StoryNode[] = [
     arc: "east-blue",
     title: "East Blue — Un épéiste dans une taverne",
     subtitle: "Un épéiste à convaincre",
-    text: "Dans l'arrière-salle d'une taverne qui sent la sciure et le rhum bon marché, un jeune épéiste vient de mettre trois hommes au tapis pour une histoire de dette impayée. Il te regarde, amusé, comme s'il te jaugeait déjà.",
+    text: "Dans l'arrière-salle d'une taverne qui sent la sciure et le rhum bon marché, un jeune épéiste vient de mettre trois hommes au tapis pour une histoire de dette impayée. Il te regarde, amusé, comme s'il jaugeait déjà un {espece} qui vient d'entrer.",
     svg: SVG_EAST_BLUE,
     choices: [
       {
@@ -201,7 +212,7 @@ export const STORY: StoryNode[] = [
     arc: "east-blue",
     title: "East Blue — Un serment de lame",
     subtitle: "Un adversaire convaincu",
-    text: "Tu le mets à terre, la pointe de ta lame — ou de ton poing — sous sa gorge. Il éclate de rire au lieu de supplier. \"C'est bon, tu m'as convaincu.\" Il se relève, tend la main. Un équipage vient de gagner son épéiste.",
+    text: "Tu le mets à terre, la pointe de ta lame — ou de ton poing — sous sa gorge. Il éclate de rire au lieu de supplier. \"C'est bon, tu m'as convaincu.\" Il se relève, tend la main. \"{Enchanté/Enchantée}, {prenom}.\" Un équipage vient de gagner son épéiste.",
     svg: SVG_EAST_BLUE,
     choices: [{ text: "Continuer.", effects: {}, next: "eb-marine" }],
   },
@@ -211,7 +222,7 @@ export const STORY: StoryNode[] = [
     arc: "east-blue",
     title: "East Blue — Un duel serré, perdu de peu",
     subtitle: "Une défaite honorable",
-    text: "Le combat est plus long que prévu. Tu finis à terre, essoufflé, mais entier. Il te tend la main pour t'aider à te relever. \"Pas mal. Mais je ne rejoins pas les épaves.\" Il s'en va en sifflotant. Tu croiseras peut-être sa route ailleurs, un jour.",
+    text: "Le combat est plus long que prévu. Tu finis à terre, {essoufflé/essoufflée}, mais {entier/entière}. Il te tend la main pour t'aider à te relever. \"Pas mal. Mais je ne rejoins pas les épaves.\" Il s'en va en sifflotant. Tu croiseras peut-être sa route ailleurs, un jour.",
     svg: SVG_EAST_BLUE,
     choices: [{ text: "Continuer.", effects: {}, next: "eb-marine" }],
   },
@@ -231,7 +242,7 @@ export const STORY: StoryNode[] = [
     arc: "east-blue",
     title: "East Blue — Première confrontation",
     subtitle: "Affronter la Marine ou s'éclipser",
-    text: "Un capitaine de la Marine te coupe la route. Il est fier, arrogant, et il a un mandat d'arrestation avec ton nom dessus. Une petite foule de villageois regarde depuis le quai. Ce moment pourrait définir qui tu es — ou du moins ce que les autres diront de toi.",
+    text: "Un capitaine de la Marine te coupe la route. Il est fier, arrogant, et il brandit un mandat d'arrestation où on peut lire, en toutes lettres : {prenom}. Une petite foule de villageois regarde depuis le quai. Ce moment pourrait définir qui tu es — ou du moins ce que les autres diront de toi.",
     svg: SVG_MARINE,
     choices: [
       {
@@ -290,7 +301,7 @@ export const STORY: StoryNode[] = [
     text: (flags) =>
       flags.has("epeiste-recrute")
         ? "Sur le pont, ton épéiste aiguise sa lame sans un mot, les yeux fixés sur l'horizon nouveau. La Grand Line ne l'impressionne pas — ou il le cache bien."
-        : "Sur les quais d'une île de passage, tu croises à nouveau ce même épéiste d'East Blue, plus loin de chez lui que toi. Il te reconnaît, hausse un sourcil. \"Toujours vivant, à ce que je vois.\"",
+        : "Sur les quais d'une île de passage, tu croises à nouveau ce même épéiste d'East Blue, plus loin de chez lui que toi. Il te reconnaît, hausse un sourcil. \"Toujours vivant, {prenom}, à ce que je vois.\"",
     svg: SVG_GRAND_LINE,
     choices: [
       {
@@ -467,7 +478,7 @@ export const STORY: StoryNode[] = [
     arc: "nouveau-monde",
     title: "Nouveau Monde — Un médecin sans navire",
     subtitle: "Un médecin à recruter",
-    text: "Sur une île à moitié engloutie, un médecin erre depuis le naufrage de son propre équipage. Il connaît les blessures de guerre, les poisons des Logia, et — détail qu'il glisse presque timidement — les Fruits du Démon, qu'il a étudiés toute sa vie.",
+    text: "Sur une île à moitié engloutie, un médecin erre depuis le naufrage de son propre équipage. Il te dévisage un instant — un {espece}, en pleine mer, ce n'est pas si courant — puis reprend son sérieux. Il connaît les blessures de guerre, les poisons des Logia, et — détail qu'il glisse presque timidement — les Fruits du Démon, qu'il a étudiés toute sa vie.",
     svg: SVG_NOUVEAU_MONDE,
     choices: [
       {
@@ -628,6 +639,7 @@ export const STORY: StoryNode[] = [
       if (fruit) {
         morceaux.push(`${fruit.nom} bat toujours en toi, prêt à servir une dernière fois.`);
       }
+      morceaux.push("{prenom}, tu es {prêt/prête} — ou tu ne le seras jamais.");
       return morceaux.join(" ");
     },
     svg: SVG_NOUVEAU_MONDE,
@@ -639,7 +651,7 @@ export const STORY: StoryNode[] = [
     arc: "final",
     title: "Laugh Tale — La fin du monde",
     subtitle: "Le dernier voyage",
-    text: "Tu y es presque. Après tout ça — les tempêtes, les trahisons, les dieux marins et les Amiaux, les cicatrices qui ne s'effacent pas — tu approches de Laugh Tale. L'île que personne n'a atteinte depuis Gold Roger. Tu penses à ceux qui t'ont aidé. À ceux que tu as perdus. Tu réalises que tu n'es plus le même qu'au début du voyage. Le One Piece t'attend. Mais lequel des pirates que tu es devenu va l'atteindre ?",
+    text: "Tu y es presque. Après tout ça — les tempêtes, les trahisons, les dieux marins et les Amiraux, les cicatrices qui ne s'effacent pas — tu approches de Laugh Tale. L'île que personne n'a atteinte depuis Gold Roger. Tu penses à ceux qui t'ont aidé. À ceux que tu as perdus. Tu réalises que tu n'es plus {le même/la même} qu'au début du voyage, {prenom}. Le One Piece t'attend. Mais lequel des pirates que tu es devenu va l'atteindre ?",
     svg: SVG_FINAL,
     choices: [
       { text: "Découvrir mon destin", effects: {}, next: "__ending__" },
@@ -651,7 +663,7 @@ export const STORY: StoryNode[] = [
     arc: "final",
     title: "Roi des Pirates",
     subtitle: "Le rêve accompli",
-    text: "Le One Piece existait vraiment. Personne n'y croyait vraiment — même toi, au fond, tu n'osais pas trop y penser. Et là, devant tes yeux, c'est réel. Gold Roger l'a laissé ici il y a des décennies, en riant. Tu comprends pourquoi. Tu ris aussi. Le Roi des Pirates est mort. Vive le Roi des Pirates.",
+    text: "Le One Piece existait vraiment. Personne n'y croyait vraiment — même toi, au fond, tu n'osais pas trop y penser. Et là, devant tes yeux, c'est réel. Gold Roger l'a laissé ici il y a des décennies, en riant. Tu comprends pourquoi. Tu ris aussi. {Le Roi des Pirates est mort. Vive le Roi des Pirates/La Reine des Pirates est morte. Vive la Reine des Pirates}, {prenom}.",
     svg: SVG_FIN_ROI,
     isEnding: true,
     endingId: "fin-roi-des-pirates",
@@ -663,7 +675,7 @@ export const STORY: StoryNode[] = [
     arc: "final",
     title: "La Légende des Mers",
     subtitle: "Une légende, pas un roi",
-    text: "Tu n'as pas trouvé le One Piece — pas encore, peut-être jamais. Mais ta prime dépasse celle de la plupart des Empereurs. Ton nom fait trembler les Amiraux. Dans les tavernes de chaque île de la Grand Line, on raconte des histoires sur toi — certaines vraies, d'autres inventées, toutes impressionnantes. Tu n'es pas le Roi. Tu es peut-être quelque chose de plus grand.",
+    text: "Tu n'as pas trouvé le One Piece — pas encore, peut-être jamais. Mais ta prime dépasse celle de la plupart des Empereurs. Le nom de {prenom} fait trembler les Amiraux. Dans les tavernes de chaque île de la Grand Line, on raconte des histoires sur toi — certaines vraies, d'autres inventées, toutes impressionnantes. Tu n'es pas {le Roi/la Reine} des Pirates. Tu es peut-être quelque chose de plus grand.",
     svg: SVG_FIN_LEGENDE,
     isEnding: true,
     endingId: "fin-legende",
