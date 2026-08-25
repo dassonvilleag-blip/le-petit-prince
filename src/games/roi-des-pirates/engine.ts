@@ -1,5 +1,6 @@
-import type { Stats, StoryNode, Choice, EndingId, Fruit, FruitType } from "./types";
+import type { Stats, StoryNode, Choice, EndingId, Fruit, FruitType, Player } from "./types";
 import { pickRandomFruit, findEatenFruit } from "./fruits.ts";
+import { resolvePlayerText } from "./player.ts";
 
 export function resolveDuel(
   playerStat: number,
@@ -122,6 +123,11 @@ let stats: Stats;
 let currentNodeId: string;
 let flags: Set<string>;
 let pendingFruit: Fruit | undefined;
+let player: Player;
+
+function defaultPlayer(): Player {
+  return { name: "", gender: "homme", species: "humain" };
+}
 
 export function getPendingFruit(): Fruit | undefined {
   return pendingFruit;
@@ -192,7 +198,7 @@ function renderNode(): void {
   if (subtitleEl) subtitleEl.textContent = node.subtitle;
 
   illustEl.innerHTML = node.svg;
-  textEl.textContent = resolveText(node.text, flags);
+  textEl.textContent = resolvePlayerText(resolveText(node.text, flags), player);
   choicesEl.innerHTML = "";
   replayEl.hidden = true;
 
@@ -208,12 +214,12 @@ function renderNode(): void {
     btn.className = "choice-btn";
     const textSpan = document.createElement("span");
     textSpan.className = "choice-text";
-    textSpan.textContent = choice.text;
+    textSpan.textContent = resolvePlayerText(choice.text, player);
     btn.appendChild(textSpan);
     if (choice.sub) {
       const subSpan = document.createElement("span");
       subSpan.className = "choice-sub";
-      subSpan.textContent = choice.sub;
+      subSpan.textContent = resolvePlayerText(choice.sub, player);
       btn.appendChild(subSpan);
     }
     btn.addEventListener("click", () => navigate(choice));
@@ -275,7 +281,8 @@ export function startEngine(storyNodes: StoryNode[]): void {
   stats = { force: 0, notoriete: 0, equipage: 0, fruitDuDemon: 0 };
   flags = new Set();
   pendingFruit = undefined;
-  currentNodeId = "intro";
+  player = defaultPlayer();
+  currentNodeId = "creation-personnage";
 
   const replayBtn = document.getElementById("replay-btn");
   if (replayBtn) {
@@ -283,7 +290,8 @@ export function startEngine(storyNodes: StoryNode[]): void {
       stats = { force: 0, notoriete: 0, equipage: 0, fruitDuDemon: 0 };
       flags = new Set();
       pendingFruit = undefined;
-      currentNodeId = "intro";
+      player = defaultPlayer();
+      currentNodeId = "creation-personnage";
       renderNode();
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
