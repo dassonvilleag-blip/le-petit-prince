@@ -36,3 +36,8 @@ test("resolvePlayerText : une accolade non refermée reste telle quelle, sans pl
 test("SPECIES_LABELS : couvre exactement les 5 espèces de SPECIES_ORDER", () => {
   assert.deepEqual(Object.keys(SPECIES_LABELS).sort(), [...SPECIES_ORDER].sort());
 });
+
+test("resolvePlayerText : un prénom contenant des caractères de placeholder n'est pas re-scanné", () => {
+  const joueur: Player = { name: "Jo{a/b}ie", gender: "homme", species: "humain" };
+  assert.equal(resolvePlayerText("Bonjour {prenom}.", joueur), "Bonjour Jo{a/b}ie.");
+});

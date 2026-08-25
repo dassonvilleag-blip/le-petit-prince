@@ -17,11 +17,13 @@ export const SPECIES_LABELS: Record<SpeciesId, { m: string; f: string }> = {
 };
 
 export function resolvePlayerText(text: string, player: Player): string {
-  let result = text.replaceAll("{prenom}", player.name);
   const speciesLabel = SPECIES_LABELS[player.species][player.gender === "homme" ? "m" : "f"];
-  result = result.replaceAll("{espece}", speciesLabel);
-  result = result.replace(/\{([^{}/]+)\/([^{}]+)\}/g, (_match, m: string, f: string) =>
-    player.gender === "homme" ? m : f,
-  );
-  return result;
+  return text.replace(/\{(prenom|espece|[^{}/]+\/[^{}]+)\}/g, (_match, token: string) => {
+    if (token === "prenom") return player.name;
+    if (token === "espece") return speciesLabel;
+    const slashIndex = token.indexOf("/");
+    const m = token.slice(0, slashIndex);
+    const f = token.slice(slashIndex + 1);
+    return player.gender === "homme" ? m : f;
+  });
 }
