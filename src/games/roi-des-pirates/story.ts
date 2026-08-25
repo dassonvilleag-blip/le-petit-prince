@@ -301,7 +301,7 @@ export const STORY: StoryNode[] = [
     text: (flags) =>
       flags.has("epeiste-recrute")
         ? "Sur le pont, ton épéiste aiguise sa lame sans un mot, les yeux fixés sur l'horizon nouveau. La Grand Line ne l'impressionne pas — ou il le cache bien."
-        : "Sur les quais d'une île de passage, tu croises à nouveau ce même épéiste d'East Blue, plus loin de chez lui que toi. Il te reconnaît, hausse un sourcil. \"Toujours vivant, à ce que je vois.\"",
+        : "Sur les quais d'une île de passage, tu croises à nouveau ce même épéiste d'East Blue, plus loin de chez lui que toi. Il te reconnaît, hausse un sourcil. \"Toujours vivant, {prenom}, à ce que je vois.\"",
     svg: SVG_GRAND_LINE,
     choices: [
       {
@@ -478,7 +478,7 @@ export const STORY: StoryNode[] = [
     arc: "nouveau-monde",
     title: "Nouveau Monde — Un médecin sans navire",
     subtitle: "Un médecin à recruter",
-    text: "Sur une île à moitié engloutie, un médecin erre depuis le naufrage de son propre équipage. Il connaît les blessures de guerre, les poisons des Logia, et — détail qu'il glisse presque timidement — les Fruits du Démon, qu'il a étudiés toute sa vie.",
+    text: "Sur une île à moitié engloutie, un médecin erre depuis le naufrage de son propre équipage. Il te dévisage un instant — un {espece}, en pleine mer, ce n'est pas si courant — puis reprend son sérieux. Il connaît les blessures de guerre, les poisons des Logia, et — détail qu'il glisse presque timidement — les Fruits du Démon, qu'il a étudiés toute sa vie.",
     svg: SVG_NOUVEAU_MONDE,
     choices: [
       {
@@ -639,6 +639,7 @@ export const STORY: StoryNode[] = [
       if (fruit) {
         morceaux.push(`${fruit.nom} bat toujours en toi, prêt à servir une dernière fois.`);
       }
+      morceaux.push("{prenom}, tu es {prêt/prête} — ou tu ne le seras jamais.");
       return morceaux.join(" ");
     },
     svg: SVG_NOUVEAU_MONDE,
