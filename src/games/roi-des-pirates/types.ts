@@ -5,6 +5,15 @@ export interface Stats {
   fruitDuDemon: number;
 }
 
+export type Gender = "homme" | "femme";
+export type SpeciesId = "humain" | "geant" | "homme-poisson" | "buccaneer" | "lunarien";
+
+export interface Player {
+  name: string;
+  gender: Gender;
+  species: SpeciesId;
+}
+
 export type EndingId =
   | "fin-roi-des-pirates"
   | "fin-legende"
@@ -65,6 +74,7 @@ export interface Choice {
 
 export interface StoryNode {
   id: string;
+  characterForm?: true;
   arc?: ArcId;
   title?: string;
   subtitle: string;
