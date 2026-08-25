@@ -1,6 +1,7 @@
-import type { Stats, StoryNode, Choice, EndingId, Fruit, FruitType, Player } from "./types";
+import type { Stats, StoryNode, Choice, EndingId, Fruit, FruitType, Player, Gender, SpeciesId } from "./types";
 import { pickRandomFruit, findEatenFruit } from "./fruits.ts";
-import { resolvePlayerText } from "./player.ts";
+import { resolvePlayerText, SPECIES_ORDER, SPECIES_LABELS } from "./player.ts";
+import { pickRandomName } from "./names.ts";
 
 export function resolveDuel(
   playerStat: number,
@@ -209,6 +210,11 @@ function renderNode(): void {
     return;
   }
 
+  if (node.characterForm) {
+    renderCharacterForm(node, choicesEl);
+    return;
+  }
+
   for (const choice of filterChoices(node.choices, flags)) {
     const btn = document.createElement("button");
     btn.className = "choice-btn";
@@ -225,6 +231,102 @@ function renderNode(): void {
     btn.addEventListener("click", () => navigate(choice));
     choicesEl.appendChild(btn);
   }
+}
+
+function renderCharacterForm(node: StoryNode, container: HTMLElement): void {
+  const state: { name: string; gender?: Gender; species?: SpeciesId } = { name: "" };
+
+  const form = document.createElement("div");
+  form.className = "character-form";
+
+  const nameRow = document.createElement("div");
+  nameRow.className = "form-row name-row";
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.maxLength = 24;
+  nameInput.placeholder = "Ton prénom de pirate";
+  nameInput.className = "name-input";
+  const diceBtn = document.createElement("button");
+  diceBtn.type = "button";
+  diceBtn.className = "dice-btn";
+  diceBtn.textContent = "🎲";
+  diceBtn.disabled = true;
+  nameRow.appendChild(nameInput);
+  nameRow.appendChild(diceBtn);
+  form.appendChild(nameRow);
+
+  const genderLabels: Record<Gender, string> = { homme: "Homme", femme: "Femme" };
+  const genderButtons = new Map<Gender, HTMLButtonElement>();
+  const genderGroup = document.createElement("div");
+  genderGroup.className = "option-group";
+  for (const gender of Object.keys(genderLabels) as Gender[]) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "option-btn";
+    btn.textContent = genderLabels[gender];
+    btn.addEventListener("click", () => {
+      state.gender = gender;
+      for (const b of genderButtons.values()) b.classList.remove("selected");
+      btn.classList.add("selected");
+      diceBtn.disabled = false;
+      updateSubmit();
+    });
+    genderButtons.set(gender, btn);
+    genderGroup.appendChild(btn);
+  }
+  form.appendChild(genderGroup);
+
+  const speciesButtons = new Map<SpeciesId, HTMLButtonElement>();
+  const speciesGroup = document.createElement("div");
+  speciesGroup.className = "option-group";
+  for (const species of SPECIES_ORDER) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "option-btn";
+    btn.textContent = SPECIES_LABELS[species].m;
+    btn.addEventListener("click", () => {
+      state.species = species;
+      for (const b of speciesButtons.values()) b.classList.remove("selected");
+      btn.classList.add("selected");
+      updateSubmit();
+    });
+    speciesButtons.set(species, btn);
+    speciesGroup.appendChild(btn);
+  }
+  form.appendChild(speciesGroup);
+
+  const submitBtn = document.createElement("button");
+  submitBtn.type = "button";
+  submitBtn.className = "choice-btn";
+  submitBtn.textContent = "Embarquer";
+  submitBtn.disabled = true;
+  submitBtn.addEventListener("click", () => {
+    player = { name: state.name.trim(), gender: state.gender!, species: state.species! };
+    navigate(node.choices[0]);
+  });
+  form.appendChild(submitBtn);
+
+  function updateSubmit(): void {
+    submitBtn.disabled = !(
+      state.name.trim().length > 0 &&
+      state.gender !== undefined &&
+      state.species !== undefined
+    );
+  }
+
+  nameInput.addEventListener("input", () => {
+    state.name = nameInput.value;
+    updateSubmit();
+  });
+
+  diceBtn.addEventListener("click", () => {
+    if (!state.gender) return;
+    nameInput.value = pickRandomName(state.gender);
+    state.name = nameInput.value;
+    updateSubmit();
+  });
+
+  container.appendChild(form);
 }
 
 function navigate(choice: Choice): void {
