@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Du Kebab au CAC 40</title>
+    <meta name="description" content="Du vide-grenier à la compagnie aérienne : rachète des commerces, embauche des gérants et entre en Bourse." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥙</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/du-kebab-au-cac-40/cac40.css" />
+  </head>
+  <body>
+    <header class="entete">
+      <a class="back-link" href="../../">← le petit prince</a>
+      <div class="argent" id="argent">0 €</div>
+      <div class="sous-entete">
+        <span id="debit"></span>
+        <span id="actions" class="pastille-actions" hidden></span>
+      </div>
+    </header>
+
+    <main class="commerces" id="commerces"></main>
+
+    <nav class="barre">
+      <button type="button" data-panneau="gerants">🧑‍💼<small>gérants</small><span class="badge" id="badge-gerants" hidden></span></button>
+      <button type="button" data-panneau="ameliorations">⭐<small>amélios</small><span class="badge" id="badge-ameliorations" hidden></span></button>
+      <button type="button" data-panneau="bourse">📈<small>bourse</small><span class="badge" id="badge-bourse" hidden></span></button>
+      <button type="button" id="mode-achat" class="mode-achat">×1<small>achat</small></button>
+    </nav>
+
+    <div class="voile" id="voile" hidden></div>
+    <section class="panneau" id="panneau" hidden>
+      <div class="panneau-tete">
+        <span id="panneau-titre"></span>
+        <button type="button" id="panneau-fermer" aria-label="fermer">✕</button>
+      </div>
+      <div class="panneau-corps" id="panneau-corps"></div>
+    </section>
+
+    <div class="popup" id="popup" hidden></div>
+    <div class="toast" id="toast"></div>
+
+    <script type="module" src="/src/games/du-kebab-au-cac-40/main.ts"></script>
+  </body>
+</html>
