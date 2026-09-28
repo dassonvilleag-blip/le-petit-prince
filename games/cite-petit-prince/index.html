@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Cité Petit Prince</title>
+    <meta name="description" content="Empile les étages de ta tour, loge les habitants, fais tourner les commerces et monte les visiteurs en ascenseur." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏢</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/cite-petit-prince/cite.css" />
+  </head>
+  <body>
+    <canvas id="tour"></canvas>
+
+    <a class="back-link" href="../../">← le petit prince</a>
+
+    <div class="hud">
+      <span class="pill" id="hud-argent"></span>
+      <span class="pill" id="hud-tickets"></span>
+      <span class="pill" id="hud-pop"></span>
+    </div>
+
+    <nav class="barre">
+      <button type="button" id="btn-ascenseur">🛗<small>ascenseur</small><span class="badge" id="badge-ascenseur" hidden></span></button>
+      <button type="button" data-panneau="habitants">👥<small>habitants</small><span class="badge" id="badge-habitants" hidden></span></button>
+      <button type="button" data-panneau="fil">📱<small>le fil</small><span class="badge" id="badge-fil" hidden></span></button>
+      <button type="button" data-panneau="construire">🏗️<small>construire</small></button>
+    </nav>
+
+    <div class="voile" id="voile" hidden></div>
+    <section class="panneau" id="panneau" hidden>
+      <div class="panneau-tete">
+        <span id="panneau-titre"></span>
+        <button type="button" id="panneau-fermer" aria-label="fermer">✕</button>
+      </div>
+      <div class="panneau-corps" id="panneau-corps"></div>
+    </section>
+
+    <div class="popup" id="popup" hidden></div>
+    <div class="toast" id="toast"></div>
+
+    <script type="module" src="/src/games/cite-petit-prince/main.ts"></script>
+  </body>
+</html>
