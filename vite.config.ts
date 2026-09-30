@@ -158,6 +158,7 @@ export default defineConfig({
         roiDesPirates: resolve(__dirname, "games/roi-des-pirates/index.html"),
         duKebabAuCac40: resolve(__dirname, "games/du-kebab-au-cac-40/index.html"),
         citePetitPrince: resolve(__dirname, "games/cite-petit-prince/index.html"),
+        lesCaravanes: resolve(__dirname, "games/les-caravanes/index.html"),
       },
     },
   },

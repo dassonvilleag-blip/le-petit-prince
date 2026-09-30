@@ -15,6 +15,10 @@ interactives inspirées de l'univers du Petit Prince.
   chaque insecte du jardin peut devenir allié (les pucerons dès la v1) ou
   rester adversaire ; ajouter une espèce = une fiche dans
   `src/games/la-colonie/data.ts`.
+- **Les Caravanes** (`/games/les-caravanes/`) — commerce en temps réel entre
+  six villes. On range sa charrette façon Tetris, on marchande à l'arrivée
+  avec des marchands qui ont chacun leur caractère, et des caravaniers font la
+  navette tout seuls, même onglet fermé. Échap = mode discret.
 - **Les Dés Menteurs** (`/games/les-des-menteurs/`) — Perudo en ligne, de 2 à
   6 joueurs dans un salon à code. Enchères, bluff, « Menteur ! » et « Pile
   poil ! » ; l'étoile ⭐ est joker, manches palifico incluses. Les dés vivent
