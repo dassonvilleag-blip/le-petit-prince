@@ -6,20 +6,28 @@
 import {
   ATTELAGES,
   CHARRETTES,
+  DEMI_VIE_SATURATION,
+  DUREE_CRENEAU,
   ECUS_DEPART,
+  SATURATION_MAX,
   PRIX_CARAVANES,
   PRIX_CARAVANIERS,
   PRIX_TITRE_ROYAL,
   VILLES,
+  type BienId,
   type VilleId,
 } from "./data.ts";
 import {
   chargementAuto,
+  evenementDuCreneau,
   peutPlacer,
   prixAchat,
   rejouerGabarit,
+  saturationPiece,
   valeurCargaison,
   dureeTrajet,
+  type Evenement,
+  type Marche,
   type Piece,
 } from "./eco.ts";
 
@@ -43,7 +51,7 @@ export interface Caravane {
   aVendre: boolean; // arrivée, cargaison pas encore écoulée
   caravanier: boolean;
   auto: boolean; // le caravanier fait la navette tout seul
-  gabarits: Partial<Record<VilleId, Piece[]>>; // dernier rangement fait à la main dans chaque ville
+  gabarits: Record<string, Piece[]>; // "départ>arrivée" → dernier rangement fait à la main pour ce trajet
 }
 
 export interface Etat {
@@ -57,6 +65,10 @@ export interface Etat {
   attelage: number;
   titre: boolean;
   stats: { voyages: number; marchandages: number; meilleureMarge: number };
+  // "ville:bien" → saturation au moment t (elle décroît ensuite)
+  saturation: Record<string, { v: number; t: number }>;
+  // nouvelle du créneau, figée une fois tirée (ouvrir une ville ne la change pas)
+  nouvelle: { creneau: number; evenement: Evenement | null } | null;
 }
 
 const STORAGE_KEY = "les-caravanes:v1";
@@ -89,6 +101,8 @@ export function nouvelEtat(now: number): Etat {
     attelage: 0,
     titre: false,
     stats: { voyages: 0, marchandages: 0, meilleureMarge: 0 },
+    saturation: {},
+    nouvelle: null,
   };
 }
 
@@ -120,6 +134,38 @@ export function prixCaravanier(s: Etat): number | null {
   return PRIX_CARAVANIERS[n] ?? null;
 }
 
+// ---- marché ----
+
+export function saturationA(s: Etat, ville: VilleId, bien: BienId, t: number): number {
+  const e = s.saturation[`${ville}:${bien}`];
+  if (!e) return 0;
+  return e.v * 0.5 ** (Math.max(0, t - e.t) / DEMI_VIE_SATURATION);
+}
+
+function saturer(s: Etat, ville: VilleId, pieces: Piece[], t: number): void {
+  for (const p of pieces) {
+    const v = Math.min(SATURATION_MAX, saturationA(s, ville, p.bien, t) + saturationPiece(p.bien));
+    s.saturation[`${ville}:${p.bien}`] = { v, t };
+  }
+  // on oublie ce qui s'est résorbé, pour ne pas faire grossir la sauvegarde
+  for (const [k, e] of Object.entries(s.saturation))
+    if (e.v * 0.5 ** (Math.max(0, t - e.t) / DEMI_VIE_SATURATION) < 0.005) delete s.saturation[k];
+}
+
+export function creneauA(t: number): number {
+  return Math.floor(t / DUREE_CRENEAU);
+}
+
+export function evenementA(s: Etat, t: number): Evenement | null {
+  const creneau = creneauA(t);
+  if (s.nouvelle?.creneau !== creneau) s.nouvelle = { creneau, evenement: evenementDuCreneau(creneau, s.villes) };
+  return s.nouvelle.evenement;
+}
+
+export function marche(s: Etat, t: number): Marche {
+  return { evenement: evenementA(s, t), saturation: (v, b) => saturationA(s, v, b, t) };
+}
+
 // ---- temps ----
 
 function gagner(s: Etat, montant: number): void {
@@ -129,7 +175,7 @@ function gagner(s: Etat, montant: number): void {
 
 function payerChargement(s: Etat, c: Caravane, pieces: Piece[], ville: VilleId, t: number): void {
   for (const p of pieces) {
-    const paye = prixAchat(ville, p.bien, t)!;
+    const paye = prixAchat(ville, p.bien, t, marche(s, t))!;
     s.ecus -= paye;
     c.cargaison.push({ ...p, paye });
     c.cout += paye;
@@ -166,17 +212,19 @@ export function avancer(s: Etat, now: number): Bilan {
       if (!c.aVendre) c.cout = 0;
       continue;
     }
-    const vente = valeurCargaison(c.cargaison, c.ville, t);
+    const m = marche(s, t);
+    const vente = valeurCargaison(c.cargaison, c.ville, t, m);
+    saturer(s, c.ville, c.cargaison, t);
     gagner(s, vente);
     bilan.gain += vente;
     bilan.voyages++;
     c.cargaison = [];
     c.cout = 0;
     const { l, h } = grille(s);
-    const gabarit = c.gabarits[c.ville];
+    const gabarit = c.gabarits[`${c.ville}>${de}`];
     const pieces = gabarit
-      ? rejouerGabarit(gabarit, l, h, c.ville, t, s.ecus)
-      : chargementAuto(l, h, c.ville, de, t, s.ecus);
+      ? rejouerGabarit(gabarit, l, h, c.ville, t, s.ecus, m)
+      : chargementAuto(l, h, c.ville, de, t, s.ecus, [], m);
     payerChargement(s, c, pieces, c.ville, t);
     lancer(s, c, de, t);
   }
@@ -188,7 +236,7 @@ export function avancer(s: Etat, now: number): Bilan {
 export function poser(s: Etat, i: number, p: Piece, now: number): boolean {
   const c = s.caravanes[i];
   if (!enChargement(c)) return false;
-  const prix = prixAchat(c.ville, p.bien, now);
+  const prix = prixAchat(c.ville, p.bien, now, marche(s, now));
   const { l, h } = grille(s);
   if (prix === null || prix > s.ecus || !peutPlacer(l, h, c.cargaison, p)) return false;
   payerChargement(s, c, [p], c.ville, now);
@@ -217,26 +265,31 @@ export function remplirAuto(s: Etat, i: number, vers: VilleId, now: number): num
   if (!enChargement(c)) return 0;
   const { l, h } = grille(s);
   const avant = c.cargaison.length;
-  const pieces = chargementAuto(l, h, c.ville, vers, now, s.ecus, c.cargaison).slice(avant);
+  const pieces = chargementAuto(l, h, c.ville, vers, now, s.ecus, c.cargaison, marche(s, now)).slice(avant);
   payerChargement(s, c, pieces, c.ville, now);
   return pieces.length;
 }
 
-export function partir(s: Etat, i: number, vers: VilleId, now: number): boolean {
+// `confier` : le caravanier (s'il y en a un) reprend la navette sur ce trajet.
+export function partir(s: Etat, i: number, vers: VilleId, now: number, confier?: boolean): boolean {
   const c = s.caravanes[i];
   if (!enChargement(c) || vers === c.ville || !s.villes.includes(vers)) return false;
-  if (c.cargaison.length > 0) c.gabarits[c.ville] = c.cargaison.map(({ bien, rot, x, y }) => ({ bien, rot, x, y }));
+  if (c.cargaison.length > 0)
+    c.gabarits[`${c.ville}>${vers}`] = c.cargaison.map(({ bien, rot, x, y }) => ({ bien, rot, x, y }));
+  if (c.caravanier && confier !== undefined) c.auto = confier;
   lancer(s, c, vers, now);
   return true;
 }
 
 // ---- vente ----
 
-// Écoule la cargaison pour `montant` écus. Renvoie le bénéfice du voyage.
-export function encaisser(s: Etat, i: number, montant: number): number {
+// Écoule la cargaison pour `montant` écus (ce qui sature le marché local).
+// Renvoie le bénéfice du voyage.
+export function encaisser(s: Etat, i: number, montant: number, now: number): number {
   const c = s.caravanes[i];
   if (!c.aVendre) return 0;
   const benefice = montant - c.cout;
+  saturer(s, c.ville, c.cargaison, now);
   gagner(s, montant);
   c.cargaison = [];
   c.cout = 0;
@@ -246,7 +299,7 @@ export function encaisser(s: Etat, i: number, montant: number): number {
 
 export function valeurAffichee(s: Etat, i: number, now: number): number {
   const c = s.caravanes[i];
-  return valeurCargaison(c.cargaison, c.ville, now);
+  return valeurCargaison(c.cargaison, c.ville, now, marche(s, now));
 }
 
 export function noterMarchandage(s: Etat, marge: number): void {

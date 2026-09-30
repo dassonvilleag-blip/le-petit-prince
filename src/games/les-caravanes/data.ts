@@ -281,6 +281,21 @@ export const AMPLITUDE_COURS = 0.2; // les cours ondulent de ±20 %
 export const PERIODE_COURS_MIN = 30; // minutes
 export const PERIODE_COURS_MAX = 120;
 
+// Saturation : chaque case vendue d'un bien dans une ville fait baisser son
+// prix de vente là-bas ; l'effet se résorbe de moitié toutes les DEMI_VIE.
+export const SATURATION_PAR_CASE = 0.008;
+export const SATURATION_MAX = 0.3;
+export const DEMI_VIE_SATURATION = 10 * 60_000;
+
+// ---- événements ----
+
+// Le temps est découpé en créneaux ; chacun porte au plus une nouvelle.
+export const DUREE_CRENEAU = 40 * 60_000;
+export const CHANCE_EVENEMENT = 0.7;
+export const MULT_FOIRE = 1.5; // un bien se vend +50 % dans une ville
+export const MULT_RECOLTE = 0.6; // un bien s'achète −40 % chez son producteur
+export const MULT_FETE = 1.25; // tout se vend +25 % dans une ville
+
 // ---- trajets ----
 
 export const SECONDES_PAR_UNITE = 4; // une unité de carte à allure de mulet, palier 1

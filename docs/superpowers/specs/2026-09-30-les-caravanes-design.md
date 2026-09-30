@@ -40,6 +40,35 @@ Aucun lien avec le livre *Le Petit Prince* (c'est juste le nom du site).
   hors ligne calculent la même chose. Même au pire des cours, revendre
   ailleurs que chez le producteur reste rentable.
 
+## Saturation
+
+Chaque pièce vendue fait baisser le prix de vente de ce bien dans cette ville :
+0,8 % par case, plafonné à −30 %. L'effet se résorbe de moitié toutes les 10 min.
+Dans une même vente, chaque pièce sature déjà la suivante du même bien : une
+charrette variée se vend mieux qu'une charrette monoproduit, ce qui rend le
+rangement plus intéressant. La saturation est un état sauvegardé,
+décru paresseusement (`{ v, t }` par couple ville/bien).
+
+## Nouvelles (événements)
+
+Le temps est découpé en créneaux de 40 min. Chacun a 70 % de chances de
+porter une nouvelle, tirée de façon déterministe parmi les villes ouvertes :
+
+- 🎪 **Foire** : un bien produit ailleurs se vend +50 % dans une ville.
+- 🌾 **Récolte exceptionnelle** : un bien s'achète −40 % chez son producteur.
+- 🎉 **Fête** : tout se vend +25 % dans une ville.
+
+Une fois tirée, la nouvelle d'un créneau est figée dans l'état (ouvrir une
+ville en cours de créneau ne la change pas). Les événements sont uniquement
+positifs, pour garder le jeu chill. Ils apparaissent dans le bandeau sous la carte, sur la carte, dans l'étal et
+dans un toast au changement de créneau.
+
+## Caravaniers
+
+Le rangement rejoué est mémorisé **par trajet** (`départ>arrivée`), pas par
+ville. Au comptoir, une case « Ensuite, le caravanier fait la navette sur ce
+trajet » permet de rediriger un caravanier en un seul départ.
+
 ## Marchandage
 
 Chaque ville a un marchand avec un caractère (pressée, patient, sensible aux
@@ -70,11 +99,13 @@ Un marchandage entamé ne peut plus être fermé sans conclure.
 | 4 | 🐪 Sablemire | 12 000 | dattes, thé, épices | laine, fromage, vin, soie |
 | 5 | 💎 Mirazur | 90 000 | perles, parfum, soie | épices, thé, miel, tissu |
 
-## Rythme mesuré (simulation, joueur actif sans marchandage)
+## Rythme mesuré (simulation)
 
-Lainebourg vers 9 min, 1er caravanier vers 23 min, Clos-Vermeil vers 46 min,
-Sablemire vers 3 h, Mirazur vers 15 h. Le titre royal demande plus de 3 jours
-(caravaniers compris). À rééquilibrer après les premiers retours.
+Le bot joue avec le chargement auto, sans marchander, et redirige ses
+caravaniers toutes les heures. Avec saturation et nouvelles : Lainebourg vers
+11 min, 1er caravanier vers 31 min, Clos-Vermeil vers 1 h, Sablemire vers
+4 h, Mirazur vers 20 h, titre royal vers 100 h. (Sans saturation, le titre
+tombait vers 55 h.) À rééquilibrer après les premiers retours.
 
 ## Confort « au bureau »
 
@@ -85,5 +116,5 @@ Sablemire vers 3 h, Mirazur vers 15 h. Le titre royal demande plus de 3 jours
 
 ## Pistes pour la suite
 
-Bateaux et routes maritimes, deuxième continent, événements (tempête,
-bandits, foire), stocks limités par ville, succès.
+Arbre de compétences, bateaux et routes maritimes, deuxième continent, stocks limités par
+ville, succès.

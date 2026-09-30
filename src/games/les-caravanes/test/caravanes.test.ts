@@ -1,11 +1,27 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BIENS, BIEN_PAR_ID, CARACTERES, COEF_ACHAT, COEF_NEUTRE, AMPLITUDE_COURS, FORMES, VILLES } from "../data.ts";
+import {
+  AMPLITUDE_COURS,
+  BIENS,
+  BIEN_PAR_ID,
+  CARACTERES,
+  COEF_ACHAT,
+  COEF_NEUTRE,
+  DEMI_VIE_SATURATION,
+  DUREE_CRENEAU,
+  FORMES,
+  MULT_FOIRE,
+  MULT_RECOLTE,
+  SATURATION_MAX,
+  VILLES,
+  VILLE_PAR_ID,
+} from "../data.ts";
 import {
   casesPiece,
   chargementAuto,
   cours,
   dureeTrajet,
+  evenementDuCreneau,
   formatDuree,
   formatNombre,
   occupation,
@@ -15,14 +31,21 @@ import {
   rejouerGabarit,
   rotationsUtiles,
   tourner,
+  valeurCargaison,
+  MARCHE_NEUTRE,
+  type Marche,
   type Piece,
 } from "../eco.ts";
 import { accepterContreOffre, complimenter, montantFinal, ouvrir, proposer } from "../marchandage.ts";
 import {
   avancer,
   embaucherCaravanier,
+  debloquerVille,
   encaisser,
+  evenementA,
+  marche,
   nouvelEtat,
+  saturationA,
   partir,
   poser,
   reprendre,
@@ -184,13 +207,13 @@ test("un voyage manuel : départ, arrivée, vente avec bénéfice", () => {
   const cout = s.caravanes[0].cout;
   assert.ok(cout > 0 && s.ecus >= 0);
   assert.ok(partir(s, 0, "terracuite", 0));
-  assert.deepEqual(Object.keys(s.caravanes[0].gabarits), ["portvent"]);
+  assert.deepEqual(Object.keys(s.caravanes[0].gabarits), ["portvent>terracuite"]);
   avancer(s, 10_000);
   assert.equal(s.caravanes[0].aVendre, false, "pas encore arrivée");
   avancer(s, dureeTrajet("portvent", "terracuite", 0));
   const c = s.caravanes[0];
   assert.ok(c.aVendre && c.ville === "terracuite");
-  const benefice = encaisser(s, 0, 1000);
+  const benefice = encaisser(s, 0, 1000, dureeTrajet("portvent", "terracuite", 0));
   assert.equal(benefice, 1000 - cout);
   assert.equal(c.cargaison.length, 0);
 });
@@ -226,4 +249,77 @@ test("formatNombre et formatDuree", () => {
   assert.equal(formatNombre(2_500_000), "2,50 M");
   assert.equal(formatDuree(88), "1:28");
   assert.equal(formatDuree(7300), "2 h 01");
+});
+
+// ---- saturation ----
+
+test("une cargaison d'un seul bien se vend moins cher que la somme des prix unitaires", () => {
+  const quatre: Piece[] = [0, 1, 2, 3].map((y) => ({ bien: "poisson", rot: 0, x: 0, y }));
+  const naif = 4 * prixVente("terracuite", "poisson", 0);
+  const reel = valeurCargaison(quatre, "terracuite", 0);
+  assert.ok(reel < naif && reel > naif * (1 - SATURATION_MAX));
+  // varier les biens évite l'essentiel de la baisse
+  const varie: Piece[] = [
+    { bien: "poisson", rot: 0, x: 0, y: 0 },
+    { bien: "sel", rot: 0, x: 0, y: 1 },
+  ];
+  const sep = prixVente("terracuite", "poisson", 0) + prixVente("terracuite", "sel", 0);
+  assert.ok(Math.abs(valeurCargaison(varie, "terracuite", 0) - sep) < 1e-9);
+});
+
+test("vendre sature le marché local, qui se remet de moitié par demi-vie", () => {
+  const s = nouvelEtat(0);
+  remplirAuto(s, 0, "terracuite", 0);
+  partir(s, 0, "terracuite", 0);
+  const t = dureeTrajet("portvent", "terracuite", 0);
+  avancer(s, t);
+  const bien = s.caravanes[0].cargaison[0].bien;
+  encaisser(s, 0, 100, t);
+  const sat = saturationA(s, "terracuite", bien, t);
+  assert.ok(sat > 0 && sat <= SATURATION_MAX);
+  assert.ok(Math.abs(saturationA(s, "terracuite", bien, t + DEMI_VIE_SATURATION) - sat / 2) < 1e-9);
+  const m = marche(s, t);
+  assert.ok(prixVente("terracuite", bien, t, m) < prixVente("terracuite", bien, t));
+});
+
+// ---- événements ----
+
+test("les nouvelles sont déterministes, variées, et concernent des villes ouvertes", () => {
+  const villes = VILLES.map((v) => v.id);
+  const types = new Set<string>();
+  let calmes = 0;
+  for (let c = 0; c < 300; c++) {
+    const e = evenementDuCreneau(c, villes);
+    assert.deepEqual(e, evenementDuCreneau(c, villes));
+    if (!e) {
+      calmes++;
+      continue;
+    }
+    types.add(e.type);
+    assert.ok(villes.includes(e.ville));
+    if (e.type === "recolte") assert.ok(VILLE_PAR_ID[e.ville].produit.includes(e.bien));
+    if (e.type === "foire") assert.ok(!VILLE_PAR_ID[e.ville].produit.includes(e.bien));
+  }
+  assert.equal(types.size, 3);
+  assert.ok(calmes > 40 && calmes < 160, `${calmes} créneaux calmes`);
+  assert.equal(evenementDuCreneau(5, ["portvent"]), null);
+});
+
+test("foire et récolte changent les prix", () => {
+  const foire: Marche = { ...MARCHE_NEUTRE, evenement: { type: "foire", ville: "terracuite", bien: "sel", creneau: 0 } };
+  assert.ok(Math.abs(prixVente("terracuite", "sel", 0, foire) - prixVente("terracuite", "sel", 0) * MULT_FOIRE) < 1e-9);
+  assert.equal(prixVente("terracuite", "poisson", 0, foire), prixVente("terracuite", "poisson", 0));
+  const recolte: Marche = { ...MARCHE_NEUTRE, evenement: { type: "recolte", ville: "portvent", bien: "sel", creneau: 0 } };
+  assert.ok(Math.abs(prixAchat("portvent", "sel", 0, recolte)! - prixAchat("portvent", "sel", 0)! * MULT_RECOLTE) < 1e-9);
+});
+
+test("la nouvelle d'un créneau reste la même quand on ouvre une ville", () => {
+  const s = nouvelEtat(0);
+  s.ecus = 1e6;
+  let t = 0;
+  while (!evenementA(s, t)) t += DUREE_CRENEAU;
+  const avant = evenementA(s, t);
+  debloquerVille(s);
+  debloquerVille(s);
+  assert.deepEqual(evenementA(s, t + 1), avant);
 });

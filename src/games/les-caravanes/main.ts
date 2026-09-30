@@ -8,6 +8,10 @@ import {
   BIEN_PAR_ID,
   CARACTERES,
   CHARRETTES,
+  DUREE_CRENEAU,
+  MULT_FETE,
+  MULT_FOIRE,
+  MULT_RECOLTE,
   PRIX_TITRE_ROYAL,
   VILLES,
   VILLE_PAR_ID,
@@ -24,6 +28,8 @@ import {
   formatDuree,
   formatEcus,
   formatNombre,
+  multAchat,
+  multVente,
   occupation,
   peutPlacer,
   pieceEn,
@@ -32,6 +38,7 @@ import {
   taille,
   tourner,
   valeurCargaison,
+  type Evenement,
   type Piece,
 } from "./eco.ts";
 import {
@@ -55,7 +62,10 @@ import {
   embaucherCaravanier,
   encaisser,
   enChargement,
+  evenementA,
+  creneauA,
   grille,
+  marche as marcheA,
   noterMarchandage,
   partir,
   poser,
@@ -65,6 +75,7 @@ import {
   remplirAuto,
   reprendre,
   sauver,
+  saturationA,
   valeurAffichee,
   vider,
   type Caravane,
@@ -105,6 +116,38 @@ function resumeCargaison(c: Caravane): string {
   return [...n].map(([b, k]) => `${BIEN_PAR_ID[b].icone}×${k}`).join(" ");
 }
 
+function pctEntier(x: number): string {
+  return `${Math.round(x * 100)} %`;
+}
+
+// ---- nouvelles (événements) ----
+
+const ICONES_EVT: Record<Evenement["type"], string> = { foire: "🎪", recolte: "🌾", fete: "🎉" };
+
+function texteEvenement(e: Evenement): string {
+  const v = VILLE_PAR_ID[e.ville];
+  const ville = `${v.icone} <b>${v.nom}</b>`;
+  if (e.type === "fete") return `🎉 Fête à ${ville} : tout s'y vend <b>+${pctEntier(MULT_FETE - 1)}</b>`;
+  const b = BIEN_PAR_ID[e.bien];
+  if (e.type === "foire") return `🎪 Foire à ${ville} : ${b.icone} ${b.nom} s'y vend <b>+${pctEntier(MULT_FOIRE - 1)}</b>`;
+  return `🌾 Récolte exceptionnelle à ${ville} : ${b.icone} ${b.nom} <b>−${pctEntier(1 - MULT_RECOLTE)}</b> à l'achat`;
+}
+
+let creneauAnnonce = -1;
+function majNouvelles(now: number): void {
+  const e = evenementA(etat, now);
+  const creneau = creneauA(now);
+  const reste = formatDuree(((creneau + 1) * DUREE_CRENEAU - now) / 1000);
+  const html = e
+    ? `${texteEvenement(e)} <small>· encore ${reste}</small>`
+    : `🌤️ Marchés calmes <small>· prochaines nouvelles dans ${reste}</small>`;
+  const el = $("nouvelles");
+  if (el.innerHTML !== html) el.innerHTML = html;
+  el.classList.toggle("active", !!e);
+  if (creneauAnnonce !== -1 && creneauAnnonce !== creneau && e) toast(`📰 ${texteEvenement(e).replace(/<[^>]+>/g, "")}`);
+  creneauAnnonce = creneau;
+}
+
 // ---- carte ----
 
 const carte = document.getElementById("carte") as unknown as SVGSVGElement;
@@ -140,7 +183,13 @@ const gPions = carte.querySelector("#pions")!;
 let signatureCarte = "";
 function rendreCarte(): void {
   const prochaine = prochaineVille(etat);
-  const sig = etat.villes.join() + "|" + etat.caravanes.map((c) => (c.trajet ? c.trajet.de + c.trajet.vers : "")).join();
+  const evt = evenementA(etat, Date.now());
+  const sig =
+    etat.villes.join() +
+    "|" +
+    etat.caravanes.map((c) => (c.trajet ? c.trajet.de + c.trajet.vers : "")).join() +
+    "|" +
+    (evt ? evt.type + evt.ville : "");
   if (sig === signatureCarte) return;
   signatureCarte = sig;
 
@@ -170,6 +219,7 @@ function rendreCarte(): void {
         <circle r="4.2"/>
         <text class="ville-icone" y="1.5">${ouverte || estProchaine ? v.icone : "❔"}</text>
         <text class="ville-nom" y="7.6">${nom}</text>
+        ${evt?.ville === v.id ? `<text class="ville-evt" x="3.6" y="-2.6">${ICONES_EVT[evt.type]}</text>` : ""}
       </g>`;
   }).join("");
 
@@ -322,7 +372,7 @@ $("caravanes").addEventListener("click", (e) => {
         return ouvrirMarche(i);
       case "vendre": {
         const montant = valeurAffichee(etat, i, now);
-        const benef = encaisser(etat, i, montant);
+        const benef = encaisser(etat, i, montant, now);
         return toast(`💰 Vendu ${formatEcus(montant)} · bénéfice ${benef >= 0 ? "+" : ""}${formatEcus(benef)}`);
       }
       case "auto": {
@@ -357,8 +407,9 @@ function caravaneComptoir(): Caravane | null {
 // Rentabilité estimée d'une destination (écus par minute) avec un chargement auto.
 function rentabilite(depuis: VilleId, vers: VilleId, now: number): number {
   const { l, h } = grille(etat);
-  const p = chargementAuto(l, h, depuis, vers, now, Infinity);
-  const gain = valeurCargaison(p, vers, now) - coutCargaison(p, depuis, now);
+  const m = marcheA(etat, now);
+  const p = chargementAuto(l, h, depuis, vers, now, Infinity, [], m);
+  const gain = valeurCargaison(p, vers, now, m) - coutCargaison(p, depuis, now, m);
   return gain / (dureeTrajet(depuis, vers, etat.attelage) / 60_000);
 }
 
@@ -384,6 +435,7 @@ function ouvrirComptoir(i: number): void {
   enMain = null;
   survol = null;
   destination = meilleureDestination(c.ville, Date.now());
+  ($("confier") as HTMLInputElement).checked = true;
   $("comptoir").hidden = false;
   $("voile").hidden = false;
   rendreComptoir();
@@ -401,6 +453,7 @@ function rendreComptoir(): void {
   const now = Date.now();
   const ville = VILLE_PAR_ID[c.ville];
   setText($("comptoir-titre"), `📦 Comptoir de ${ville.nom} · ${c.nom}`);
+  $("confier-ligne").hidden = !c.caravanier;
 
   // destinations
   const meilleure = meilleureDestination(c.ville, now);
@@ -426,14 +479,21 @@ function rendreEtal(now: number): void {
   const c = caravaneComptoir();
   if (!c) return;
   const ville = VILLE_PAR_ID[c.ville];
+  const m = marcheA(etat, now);
   $("etal").innerHTML =
     `<div class="etal-tete">Étal de ${ville.marchand.portrait} ${ville.marchand.nom}</div>` +
     ville.produit
       .map((b) => {
         const def = BIEN_PAR_ID[b];
-        const achat = prixAchat(c.ville, b, now)!;
-        const vente = prixVente(destination, b, now);
+        const achat = prixAchat(c.ville, b, now, m)!;
+        const vente = prixVente(destination, b, now, m);
         const reclame = coefVente(destination, b) > 1.5;
+        const sat = saturationA(etat, destination, b, now);
+        const badges = [
+          multAchat(m, c.ville, b) < 1 ? `<em class="evt">🌾 récolte −${pctEntier(1 - MULT_RECOLTE)}</em>` : "",
+          multVente(m, destination, b) > 1 ? `<em class="evt">${ICONES_EVT[m.evenement!.type]} +${pctEntier(multVente(m, destination, b) - 1)}</em>` : "",
+          sat >= 0.02 ? `<em class="sature">saturé −${pctEntier(sat)}</em>` : "",
+        ].join("");
         const forme = tourner(def.forme, 0);
         const { l, h } = taille(forme);
         const mini = forme
@@ -446,7 +506,7 @@ function rendreEtal(now: number): void {
               <b>${def.icone} ${def.nom}</b>
               <small>achat ${formatNombre(achat)} ${coursMonte(c.ville, b, now) ? "↗" : "↘"} · vente ${formatNombre(vente)}${
                 reclame ? ` <em class="reclame">★ réclamé</em>` : ""
-              }</small>
+              }${badges}</small>
             </span>
             <span class="m-gain">+${formatNombre(vente - achat)}</span>
           </button>`;
@@ -469,7 +529,7 @@ function rendreGrille(): void {
   if (enMain && survol) {
     const p = pieceSurvol();
     if (p) {
-      const ok = peutPlacer(l, h, c.cargaison, p) && (prixAchat(c.ville, p.bien, Date.now()) ?? Infinity) <= etat.ecus;
+      const ok = peutPlacer(l, h, c.cargaison, p) && (prixAchat(c.ville, p.bien, Date.now(), marcheA(etat, Date.now())) ?? Infinity) <= etat.ecus;
       html += htmlPiece(p, `fantome ${ok ? "ok" : "ko"}`, l, h);
     }
   }
@@ -616,7 +676,7 @@ function rendreResume(now: number): void {
   if (!c) return;
   const { l, h } = grille(etat);
   const occupees = occupation(c.cargaison).size;
-  const vente = valeurCargaison(c.cargaison, destination, now);
+  const vente = valeurCargaison(c.cargaison, destination, now, marcheA(etat, now));
   const benef = vente - c.cout;
   $("resume").innerHTML = `
     <div><dt>Payé</dt><dd>${formatEcus(c.cout)}</dd></div>
@@ -635,7 +695,8 @@ function rendreResume(now: number): void {
 $("btn-partir").addEventListener("click", () => {
   if (comptoirI === null) return;
   const c = etat.caravanes[comptoirI];
-  if (partir(etat, comptoirI, destination, Date.now())) {
+  const confier = c.caravanier ? ($("confier") as HTMLInputElement).checked : undefined;
+  if (partir(etat, comptoirI, destination, Date.now(), confier)) {
     toast(`🐪 ${c.nom} prend la route de ${VILLE_PAR_ID[destination].nom} !`);
     fermerTout();
   }
@@ -775,7 +836,7 @@ $("marche").addEventListener("click", (e) => {
     case "encaisser": {
       const montant = montantFinal(n);
       if (!n.fin!.fache) noterMarchandage(etat, n.fin!.marge);
-      const benef = encaisser(etat, marche.i, montant);
+      const benef = encaisser(etat, marche.i, montant, Date.now());
       toast(`💰 ${formatEcus(montant)} · bénéfice du voyage ${benef >= 0 ? "+" : ""}${formatEcus(benef)}`);
       fermerTout();
       return;
@@ -901,6 +962,8 @@ function rendrePanneau(): void {
         <p><b>📦 Charge ta charrette.</b> Chaque marchandise a une forme : les grosses rapportent plus par case mais se casent mal. Clic droit ou <kbd>R</kbd> pour tourner, clic sur une pièce posée pour la reprendre (remboursée). Le bouton ✨ Auto fait un rangement correct, toi tu peux faire mieux.</p>
         <p><b>🐪 Pars.</b> Le voyage dure en vrai : ferme l'onglet, reviens plus tard.</p>
         <p><b>🤝 Marchande à l'arrivée.</b> Chaque marchand a son caractère. Accepter sa contre-offre est sans risque ; en demander trop use sa patience… et s'il claque la porte, tu brades.</p>
+        <p><b>📰 Nouvelles.</b> Foires, fêtes, récoltes exceptionnelles : toutes les 40 minutes, une ville peut s'animer. C'est le moment d'y envoyer du monde.</p>
+        <p><b>📉 Marchés saturés.</b> Chaque pièce vendue fait baisser le prix de ce bien dans la ville (ça remonte tout seul en une demi-heure environ). Varie tes cargaisons et tes destinations.</p>
         <p><b>🤠 Embauche des caravaniers</b> (atelier) : ils font la navette tout seuls, même onglet fermé, en rejouant ton dernier rangement. Range bien, ils rangeront bien.</p>
         <p><b>🙈 Échap</b> : mode discret.</p>
       </div>`;
@@ -908,17 +971,23 @@ function rendrePanneau(): void {
     const v = VILLE_PAR_ID[panneau.id];
     const car = CARACTERES[v.marchand.caractere];
     const now = Date.now();
+    const m = marcheA(etat, now);
     setText($("panneau-titre"), `${v.icone} ${v.nom}`);
     const liste = (biens: BienId[], achat: boolean) =>
       biens
         .map((b) => {
           const d = BIEN_PAR_ID[b];
-          const p = achat ? prixAchat(v.id, b, now)! : prixVente(v.id, b, now);
-          return `<li>${d.icone} ${d.nom} <b>${formatNombre(p)}</b> ${coursMonte(v.id, b, now) ? "↗" : "↘"}</li>`;
+          const p = achat ? prixAchat(v.id, b, now, m)! : prixVente(v.id, b, now, m);
+          const sat = achat ? 0 : saturationA(etat, v.id, b, now);
+          return `<li>${d.icone} ${d.nom} <b>${formatNombre(p)}</b> ${coursMonte(v.id, b, now) ? "↗" : "↘"}${
+            sat >= 0.02 ? ` <em class="sature">saturé −${pctEntier(sat)}</em>` : ""
+          }</li>`;
         })
         .join("");
+    const evt = m.evenement?.ville === v.id ? `<p class="nouvelle-ville">${texteEvenement(m.evenement)}</p>` : "";
     corps.innerHTML = `
       <div class="fiche-ville">
+        ${evt}
         <p class="marchand-ligne">${v.marchand.portrait} <b>${v.marchand.nom}</b><br><small>${car.nom} — ${car.indice}</small></p>
         <h3>Produit (prix d'achat)</h3><ul>${liste(v.produit, true)}</ul>
         <h3>Réclame ★ (prix de vente)</h3><ul>${liste(v.demande, false)}</ul>
@@ -1096,6 +1165,7 @@ function frame(): void {
   });
 
   majEntete();
+  majNouvelles(now);
   rendreCarte();
   majPions(now);
   rendreFiches(now);

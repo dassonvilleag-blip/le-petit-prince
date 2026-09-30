@@ -288,6 +288,69 @@ button:disabled {
   }
 }
 
+#carte .ville-evt {
+  font-size: 4px;
+  text-anchor: middle;
+  animation: sautille 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes sautille {
+  to {
+    transform: translateY(-0.8px);
+  }
+}
+
+/* ---- nouvelles ---- */
+
+.nouvelles {
+  margin-top: 12px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: rgba(243, 227, 195, 0.12);
+  border: 1px dashed rgba(243, 227, 195, 0.35);
+  color: var(--parchemin-2);
+  font-size: 15px;
+  text-align: center;
+}
+
+.nouvelles.active {
+  background: var(--parchemin);
+  border: 2px solid var(--or);
+  color: var(--encre);
+  box-shadow: 0 0 0 3px rgba(224, 169, 59, 0.25);
+}
+
+.nouvelles small {
+  opacity: 0.75;
+}
+
+.nouvelle-ville {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff3cf;
+  border: 1px solid var(--or);
+}
+
+.evt,
+.sature {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 5px;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.evt {
+  background: #fff0c4;
+  color: var(--or-fonce);
+}
+
+.sature {
+  background: #f6dcd6;
+  color: var(--rouge);
+}
+
 /* ---- fiches des caravanes ---- */
 
 .caravanes {
@@ -856,6 +919,22 @@ kbd {
 
 .negatif {
   color: var(--rouge);
+}
+
+.confier {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.confier input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--vert);
 }
 
 .gros-bouton {
