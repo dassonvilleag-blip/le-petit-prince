@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Les Caravanes</title>
+    <meta name="description" content="Charge ta charrette au millimètre, marchande avec les marchands et bâtis une route commerciale qui tourne même quand tu n'es pas là." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐪</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@400;700&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/les-caravanes/caravanes.css" />
+  </head>
+  <body>
+    <header class="entete">
+      <a class="back-link" href="../../">← le petit prince</a>
+      <h1>Les Caravanes</h1>
+      <div class="bourse" id="ecus"></div>
+      <button type="button" class="btn-discret" id="btn-discret" title="Mode discret (Échap)">🙈</button>
+    </header>
+
+    <main class="jeu">
+      <section class="monde">
+        <svg id="carte" viewBox="0 0 100 60" aria-label="carte des routes commerciales"></svg>
+      </section>
+      <section class="caravanes" id="caravanes"></section>
+    </main>
+
+    <nav class="barre">
+      <button type="button" data-panneau="atelier">🛠️<small>atelier</small><span class="badge" id="badge-atelier" hidden></span></button>
+      <button type="button" data-panneau="aide">❔<small>comment jouer</small></button>
+    </nav>
+
+    <div class="voile" id="voile" hidden></div>
+
+    <section class="panneau" id="panneau" hidden>
+      <div class="panneau-tete">
+        <span id="panneau-titre"></span>
+        <button type="button" class="fermer" data-fermer aria-label="fermer">✕</button>
+      </div>
+      <div class="panneau-corps" id="panneau-corps"></div>
+    </section>
+
+    <section class="comptoir" id="comptoir" hidden>
+      <div class="comptoir-tete">
+        <span id="comptoir-titre"></span>
+        <button type="button" class="fermer" data-fermer aria-label="fermer">✕</button>
+      </div>
+      <div class="destinations" id="destinations"></div>
+      <div class="comptoir-corps">
+        <div class="etal" id="etal"></div>
+        <div class="zone-charrette">
+          <div class="grille" id="grille"></div>
+          <div class="outils">
+            <button type="button" id="btn-tourner" title="Tourner (R ou clic droit)">↻ Tourner</button>
+            <button type="button" id="btn-auto" title="Remplit les cases vides avec ce qui rapporte le plus">✨ Auto</button>
+            <button type="button" id="btn-vider">🗑️ Vider</button>
+          </div>
+          <p class="astuce">Choisis une marchandise, pose-la dans la charrette. Clic sur une pièce posée pour la reprendre.</p>
+        </div>
+      </div>
+      <div class="comptoir-pied">
+        <dl class="resume" id="resume"></dl>
+        <button type="button" class="gros-bouton" id="btn-partir"></button>
+      </div>
+    </section>
+
+    <section class="marche" id="marche" hidden></section>
+
+    <div class="popup" id="popup" hidden></div>
+    <div class="toast" id="toast"></div>
+
+    <div class="discret" id="discret" hidden></div>
+
+    <script type="module" src="/src/games/les-caravanes/main.ts"></script>
+  </body>
+</html>
