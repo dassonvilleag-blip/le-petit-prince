@@ -348,3 +348,80 @@ export const ECUS_DEPART = 30;
 
 // Si le marchand claque la porte, on brade au marché voisin.
 export const DECOTE_FACHE = 0.9;
+
+// ---- compétences ----
+
+export type BrancheId = "negoce" | "routes" | "logistique";
+
+export type CompetenceId =
+  | "beau-parleur"
+  | "oeil"
+  | "bonne-reputation"
+  | "charmeur"
+  | "maitre-negociant"
+  | "raccourcis"
+  | "eclaireur"
+  | "relais"
+  | "informateurs"
+  | "grand-voyageur"
+  | "achat-en-gros"
+  | "marches-profonds"
+  | "double-fond"
+  | "contremaitre"
+  | "flotte-royale";
+
+export interface BrancheDef {
+  id: BrancheId;
+  nom: string;
+  icone: string;
+}
+
+export const BRANCHES: BrancheDef[] = [
+  { id: "negoce", nom: "Négoce", icone: "🤝" },
+  { id: "routes", nom: "Routes", icone: "🗺️" },
+  { id: "logistique", nom: "Logistique", icone: "📦" },
+];
+
+export interface CompetenceDef {
+  id: CompetenceId;
+  branche: BrancheId;
+  nom: string;
+  icone: string;
+  effet: string;
+}
+
+// Dans chaque branche, une compétence demande d'avoir appris la précédente.
+export const COMPETENCES: CompetenceDef[] = [
+  { id: "beau-parleur", branche: "negoce", nom: "Beau parleur", icone: "🗣️", effet: "+1 de patience chez tous les marchands." },
+  { id: "oeil", branche: "negoce", nom: "Œil du marchand", icone: "👁️", effet: "Tu devines une fourchette de ce qu'il acceptera." },
+  { id: "bonne-reputation", branche: "negoce", nom: "Bonne réputation", icone: "📜", effet: "Les marchands acceptent +5 % de plus." },
+  { id: "charmeur", branche: "negoce", nom: "Charmeur", icone: "💐", effet: "Tes compliments font mouche sur tout le monde." },
+  { id: "maitre-negociant", branche: "negoce", nom: "Maître négociant", icone: "🎩", effet: "Tes caravaniers marchandent aussi : +8 % sur leurs ventes." },
+  { id: "raccourcis", branche: "routes", nom: "Raccourcis", icone: "🧭", effet: "Trajets −10 %." },
+  { id: "eclaireur", branche: "routes", nom: "Éclaireur", icone: "🔭", effet: "Tu connais la prochaine nouvelle à l'avance." },
+  { id: "relais", branche: "routes", nom: "Relais", icone: "🏕️", effet: "Trajets encore −15 %." },
+  { id: "informateurs", branche: "routes", nom: "Informateurs", icone: "🕵️", effet: "Foires, fêtes et récoltes rapportent moitié plus." },
+  { id: "grand-voyageur", branche: "routes", nom: "Grand voyageur", icone: "🐫", effet: "Trajets vers Sablemire et Mirazur −20 %." },
+  { id: "achat-en-gros", branche: "logistique", nom: "Achat en gros", icone: "🧾", effet: "Tout s'achète −10 %." },
+  { id: "marches-profonds", branche: "logistique", nom: "Marchés profonds", icone: "🏛️", effet: "Tes ventes saturent les marchés 40 % moins." },
+  { id: "double-fond", branche: "logistique", nom: "Double fond", icone: "🧰", effet: "+1 rangée dans toutes les charrettes." },
+  { id: "contremaitre", branche: "logistique", nom: "Contremaître", icone: "👷", effet: "Les caravaniers comblent les trous de ton rangement." },
+  { id: "flotte-royale", branche: "logistique", nom: "Flotte royale", icone: "⚜️", effet: "Débloque une 6e caravane." },
+];
+
+export const COMPETENCE_PAR_ID = Object.fromEntries(COMPETENCES.map((c) => [c.id, c])) as Record<CompetenceId, CompetenceDef>;
+
+// Réputation : gagnée avec le bénéfice des ventes. Le niveau n demande
+// REPUTATION_PREMIER × (RAISON^n − 1) / (RAISON − 1) ; chaque niveau = 1 point.
+export const REPUTATION_PREMIER = 60;
+export const REPUTATION_RAISON = 2.0;
+export const REPUTATION_AUTO = 0.5; // part de réputation des ventes des caravaniers
+export const REPUTATION_MARCHANDAGE = 2; // bonus : ×(1 + 2 × marge obtenue)
+
+export const BONUS_REPUTATION_MARCHAND = 0.05;
+export const BONUS_MAITRE_NEGOCIANT = 1.08;
+export const COMPLIMENT_CHARMEUR = 0.08;
+export const AMPLIF_INFORMATEURS = 1.5;
+export const REMISE_EN_GROS = 0.9;
+export const FACTEUR_MARCHES_PROFONDS = 0.6;
+export const PRIX_FLOTTE_ROYALE = 1_000_000; // la 6e caravane

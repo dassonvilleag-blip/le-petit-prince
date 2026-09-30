@@ -150,23 +150,41 @@ export function evenementDuCreneau(creneau: number, villes: VilleId[]): Evenemen
 }
 
 // Ce qu'il faut savoir du marché à un instant donné, au-delà des cours.
+// Les compétences du joueur y ajoutent leurs effets.
 export interface Marche {
   evenement: Evenement | null;
   saturation: (ville: VilleId, bien: BienId) => number;
+  remiseAchat: number; // multiplicateur des prix d'achat
+  amplifEvenement: number; // 1 = effet normal des nouvelles
+  facteurSaturation: number; // 1 = saturation normale
 }
 
-export const MARCHE_NEUTRE: Marche = { evenement: null, saturation: () => 0 };
+export const MARCHE_NEUTRE: Marche = {
+  evenement: null,
+  saturation: () => 0,
+  remiseAchat: 1,
+  amplifEvenement: 1,
+  facteurSaturation: 1,
+};
 
+// Effet d'une nouvelle, amplifié (ou non) par les informateurs.
+function amplifier(mult: number, amplif: number): number {
+  return 1 + (mult - 1) * amplif;
+}
+
+// Multiplicateur d'achat dû à la nouvelle en cours (la remise en gros est à part).
 export function multAchat(m: Marche, ville: VilleId, bien: BienId): number {
   const e = m.evenement;
-  return e?.type === "recolte" && e.ville === ville && e.bien === bien ? MULT_RECOLTE : 1;
+  return e?.type === "recolte" && e.ville === ville && e.bien === bien
+    ? amplifier(MULT_RECOLTE, m.amplifEvenement)
+    : 1;
 }
 
 export function multVente(m: Marche, ville: VilleId, bien: BienId): number {
   const e = m.evenement;
   if (!e || e.ville !== ville) return 1;
-  if (e.type === "fete") return MULT_FETE;
-  if (e.type === "foire" && e.bien === bien) return MULT_FOIRE;
+  if (e.type === "fete") return amplifier(MULT_FETE, m.amplifEvenement);
+  if (e.type === "foire" && e.bien === bien) return amplifier(MULT_FOIRE, m.amplifEvenement);
   return 1;
 }
 
@@ -175,7 +193,7 @@ export function multVente(m: Marche, ville: VilleId, bien: BienId): number {
 // Prix d'achat d'une pièce, ou null si la ville ne produit pas ce bien.
 export function prixAchat(ville: VilleId, bien: BienId, t: number, m: Marche = MARCHE_NEUTRE): number | null {
   if (!VILLE_PAR_ID[ville].produit.includes(bien)) return null;
-  return BIEN_PAR_ID[bien].base * COEF_ACHAT * cours(ville, bien, t) * multAchat(m, ville, bien);
+  return BIEN_PAR_ID[bien].base * COEF_ACHAT * cours(ville, bien, t) * multAchat(m, ville, bien) * m.remiseAchat;
 }
 
 export function coefVente(ville: VilleId, bien: BienId): number {
@@ -194,8 +212,8 @@ export function prixVente(ville: VilleId, bien: BienId, t: number, m: Marche = M
   return prixVenteBrut(ville, bien, t, m) * (1 - Math.min(SATURATION_MAX, m.saturation(ville, bien)));
 }
 
-export function saturationPiece(bien: BienId): number {
-  return BIEN_PAR_ID[bien].forme.length * SATURATION_PAR_CASE;
+export function saturationPiece(bien: BienId, m: Marche = MARCHE_NEUTRE): number {
+  return BIEN_PAR_ID[bien].forme.length * SATURATION_PAR_CASE * m.facteurSaturation;
 }
 
 // Valeur d'une cargaison vendue d'un coup : chaque pièce sature un peu le
@@ -207,7 +225,7 @@ export function valeurCargaison(pieces: Piece[], ville: VilleId, t: number, m: M
     const deja = ajout.get(p.bien) ?? 0;
     const sat = Math.min(SATURATION_MAX, m.saturation(ville, p.bien) + deja);
     total += prixVenteBrut(ville, p.bien, t, m) * (1 - sat);
-    ajout.set(p.bien, deja + saturationPiece(p.bien));
+    ajout.set(p.bien, deja + saturationPiece(p.bien, m));
   }
   return total;
 }
@@ -224,9 +242,10 @@ export function distance(a: VilleId, b: VilleId): number {
   return Math.hypot(va.x - vb.x, va.y - vb.y);
 }
 
-export function dureeTrajet(a: VilleId, b: VilleId, attelage: number): number {
+// `mult` : raccourcis des compétences (1 = aucun).
+export function dureeTrajet(a: VilleId, b: VilleId, attelage: number, mult = 1): number {
   const palier = Math.max(VILLE_PAR_ID[a].palier, VILLE_PAR_ID[b].palier);
-  const secondes = (distance(a, b) * SECONDES_PAR_UNITE * FACTEUR_PALIER[palier]) / ATTELAGES[attelage].vitesse;
+  const secondes = (distance(a, b) * SECONDES_PAR_UNITE * FACTEUR_PALIER[palier] * mult) / ATTELAGES[attelage].vitesse;
   return Math.round(secondes * 1000);
 }
 

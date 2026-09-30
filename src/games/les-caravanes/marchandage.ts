@@ -3,7 +3,7 @@
 // À chaque refus il fait une contre-offre un peu meilleure : prendre sa
 // contre-offre est sans risque, pousser plus loin use sa patience.
 
-import { CARACTERES, DECOTE_FACHE, type Caractere } from "./data.ts";
+import { CARACTERES, COMPLIMENT_CHARMEUR, DECOTE_FACHE, type Caractere } from "./data.ts";
 
 export interface Negociation {
   caractere: Caractere;
@@ -15,23 +15,46 @@ export interface Negociation {
   refus: number;
   complimente: boolean;
   fin: null | { marge: number; fache: boolean };
+  talents: Talents;
+  fourchette: [number, number] | null; // œil du marchand : encadre la marge secrète
 }
+
+// Ce que les compétences de négoce changent au marchandage.
+export interface Talents {
+  patience: number; // en plus
+  marge: number; // en plus
+  charmeur: boolean;
+  oeil: boolean;
+}
+
+export const SANS_TALENT: Talents = { patience: 0, marge: 0, charmeur: false, oeil: false };
+
+const LARGEUR_FOURCHETTE = 0.1;
 
 // Part de sa marge secrète qu'il concède après 1, 2, 3… refus.
 const CONCESSIONS = [0.35, 0.6, 0.8, 0.9, 0.95];
 
-export function ouvrir(caractere: Caractere, valeur: number, alea: () => number = Math.random): Negociation {
+export function ouvrir(
+  caractere: Caractere,
+  valeur: number,
+  alea: () => number = Math.random,
+  talents: Talents = SANS_TALENT
+): Negociation {
   const c = CARACTERES[caractere];
+  const marge = c.margeMin + alea() * (c.margeMax - c.margeMin) + talents.marge;
+  const bas = Math.max(0, marge - alea() * LARGEUR_FOURCHETTE);
   return {
     caractere,
     valeur,
-    marge: c.margeMin + alea() * (c.margeMax - c.margeMin),
-    patience: c.patience,
-    patienceMax: c.patience,
+    marge,
+    patience: c.patience + talents.patience,
+    patienceMax: c.patience + talents.patience,
     contreOffre: 0,
     refus: 0,
     complimente: false,
     fin: null,
+    talents,
+    fourchette: talents.oeil ? [bas, bas + LARGEUR_FOURCHETTE] : null,
   };
 }
 
@@ -68,7 +91,11 @@ export function complimenter(n: Negociation): string {
   const c = CARACTERES[n.caractere].compliment;
   if (n.complimente || n.fin) return "";
   n.complimente = true;
-  n.marge += c.marge;
+  // le charmeur ne rate jamais son effet et n'agace personne
+  const gain = n.talents.charmeur ? Math.max(c.marge, COMPLIMENT_CHARMEUR) : c.marge;
+  n.marge += gain;
+  if (n.fourchette) n.fourchette = [n.fourchette[0] + gain, n.fourchette[1] + gain];
+  if (n.talents.charmeur) return c.marge > 0 ? c.reponse : "Oh… Vous savez parler aux gens, vous.";
   n.patience = Math.min(n.patienceMax, n.patience + c.patience);
   if (n.patience <= 0) n.fin = { marge: DECOTE_FACHE - 1, fache: true };
   return c.reponse;

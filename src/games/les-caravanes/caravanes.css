@@ -689,6 +689,135 @@ kbd {
   font-size: 14px;
 }
 
+/* ---- compétences ---- */
+
+.reputation {
+  padding: 6px 2px 10px;
+}
+
+.rep-ligne {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.rep-ligne b {
+  font-family: "Almendra", serif;
+  font-size: 18px;
+}
+
+.rep-ligne small {
+  color: var(--encre-douce);
+  font-variant-numeric: tabular-nums;
+}
+
+.rep-barre {
+  margin-top: 6px;
+  height: 10px;
+  border-radius: 99px;
+  background: var(--parchemin-2);
+  overflow: hidden;
+}
+
+.rep-barre div {
+  height: 100%;
+  background: linear-gradient(90deg, #7a5bc4, #c9a0ff);
+}
+
+.rep-points {
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.arbre {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.branche {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.branche h3 {
+  margin-bottom: 8px;
+  font-family: "Almendra", serif;
+  font-size: 17px;
+  text-align: center;
+}
+
+.talent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  border-radius: 12px;
+  border: 2px solid var(--parchemin-2);
+  background: #fff7e4;
+  text-align: center;
+}
+
+.talent b {
+  font-size: 13.5px;
+  line-height: 1.2;
+}
+
+.talent small {
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--encre-douce);
+}
+
+.talent-icone {
+  font-size: 24px;
+}
+
+.talent.appris {
+  background: #efe3ff;
+  border-color: #9b7fd6;
+}
+
+.talent.dispo {
+  border-color: var(--or);
+  box-shadow: 0 0 0 3px rgba(224, 169, 59, 0.35);
+  animation: appel 1.2s ease-in-out infinite alternate;
+}
+
+.talent.dispo:hover {
+  background: #fff;
+}
+
+@keyframes appel {
+  to {
+    box-shadow: 0 0 0 5px rgba(224, 169, 59, 0.15);
+  }
+}
+
+.talent.bloque,
+.talent.attente {
+  opacity: 0.55;
+}
+
+.lien {
+  align-self: center;
+  width: 3px;
+  height: 10px;
+  background: var(--parchemin-2);
+}
+
+.oeil {
+  color: #6b4fb0 !important;
+  font-weight: 700;
+}
+
+.eclaireur {
+  opacity: 0.85;
+}
+
 /* ---- comptoir ---- */
 
 .destinations {

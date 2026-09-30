@@ -6,6 +6,7 @@ import {
   BIEN_PAR_ID,
   CARACTERES,
   COEF_ACHAT,
+  COMPETENCES,
   COEF_NEUTRE,
   DEMI_VIE_SATURATION,
   DUREE_CRENEAU,
@@ -40,8 +41,15 @@ import { accepterContreOffre, complimenter, montantFinal, ouvrir, proposer } fro
 import {
   avancer,
   embaucherCaravanier,
+  apprendre,
   debloquerVille,
+  duree,
   encaisser,
+  grille,
+  niveau,
+  pointsLibres,
+  prixCaravane,
+  seuilNiveau,
   evenementA,
   marche,
   nouvelEtat,
@@ -322,4 +330,68 @@ test("la nouvelle d'un créneau reste la même quand on ouvre une ville", () => 
   debloquerVille(s);
   debloquerVille(s);
   assert.deepEqual(evenementA(s, t + 1), avant);
+});
+
+// ---- compétences ----
+
+test("niveaux de réputation : seuils croissants, un point par niveau", () => {
+  assert.equal(niveau(0), 0);
+  assert.equal(niveau(seuilNiveau(1)), 1);
+  assert.equal(niveau(seuilNiveau(3) - 1), 2);
+  assert.equal(niveau(1e30), COMPETENCES.length);
+  for (let n = 1; n < 15; n++) assert.ok(seuilNiveau(n + 1) > seuilNiveau(n));
+});
+
+test("on apprend dans l'ordre de la branche, avec des points", () => {
+  const s = nouvelEtat(0);
+  assert.equal(apprendre(s, "raccourcis"), false, "pas de point");
+  s.reputation = seuilNiveau(2);
+  assert.equal(apprendre(s, "relais"), false, "prérequis manquant");
+  assert.ok(apprendre(s, "raccourcis"));
+  assert.ok(apprendre(s, "eclaireur"));
+  assert.equal(pointsLibres(s), 0);
+  assert.equal(apprendre(s, "achat-en-gros"), false, "plus de point");
+});
+
+test("effets : trajets, charrette, flotte, achat en gros", () => {
+  const s = nouvelEtat(0);
+  s.reputation = seuilNiveau(15);
+  const avant = duree(s, "portvent", "terracuite");
+  apprendre(s, "raccourcis");
+  assert.ok(Math.abs(duree(s, "portvent", "terracuite") - avant * 0.9) < 2);
+  const h = grille(s).h;
+  for (const id of ["achat-en-gros", "marches-profonds", "double-fond"] as const) apprendre(s, id);
+  assert.equal(grille(s).h, h + 1);
+  assert.ok(prixAchat("portvent", "sel", 0, marche(s, 0))! < prixAchat("portvent", "sel", 0)!);
+  s.caravanes.push(...Array.from({ length: 4 }, () => ({ ...s.caravanes[0] })));
+  assert.equal(prixCaravane(s), null);
+  apprendre(s, "contremaitre");
+  apprendre(s, "flotte-royale");
+  assert.ok(prixCaravane(s)! > 0);
+});
+
+test("talents de négoce : patience, marge, fourchette, charmeur", () => {
+  const t = { patience: 1, marge: 0.05, charmeur: true, oeil: true };
+  const n = ouvrir("pressee", 100, () => 0.5, t);
+  assert.equal(n.patienceMax, CARACTERES.pressee.patience + 1);
+  const [bas, haut] = n.fourchette!;
+  assert.ok(bas <= n.marge && n.marge <= haut);
+  const avant = n.marge;
+  complimenter(n);
+  assert.ok(n.marge > avant, "le charmeur amadoue même la pressée");
+  assert.equal(n.patience, n.patienceMax, "sans l'agacer");
+});
+
+test("bien marchander rapporte plus de réputation", () => {
+  const vendre = (marge: number) => {
+    const s = nouvelEtat(0);
+    remplirAuto(s, 0, "terracuite", 0);
+    partir(s, 0, "terracuite", 0);
+    const t = dureeTrajet("portvent", "terracuite", 0);
+    avancer(s, t);
+    encaisser(s, 0, 100, t, marge);
+    return s.reputation;
+  };
+  assert.ok(vendre(0) > 0);
+  assert.ok(vendre(0.2) > vendre(0));
 });

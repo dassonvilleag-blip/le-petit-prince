@@ -4,8 +4,12 @@
 // quand on n'a pas le temps, des caravaniers font la navette tout seuls.
 
 import {
+  AMPLIF_INFORMATEURS,
   ATTELAGES,
   BIEN_PAR_ID,
+  BRANCHES,
+  COMPETENCES,
+  COMPETENCE_PAR_ID,
   CARACTERES,
   CHARRETTES,
   DUREE_CRENEAU,
@@ -16,6 +20,7 @@ import {
   VILLES,
   VILLE_PAR_ID,
   type BienId,
+  type CompetenceId,
   type VilleId,
 } from "./data.ts";
 import {
@@ -24,7 +29,7 @@ import {
   coefVente,
   coursMonte,
   coutCargaison,
-  dureeTrajet,
+  evenementDuCreneau,
   formatDuree,
   formatEcus,
   formatNombre,
@@ -53,6 +58,15 @@ import {
 import {
   acheterCaravane,
   acheterTitre,
+  apprendre,
+  duree,
+  niveau,
+  peutApprendre,
+  pointsLibres,
+  prerequis,
+  sait,
+  seuilNiveau,
+  talents,
   ameliorerAttelage,
   ameliorerCharrette,
   avancer,
@@ -125,12 +139,16 @@ function pctEntier(x: number): string {
 const ICONES_EVT: Record<Evenement["type"], string> = { foire: "🎪", recolte: "🌾", fete: "🎉" };
 
 function texteEvenement(e: Evenement): string {
+  const amp = sait(etat, "informateurs") ? AMPLIF_INFORMATEURS : 1;
+  const fete = 1 + (MULT_FETE - 1) * amp;
+  const foire = 1 + (MULT_FOIRE - 1) * amp;
+  const recolte = 1 + (MULT_RECOLTE - 1) * amp;
   const v = VILLE_PAR_ID[e.ville];
   const ville = `${v.icone} <b>${v.nom}</b>`;
-  if (e.type === "fete") return `🎉 Fête à ${ville} : tout s'y vend <b>+${pctEntier(MULT_FETE - 1)}</b>`;
+  if (e.type === "fete") return `🎉 Fête à ${ville} : tout s'y vend <b>+${pctEntier(fete - 1)}</b>`;
   const b = BIEN_PAR_ID[e.bien];
-  if (e.type === "foire") return `🎪 Foire à ${ville} : ${b.icone} ${b.nom} s'y vend <b>+${pctEntier(MULT_FOIRE - 1)}</b>`;
-  return `🌾 Récolte exceptionnelle à ${ville} : ${b.icone} ${b.nom} <b>−${pctEntier(1 - MULT_RECOLTE)}</b> à l'achat`;
+  if (e.type === "foire") return `🎪 Foire à ${ville} : ${b.icone} ${b.nom} s'y vend <b>+${pctEntier(foire - 1)}</b>`;
+  return `🌾 Récolte exceptionnelle à ${ville} : ${b.icone} ${b.nom} <b>−${pctEntier(1 - recolte)}</b> à l'achat`;
 }
 
 let creneauAnnonce = -1;
@@ -138,9 +156,13 @@ function majNouvelles(now: number): void {
   const e = evenementA(etat, now);
   const creneau = creneauA(now);
   const reste = formatDuree(((creneau + 1) * DUREE_CRENEAU - now) / 1000);
-  const html = e
+  let html = e
     ? `${texteEvenement(e)} <small>· encore ${reste}</small>`
     : `🌤️ Marchés calmes <small>· prochaines nouvelles dans ${reste}</small>`;
+  if (sait(etat, "eclaireur")) {
+    const suite = evenementDuCreneau(creneau + 1, etat.villes);
+    html += `<br><small class="eclaireur">🔭 Ensuite : ${suite ? texteEvenement(suite) : "marchés calmes"}</small>`;
+  }
   const el = $("nouvelles");
   if (el.innerHTML !== html) el.innerHTML = html;
   el.classList.toggle("active", !!e);
@@ -410,7 +432,7 @@ function rentabilite(depuis: VilleId, vers: VilleId, now: number): number {
   const m = marcheA(etat, now);
   const p = chargementAuto(l, h, depuis, vers, now, Infinity, [], m);
   const gain = valeurCargaison(p, vers, now, m) - coutCargaison(p, depuis, now, m);
-  return gain / (dureeTrajet(depuis, vers, etat.attelage) / 60_000);
+  return gain / (duree(etat, depuis, vers) / 60_000);
 }
 
 function meilleureDestination(depuis: VilleId, now: number): VilleId {
@@ -464,7 +486,7 @@ function rendreComptoir(): void {
       .map((v) => {
         const d = VILLE_PAR_ID[v];
         return `<button type="button" class="dest${v === destination ? " choisie" : ""}" data-dest="${v}">
-          ${d.icone} ${d.nom} <small>${formatDuree(dureeTrajet(c.ville, v, etat.attelage) / 1000)}${
+          ${d.icone} ${d.nom} <small>${formatDuree(duree(etat, c.ville, v) / 1000)}${
             v === meilleure ? " · ⭐" : ""
           }</small></button>`;
       })
@@ -490,7 +512,7 @@ function rendreEtal(now: number): void {
         const reclame = coefVente(destination, b) > 1.5;
         const sat = saturationA(etat, destination, b, now);
         const badges = [
-          multAchat(m, c.ville, b) < 1 ? `<em class="evt">🌾 récolte −${pctEntier(1 - MULT_RECOLTE)}</em>` : "",
+          multAchat(m, c.ville, b) < 1 ? `<em class="evt">🌾 récolte −${pctEntier(1 - multAchat(m, c.ville, b))}</em>` : "",
           multVente(m, destination, b) > 1 ? `<em class="evt">${ICONES_EVT[m.evenement!.type]} +${pctEntier(multVente(m, destination, b) - 1)}</em>` : "",
           sat >= 0.02 ? `<em class="sature">saturé −${pctEntier(sat)}</em>` : "",
         ].join("");
@@ -685,10 +707,10 @@ function rendreResume(now: number): void {
     <div><dt>Charrette</dt><dd>${occupees}/${l * h} cases</dd></div>
     <div><dt>En poche</dt><dd>${formatEcus(etat.ecus)}</dd></div>`;
   const d = VILLE_PAR_ID[destination];
-  const duree = formatDuree(dureeTrajet(c.ville, destination, etat.attelage) / 1000);
+  const temps = formatDuree(duree(etat, c.ville, destination) / 1000);
   setText(
     $("btn-partir"),
-    c.cargaison.length ? `🐪 En route pour ${d.nom} (${duree})` : `🐪 Partir à vide pour ${d.nom} (${duree})`
+    c.cargaison.length ? `🐪 En route pour ${d.nom} (${temps})` : `🐪 Partir à vide pour ${d.nom} (${temps})`
   );
 }
 
@@ -734,7 +756,7 @@ function ouvrirMarche(i: number): void {
   const m = VILLE_PAR_ID[c.ville].marchand;
   marche = {
     i,
-    n: ouvrirNegociation(m.caractere, valeurAffichee(etat, i, Date.now())),
+    n: ouvrirNegociation(m.caractere, valeurAffichee(etat, i, Date.now()), Math.random, talents(etat)),
     demande: 0.2,
     bulle: hasard(ACCUEILS),
   };
@@ -801,6 +823,7 @@ function rendreMarche(): void {
         <b>${m.nom}</b>
         <small class="caractere">${car.nom} — ${car.indice}</small>
         <small class="patience" title="patience">Patience ${jauge}</small>
+        ${n.fourchette && !n.fin ? `<small class="oeil">👁️ Il lâchera entre ${pct(n.fourchette[0])} et ${pct(n.fourchette[1])}</small>` : ""}
       </div>
     </div>
     <div class="bulle">« ${marche.bulle} »</div>
@@ -836,7 +859,7 @@ $("marche").addEventListener("click", (e) => {
     case "encaisser": {
       const montant = montantFinal(n);
       if (!n.fin!.fache) noterMarchandage(etat, n.fin!.marge);
-      const benef = encaisser(etat, marche.i, montant, Date.now());
+      const benef = encaisser(etat, marche.i, montant, Date.now(), n.fin!.fache ? 0 : n.fin!.marge);
       toast(`💰 ${formatEcus(montant)} · bénéfice du voyage ${benef >= 0 ? "+" : ""}${formatEcus(benef)}`);
       fermerTout();
       return;
@@ -850,7 +873,7 @@ $("marche").addEventListener("click", (e) => {
 
 // ---- panneaux (atelier, aide, ville) ----
 
-type Panneau = { type: "atelier" } | { type: "aide" } | { type: "ville"; id: VilleId };
+type Panneau = { type: "atelier" } | { type: "talents" } | { type: "aide" } | { type: "ville"; id: VilleId };
 let panneau: Panneau | null = null;
 
 function ouvrirPanneau(p: Panneau): void {
@@ -876,7 +899,7 @@ function fermerTout(): void {
 
 document.querySelectorAll<HTMLButtonElement>("[data-panneau]").forEach((b) =>
   b.addEventListener("click", () => {
-    const type = b.dataset.panneau as "atelier" | "aide";
+    const type = b.dataset.panneau as "atelier" | "talents" | "aide";
     if (panneau?.type === type) fermerTout();
     else ouvrirPanneau({ type });
   })
@@ -954,6 +977,9 @@ function rendrePanneau(): void {
   if (panneau.type === "atelier") {
     setText($("panneau-titre"), "🛠️ Atelier");
     corps.innerHTML = lignesAtelier();
+  } else if (panneau.type === "talents") {
+    setText($("panneau-titre"), "🌟 Compétences");
+    corps.innerHTML = htmlTalents();
   } else if (panneau.type === "aide") {
     setText($("panneau-titre"), "❔ Comment jouer");
     corps.innerHTML = `
@@ -965,6 +991,7 @@ function rendrePanneau(): void {
         <p><b>📰 Nouvelles.</b> Foires, fêtes, récoltes exceptionnelles : toutes les 40 minutes, une ville peut s'animer. C'est le moment d'y envoyer du monde.</p>
         <p><b>📉 Marchés saturés.</b> Chaque pièce vendue fait baisser le prix de ce bien dans la ville (ça remonte tout seul en une demi-heure environ). Varie tes cargaisons et tes destinations.</p>
         <p><b>🤠 Embauche des caravaniers</b> (atelier) : ils font la navette tout seuls, même onglet fermé, en rejouant ton dernier rangement. Range bien, ils rangeront bien.</p>
+        <p><b>🌟 Réputation.</b> Chaque bénéfice te fait connaître, et bien marchander en rapporte davantage. Chaque niveau donne un point de compétence.</p>
         <p><b>🙈 Échap</b> : mode discret.</p>
       </div>`;
   } else {
@@ -996,6 +1023,46 @@ function rendrePanneau(): void {
   majPanneau();
 }
 
+function htmlTalents(): string {
+  const n = niveau(etat.reputation);
+  const libres = pointsLibres(etat);
+  const bas = seuilNiveau(n);
+  const haut = seuilNiveau(n + 1);
+  const max = n >= COMPETENCES.length;
+  const f = max ? 1 : (etat.reputation - bas) / (haut - bas);
+  const tete = `
+    <div class="reputation">
+      <div class="rep-ligne"><b>Réputation · niveau ${n}</b><small>${
+        max ? "niveau maximum" : `${formatNombre(etat.reputation)} / ${formatNombre(haut)}`
+      }</small></div>
+      <div class="rep-barre"><div style="width:${(f * 100).toFixed(1)}%"></div></div>
+      <p class="rep-points">${
+        libres > 0
+          ? `✨ <b>${libres}</b> point${libres > 1 ? "s" : ""} à dépenser`
+          : "Vends avec bénéfice pour gagner de la réputation (bien marchander en rapporte davantage)."
+      }</p>
+    </div>`;
+  const colonnes = BRANCHES.map((br) => {
+    const noeuds = COMPETENCES.filter((c) => c.branche === br.id)
+      .map((c) => {
+        const appris = sait(etat, c.id);
+        const dispo = peutApprendre(etat, c.id);
+        const avant = prerequis(c.id);
+        const bloque = !appris && avant !== null && !sait(etat, avant);
+        const cls = appris ? "appris" : dispo ? "dispo" : bloque ? "bloque" : "attente";
+        return `
+          <button type="button" class="talent ${cls}" data-talent="${c.id}" ${dispo ? "" : "disabled"}>
+            <span class="talent-icone">${bloque ? "🔒" : c.icone}</span>
+            <b>${c.nom}</b>
+            <small>${c.effet}</small>
+          </button>`;
+      })
+      .join(`<span class="lien"></span>`);
+    return `<div class="branche"><h3>${br.icone} ${br.nom}</h3>${noeuds}</div>`;
+  }).join("");
+  return tete + `<div class="arbre">${colonnes}</div>`;
+}
+
 function majPanneau(): void {
   if (panneau?.type !== "atelier") return;
   document.querySelectorAll<HTMLButtonElement>("#panneau-corps [data-prix]").forEach((b) => {
@@ -1004,6 +1071,17 @@ function majPanneau(): void {
 }
 
 $("panneau-corps").addEventListener("click", (e) => {
+  const t = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-talent]");
+  if (t && !t.disabled) {
+    const id = t.dataset.talent as CompetenceId;
+    if (apprendre(etat, id)) {
+      toast(`🌟 ${COMPETENCE_PAR_ID[id].nom} : ${COMPETENCE_PAR_ID[id].effet}`);
+      sauver(etat, Date.now());
+      signaturesFiches = []; // la charrette a pu grandir, les durées changer
+      rendrePanneau();
+    }
+    return;
+  }
   const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-action]");
   if (!b || b.disabled) return;
   const [type, arg] = b.dataset.action!.split(":");
@@ -1072,11 +1150,22 @@ function nbAchetables(): number {
   return n;
 }
 
+let niveauAnnonce = niveau(etat.reputation);
 function majBadges(): void {
   const el = $("badge-atelier");
   const n = nbAchetables();
   el.hidden = n === 0;
   if (n) setText(el, String(n));
+  const libres = pointsLibres(etat);
+  const bt = $("badge-talents");
+  bt.hidden = libres <= 0;
+  if (libres > 0) setText(bt, String(libres));
+  const niv = niveau(etat.reputation);
+  if (niv > niveauAnnonce) {
+    toast(`🌟 Réputation niveau ${niv} ! Un point de compétence à dépenser.`);
+    if (panneau?.type === "talents") rendrePanneau();
+  }
+  niveauAnnonce = niv;
 }
 
 // ---- mode discret ----

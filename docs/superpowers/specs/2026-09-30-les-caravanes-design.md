@@ -69,6 +69,27 @@ Le rangement rejoué est mémorisé **par trajet** (`départ>arrivée`), pas par
 ville. Au comptoir, une case « Ensuite, le caravanier fait la navette sur ce
 trajet » permet de rediriger un caravanier en un seul départ.
 
+## Compétences
+
+**Réputation** : chaque vente avec bénéfice en rapporte, à hauteur du
+bénéfice. Bien marchander la multiplie par (1 + 2 × marge obtenue), et les
+ventes des caravaniers n'en rapportent que la moitié. Le niveau n demande
+60 × (2ⁿ − 1) de réputation, et chaque niveau donne 1 point. Il n'y a pas de
+redistribution des points.
+
+Trois branches de 5 compétences, à apprendre dans l'ordre :
+
+| 🤝 Négoce | 🗺️ Routes | 📦 Logistique |
+|---|---|---|
+| Beau parleur : +1 patience | Raccourcis : trajets −10 % | Achat en gros : −10 % à l'achat |
+| Œil du marchand : fourchette de 10 points qui encadre sa marge secrète | Éclaireur : la nouvelle du créneau suivant | Marchés profonds : saturation ×0,6 |
+| Bonne réputation : marge secrète +5 % | Relais : trajets ×0,85 | Double fond : +1 rangée de charrette |
+| Charmeur : compliment ≥ +8 %, sans jamais agacer | Informateurs : effets des nouvelles ×1,5 | Contremaître : caravaniers comblent les trous du rangement rejoué |
+| Maître négociant : ventes des caravaniers +8 % | Grand voyageur : trajets de palier ≥ 4 ×0,8 | Flotte royale : 6e caravane (1 M) |
+
+Rythme simulé : 1er point vers 5 min, 6 points vers 1 h 10, 10 vers 5 h 30,
+15e compétence vers 56 h. Avec les compétences, le titre royal tombe vers 68 h.
+
 ## Marchandage
 
 Chaque ville a un marchand avec un caractère (pressée, patient, sensible aux
@@ -116,5 +137,5 @@ tombait vers 55 h.) À rééquilibrer après les premiers retours.
 
 ## Pistes pour la suite
 
-Arbre de compétences, bateaux et routes maritimes, deuxième continent, stocks limités par
+Bateaux et routes maritimes, deuxième continent, stocks limités par
 ville, succès.
