@@ -403,7 +403,7 @@ button {
   opacity: 1;
 }
 
-.discret {
+.mode-discret {
   position: fixed;
   inset: 0;
   z-index: 100;
