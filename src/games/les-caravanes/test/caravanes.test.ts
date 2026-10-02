@@ -105,7 +105,7 @@ test("revendre ailleurs que chez le producteur rapporte toujours, même au pire 
 });
 
 test("chaque bien est produit par une ville et réclamé par au moins une autre", () => {
-  for (const b of BIENS) {
+  for (const b of BIENS.filter((b) => !b.fabrique)) {
     assert.equal(VILLES.filter((v) => v.produit.includes(b.id)).length, 1, b.id);
     assert.ok(VILLES.some((v) => v.demande.includes(b.id)), `${b.id} n'est réclamé nulle part`);
   }

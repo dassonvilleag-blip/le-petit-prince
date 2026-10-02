@@ -16,16 +16,23 @@ import {
   MULT_FETE,
   MULT_FOIRE,
   MULT_RECOLTE,
+  ENTREPOTS,
+  PRIX_QG,
   PRIX_TITRE_ROYAL,
+  QG,
+  RECETTES,
   VILLES,
   VILLE_PAR_ID,
   type BienId,
   type CompetenceId,
+  type Lieu,
   type VilleId,
 } from "./data.ts";
 import {
   casesPiece,
   chargementAuto,
+  chargementStock,
+  infoLieu,
   coefVente,
   coursMonte,
   coutCargaison,
@@ -45,6 +52,7 @@ import {
   valeurCargaison,
   type Evenement,
   type Piece,
+  type Quota,
 } from "./eco.ts";
 import {
   accepterContreOffre,
@@ -57,7 +65,22 @@ import {
 } from "./marchandage.ts";
 import {
   acheterCaravane,
+  acheterEmplacement,
+  acheterQG,
   acheterTitre,
+  ameliorerEntrepot,
+  capaciteQG,
+  casesQG,
+  coutMoyen,
+  deposer,
+  dureeFabrication,
+  fabriquer,
+  peutFabriquer,
+  prixEmplacement,
+  qgAchetable,
+  recetteVisible,
+  regler,
+  stockN,
   apprendre,
   duree,
   niveau,
@@ -186,7 +209,7 @@ carte.innerHTML = `
   <ellipse class="desert" cx="84" cy="40" rx="22" ry="17"/>
   <g class="deco">
     <text x="45" y="11">⛰️</text><text x="49" y="13.5">⛰️</text><text x="67" y="9">⛰️</text>
-    <text x="19" y="51">🌲</text><text x="22" y="53">🌲</text><text x="47" y="33">🌲</text>
+    <text x="19" y="51">🌲</text><text x="22" y="53">🌲</text><text x="31" y="35">🌲</text>
     <text x="64" y="30">🌳</text><text x="31" y="11">🌳</text>
     <text x="88" y="55">🌵</text><text x="64" y="54">🌵</text><text x="95" y="33">🌵</text>
     <text x="1.2" y="22">⛵</text>
@@ -211,7 +234,9 @@ function rendreCarte(): void {
     "|" +
     etat.caravanes.map((c) => (c.trajet ? c.trajet.de + c.trajet.vers : "")).join() +
     "|" +
-    (evt ? evt.type + evt.ville : "");
+    (evt ? evt.type + evt.ville : "") +
+    "|" +
+    (etat.qg ? `qg${etat.qg.pretes > 0}` : qgAchetable(etat));
   if (sig === signatureCarte) return;
   signatureCarte = sig;
 
@@ -220,18 +245,38 @@ function rendreCarte(): void {
   for (let a = 0; a < ouvertes.length; a++)
     for (let b = a + 1; b < ouvertes.length; b++)
       routes += `<line class="route" x1="${ouvertes[a].x}" y1="${ouvertes[a].y}" x2="${ouvertes[b].x}" y2="${ouvertes[b].y}"/>`;
+  if (etat.qg)
+    for (const v of ouvertes) routes += `<line class="route route-qg" x1="${QG.x}" y1="${QG.y}" x2="${v.x}" y2="${v.y}"/>`;
   gRoutes.innerHTML = routes;
 
   gTrajets.innerHTML = etat.caravanes
     .filter((c) => c.trajet)
     .map((c) => {
-      const a = VILLE_PAR_ID[c.trajet!.de];
-      const b = VILLE_PAR_ID[c.trajet!.vers];
+      const a = infoLieu(c.trajet!.de);
+      const b = infoLieu(c.trajet!.vers);
       return `<line class="trajet" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`;
     })
     .join("");
 
-  gVilles.innerHTML = VILLES.map((v) => {
+  // le QG : visible dès qu'on peut le fonder
+  const qg = etat.qg
+    ? `
+      <g class="ville qg" data-lieu="qg" transform="translate(${QG.x} ${QG.y})">
+        <rect x="-4.2" y="-4.2" width="8.4" height="8.4" rx="1.6"/>
+        <text class="ville-icone" y="1.5">${QG.icone}</text>
+        <text class="ville-nom" y="7.6">${QG.nom}</text>
+        ${etat.qg.pretes > 0 ? `<text class="ville-evt" x="3.6" y="-2.6">✨</text>` : ""}
+      </g>`
+    : qgAchetable(etat)
+      ? `
+      <g class="ville qg verrouillee prochaine" data-lieu="qg" transform="translate(${QG.x} ${QG.y})">
+        <rect x="-4.2" y="-4.2" width="8.4" height="8.4" rx="1.6"/>
+        <text class="ville-icone" y="1.5">${QG.icone}</text>
+        <text class="ville-nom" y="7.6">🔒 ${formatEcus(PRIX_QG)}</text>
+      </g>`
+      : "";
+
+  gVilles.innerHTML = qg + VILLES.map((v) => {
     const ouverte = etat.villes.includes(v.id);
     const estProchaine = prochaine?.id === v.id;
     const cls = ouverte ? "ville" : estProchaine ? "ville verrouillee prochaine" : "ville verrouillee";
@@ -259,8 +304,8 @@ function majPions(now: number): void {
     let y: number;
     let sens = 1;
     if (c.trajet) {
-      const a = VILLE_PAR_ID[c.trajet.de];
-      const b = VILLE_PAR_ID[c.trajet.vers];
+      const a = infoLieu(c.trajet.de);
+      const b = infoLieu(c.trajet.vers);
       const f = Math.min(1, Math.max(0, (now - c.trajet.depart) / (c.trajet.arrivee - c.trajet.depart)));
       x = a.x + (b.x - a.x) * f;
       y = a.y + (b.y - a.y) * f;
@@ -269,7 +314,7 @@ function majPions(now: number): void {
       sens = b.x > a.x ? -1 : 1; // l'emoji regarde à gauche
     } else {
       // à quai : en éventail autour de la ville
-      const v = VILLE_PAR_ID[c.ville];
+      const v = infoLieu(c.ville);
       const memes = etat.caravanes.filter((k) => !k.trajet && k.ville === c.ville);
       const k = memes.indexOf(c);
       const angle = -0.6 + k * 0.9;
@@ -286,6 +331,7 @@ carte.addEventListener("click", (e) => {
   const cible = e.target as Element;
   const pion = cible.closest<SVGGElement>(".pion");
   if (pion) return agir(Number(pion.dataset.i));
+  if (cible.closest("[data-lieu=qg]")) return ouvrirPanneau(etat.qg ? { type: "qg", onglet: "entrepot" } : { type: "atelier" });
   const ville = cible.closest<SVGGElement>("[data-ville]");
   if (!ville) return;
   const id = ville.dataset.ville as VilleId;
@@ -299,18 +345,31 @@ carte.addEventListener("click", (e) => {
 // Action par défaut d'une caravane (clic sur son pion ou sa fiche).
 function agir(i: number): void {
   const c = etat.caravanes[i];
-  if (c.aVendre) ouvrirMarche(i);
+  if (c.aVendre && c.ville === "qg") toutDeposer(i);
+  else if (c.aVendre) ouvrirMarche(i);
   else if (enChargement(c)) ouvrirComptoir(i);
 }
 
+function toutDeposer(i: number): void {
+  const n = deposer(etat, i);
+  const reste = etat.caravanes[i].cargaison.length;
+  toast(
+    reste
+      ? `📥 ${n} pièce${n > 1 ? "s" : ""} déposée${n > 1 ? "s" : ""}. Entrepôt plein : ${reste} reste${reste > 1 ? "nt" : ""} dans la charrette.`
+      : `📥 ${n} pièce${n > 1 ? "s" : ""} rangée${n > 1 ? "s" : ""} à l'entrepôt.`
+  );
+  sauver(etat, Date.now());
+  if (panneau?.type === "qg") rendrePanneau();
+}
+
 function signatureFiche(c: Caravane): string {
-  return [c.ville, c.trajet?.de ?? "", c.aVendre, c.caravanier, c.auto, c.cargaison.length, etat.charrette].join("|");
+  return [c.ville, c.trajet?.de ?? "", c.aVendre, c.caravanier, c.auto, c.cargaison.length, etat.charrette, c.attente != null].join("|");
 }
 
 let signaturesFiches: string[] = [];
 
 function htmlFiche(c: Caravane, i: number): string {
-  const ville = VILLE_PAR_ID[c.ville];
+  const ville = infoLieu(c.ville);
   const bouton = (action: string, txt: string, cls = "") =>
     `<button type="button" class="${cls}" data-action="${action}" data-i="${i}">${txt}</button>`;
   const auto = c.caravanier
@@ -322,21 +381,25 @@ function htmlFiche(c: Caravane, i: number): string {
   let etatCls: string;
   if (c.trajet) {
     etatCls = "en-route";
-    const de = VILLE_PAR_ID[c.trajet.de];
+    const de = infoLieu(c.trajet.de);
     statut = `${de.icone} ${de.nom} → ${ville.icone} ${ville.nom} · <span class="fiche-temps"></span>
       <br><small>${c.cargaison.length ? resumeCargaison(c) : "à vide"}</small>`;
+  } else if (c.aVendre && c.ville === "qg") {
+    etatCls = "arrivee";
+    statut = `Arrivée au ${ville.icone} <b>QG</b> ! <small>${resumeCargaison(c)}</small>`;
+    actions = bouton("deposer", "📥 Tout déposer", "principal");
   } else if (c.aVendre) {
     etatCls = "arrivee";
     statut = `Arrivée à ${ville.icone} <b>${ville.nom}</b> ! <small>${resumeCargaison(c)}</small>
       <br><small>Prix affiché : <span class="fiche-valeur"></span></small>`;
     actions =
       bouton("vendre", "💰 Vendre", "") +
-      bouton("marchander", `🤝 Marchander avec ${VILLE_PAR_ID[c.ville].marchand.portrait}`, "principal");
+      bouton("marchander", `🤝 Marchander avec ${VILLE_PAR_ID[c.ville as VilleId].marchand.portrait}`, "principal");
   } else {
     etatCls = "quai";
-    statut = `À quai à ${ville.icone} <b>${ville.nom}</b>${
+    statut = `À quai ${c.ville === "qg" ? "au" : "à"} ${ville.icone} <b>${ville.nom}</b>${
       c.cargaison.length ? ` · chargée <small>${resumeCargaison(c)}</small>` : ""
-    }`;
+    }${c.attente != null && c.auto ? `<br><small>⏸ Rien à livrer : le caravanier réessaie dans quelques minutes.</small>` : ""}`;
     actions = bouton("charger", c.cargaison.length ? "📦 Finir le chargement" : "📦 Charger", "principal");
   }
 
@@ -375,7 +438,7 @@ function rendreFiches(now: number): void {
       const f = Math.min(1, (now - c.trajet.depart) / total);
       (el.querySelector(".fiche-rempli") as HTMLElement).style.width = `${f * 100}%`;
       setText(el.querySelector(".fiche-temps")!, formatDuree((c.trajet.arrivee - now) / 1000));
-    } else if (c.aVendre) {
+    } else if (c.aVendre && c.ville !== "qg") {
       setText(el.querySelector(".fiche-valeur")!, formatEcus(valeurAffichee(etat, i, now)));
     }
   });
@@ -392,6 +455,8 @@ $("caravanes").addEventListener("click", (e) => {
         return ouvrirComptoir(i);
       case "marchander":
         return ouvrirMarche(i);
+      case "deposer":
+        return toutDeposer(i);
       case "vendre": {
         const montant = valeurAffichee(etat, i, now);
         const benef = encaisser(etat, i, montant, now);
@@ -418,7 +483,7 @@ $("caravanes").addEventListener("click", (e) => {
 // ---- comptoir (chargement de la charrette) ----
 
 let comptoirI: number | null = null;
-let destination: VilleId = "terracuite";
+let destination: Lieu = "terracuite";
 let enMain: { bien: BienId; rot: number } | null = null;
 let survol: { x: number; y: number } | null = null;
 
@@ -426,16 +491,30 @@ function caravaneComptoir(): Caravane | null {
   return comptoirI === null ? null : etat.caravanes[comptoirI];
 }
 
-// Rentabilité estimée d'une destination (écus par minute) avec un chargement auto.
-function rentabilite(depuis: VilleId, vers: VilleId, now: number): number {
+// Tout le stock du QG, pièce par pièce.
+function quotaStock(): Quota {
+  const q: Quota = {};
+  if (etat.qg) for (const [b, e] of Object.entries(etat.qg.stock)) q[b as BienId] = e!.n;
+  return q;
+}
+
+// Rentabilité estimée d'une destination (écus par minute) avec un chargement
+// auto — depuis le QG, avec ce qu'il y a en stock.
+function rentabilite(depuis: Lieu, vers: VilleId, now: number): number {
   const { l, h } = grille(etat);
   const m = marcheA(etat, now);
+  if (depuis === "qg") {
+    const p = chargementStock(l, h, quotaStock(), vers, now, [], m);
+    const gain = valeurCargaison(p, vers, now, m) - p.reduce((k, x) => k + coutMoyen(etat.qg!, x.bien), 0);
+    return gain / (duree(etat, depuis, vers) / 60_000);
+  }
   const p = chargementAuto(l, h, depuis, vers, now, Infinity, [], m);
   const gain = valeurCargaison(p, vers, now, m) - coutCargaison(p, depuis, now, m);
   return gain / (duree(etat, depuis, vers) / 60_000);
 }
 
-function meilleureDestination(depuis: VilleId, now: number): VilleId {
+// La meilleure ville où vendre (le QG n'a pas d'⭐ : on y va pour stocker).
+function meilleureDestination(depuis: Lieu, now: number): Lieu {
   let best: VilleId | null = null;
   let bestR = -Infinity;
   for (const v of etat.villes) {
@@ -473,18 +552,20 @@ function rendreComptoir(): void {
   const c = caravaneComptoir();
   if (!c) return;
   const now = Date.now();
-  const ville = VILLE_PAR_ID[c.ville];
-  setText($("comptoir-titre"), `📦 Comptoir de ${ville.nom} · ${c.nom}`);
-  $("confier-ligne").hidden = !c.caravanier;
+  setText($("comptoir-titre"), c.ville === "qg" ? `📦 Entrepôt du QG · ${c.nom}` : `📦 Comptoir de ${infoLieu(c.ville).nom} · ${c.nom}`);
+  // la navette avec le QG demande l'Intendant
+  const avecQG = c.ville === "qg" || destination === "qg";
+  $("confier-ligne").hidden = !c.caravanier || (avecQG && !sait(etat, "intendant"));
 
   // destinations
   const meilleure = meilleureDestination(c.ville, now);
+  const lieux: Lieu[] = [...etat.villes, ...(etat.qg ? (["qg"] as const) : [])];
   $("destinations").innerHTML =
     `<span class="etiquette">Destination</span>` +
-    etat.villes
+    lieux
       .filter((v) => v !== c.ville)
       .map((v) => {
-        const d = VILLE_PAR_ID[v];
+        const d = infoLieu(v);
         return `<button type="button" class="dest${v === destination ? " choisie" : ""}" data-dest="${v}">
           ${d.icone} ${d.nom} <small>${formatDuree(duree(etat, c.ville, v) / 1000)}${
             v === meilleure ? " · ⭐" : ""
@@ -500,20 +581,35 @@ function rendreComptoir(): void {
 function rendreEtal(now: number): void {
   const c = caravaneComptoir();
   if (!c) return;
-  const ville = VILLE_PAR_ID[c.ville];
   const m = marcheA(etat, now);
+  const depuisQG = c.ville === "qg";
+  const biens: BienId[] = depuisQG
+    ? (Object.keys(etat.qg!.stock) as BienId[]).sort((a, b) => BIEN_PAR_ID[b].base - BIEN_PAR_ID[a].base)
+    : VILLE_PAR_ID[c.ville as VilleId].produit;
+  const tete = depuisQG
+    ? `<div class="etal-tete">⛺ Entrepôt · ${casesQG(etat.qg!)}/${capaciteQG(etat.qg!)} cases</div>`
+    : `<div class="etal-tete">Étal de ${VILLE_PAR_ID[c.ville as VilleId].marchand.portrait} ${VILLE_PAR_ID[c.ville as VilleId].marchand.nom}</div>`;
+  if (depuisQG && biens.length === 0) {
+    $("etal").innerHTML = tete + `<p class="etal-vide">L'entrepôt est vide. Dépose des marchandises ou fabrique au QG.</p>`;
+    return;
+  }
   $("etal").innerHTML =
-    `<div class="etal-tete">Étal de ${ville.marchand.portrait} ${ville.marchand.nom}</div>` +
-    ville.produit
+    tete +
+    biens
       .map((b) => {
         const def = BIEN_PAR_ID[b];
-        const achat = prixAchat(c.ville, b, now, m)!;
-        const vente = prixVente(destination, b, now, m);
-        const reclame = coefVente(destination, b) > 1.5;
-        const sat = saturationA(etat, destination, b, now);
+        // au QG, la marchandise est déjà payée : on affiche ce qu'elle a coûté
+        const achat = depuisQG ? coutMoyen(etat.qg!, b) : prixAchat(c.ville as VilleId, b, now, m)!;
+        const versQG = destination === "qg";
+        const dest = destination as VilleId;
+        const vente = versQG ? 0 : prixVente(dest, b, now, m);
+        const reclame = !versQG && coefVente(dest, b) > 1.5;
+        const sat = versQG ? 0 : saturationA(etat, dest, b, now);
         const badges = [
-          multAchat(m, c.ville, b) < 1 ? `<em class="evt">🌾 récolte −${pctEntier(1 - multAchat(m, c.ville, b))}</em>` : "",
-          multVente(m, destination, b) > 1 ? `<em class="evt">${ICONES_EVT[m.evenement!.type]} +${pctEntier(multVente(m, destination, b) - 1)}</em>` : "",
+          !depuisQG && multAchat(m, c.ville as VilleId, b) < 1
+            ? `<em class="evt">🌾 récolte −${pctEntier(1 - multAchat(m, c.ville as VilleId, b))}</em>`
+            : "",
+          !versQG && multVente(m, dest, b) > 1 ? `<em class="evt">${ICONES_EVT[m.evenement!.type]} +${pctEntier(multVente(m, dest, b) - 1)}</em>` : "",
           sat >= 0.02 ? `<em class="sature">saturé −${pctEntier(sat)}</em>` : "",
         ].join("");
         const forme = tourner(def.forme, 0);
@@ -521,19 +617,28 @@ function rendreEtal(now: number): void {
         const mini = forme
           .map(([x, y]) => `<i style="grid-area:${y + 1}/${x + 1};background:${def.couleur}"></i>`)
           .join("");
+        const prix = depuisQG
+          ? `×${stockN(etat.qg!, b)} · coût ${formatNombre(achat)}`
+          : `achat ${formatNombre(achat)} ${coursMonte(c.ville as VilleId, b, now) ? "↗" : "↘"}`;
         return `
           <button type="button" class="marchandise${enMain?.bien === b ? " en-main" : ""}" data-bien="${b}">
             <span class="mini-forme" style="grid-template-columns:repeat(${l},10px);grid-template-rows:repeat(${h},10px)">${mini}</span>
             <span class="m-texte">
               <b>${def.icone} ${def.nom}</b>
-              <small>achat ${formatNombre(achat)} ${coursMonte(c.ville, b, now) ? "↗" : "↘"} · vente ${formatNombre(vente)}${
+              <small>${prix}${versQG ? " · à stocker" : ` · vente ${formatNombre(vente)}`}${
                 reclame ? ` <em class="reclame">★ réclamé</em>` : ""
               }${badges}</small>
             </span>
-            <span class="m-gain">+${formatNombre(vente - achat)}</span>
+            <span class="m-gain">${versQG ? "⛺" : `+${formatNombre(vente - achat)}`}</span>
           </button>`;
       })
       .join("");
+}
+
+// Peut-on prendre une pièce de ce bien ici (écus à l'étal, stock au QG) ?
+function disponible(c: Caravane, bien: BienId, now: number): boolean {
+  if (c.ville === "qg") return !!etat.qg && stockN(etat.qg, bien) > 0;
+  return (prixAchat(c.ville, bien, now, marcheA(etat, now)) ?? Infinity) <= etat.ecus;
 }
 
 const elGrille = $("grille");
@@ -551,7 +656,7 @@ function rendreGrille(): void {
   if (enMain && survol) {
     const p = pieceSurvol();
     if (p) {
-      const ok = peutPlacer(l, h, c.cargaison, p) && (prixAchat(c.ville, p.bien, Date.now(), marcheA(etat, Date.now())) ?? Infinity) <= etat.ecus;
+      const ok = peutPlacer(l, h, c.cargaison, p) && disponible(c, p.bien, Date.now());
       html += htmlPiece(p, `fantome ${ok ? "ok" : "ko"}`, l, h);
     }
   }
@@ -635,22 +740,24 @@ elGrille.addEventListener("click", (e) => {
     if (!peutPlacer(l, h, c.cargaison, p)) {
       // clic sur une pièce déjà posée avec autre chose en main : on l'échange
       const k = pieceEn(c.cargaison, cs.x, cs.y);
-      if (k >= 0) {
-        const reprise = reprendre(etat, comptoirI, k)!;
-        enMain = { bien: reprise.bien, rot: reprise.rot };
-      } else toast("Ça ne rentre pas là.");
-    } else if (!poser(etat, comptoirI, p, now)) toast("Pas assez d'écus.");
+      if (k >= 0) prendreEnMain(comptoirI, k);
+      else toast("Ça ne rentre pas là.");
+    } else if (!poser(etat, comptoirI, p, now)) toast(c.ville === "qg" ? "Plus rien de ça en stock." : "Pas assez d'écus.");
   } else {
     const k = pieceEn(c.cargaison, cs.x, cs.y);
-    if (k >= 0) {
-      const reprise = reprendre(etat, comptoirI, k)!;
-      enMain = { bien: reprise.bien, rot: reprise.rot };
-    }
+    if (k >= 0) prendreEnMain(comptoirI, k);
   }
   rendreEtal(now);
   rendreGrille();
   rendreResume(now);
 });
+
+// Reprend une pièce posée (à l'étal, ou dans l'entrepôt au QG) et la garde en main.
+function prendreEnMain(i: number, k: number): void {
+  const reprise = reprendre(etat, i, k);
+  if (reprise) enMain = { bien: reprise.bien, rot: reprise.rot };
+  else toast("L'entrepôt est plein : la pièce reste dans la charrette.");
+}
 
 function tournerMain(): void {
   if (!enMain) return;
@@ -676,20 +783,23 @@ $("etal").addEventListener("click", (e) => {
 $("destinations").addEventListener("click", (e) => {
   const b = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-dest]");
   if (!b) return;
-  destination = b.dataset.dest as VilleId;
+  destination = b.dataset.dest as Lieu;
   rendreComptoir();
 });
 
 $("btn-auto").addEventListener("click", () => {
   if (comptoirI === null) return;
+  const c = etat.caravanes[comptoirI];
   const n = remplirAuto(etat, comptoirI, destination, Date.now());
-  if (n === 0) toast(etat.ecus < 1 ? "Plus un écu en poche." : "Plus rien ne rentre.");
+  if (n === 0)
+    toast(c.ville === "qg" ? "Plus rien en stock qui rentre." : etat.ecus < 1 ? "Plus un écu en poche." : "Plus rien ne rentre.");
   rendreComptoir();
 });
 
 $("btn-vider").addEventListener("click", () => {
   if (comptoirI === null) return;
   vider(etat, comptoirI);
+  if (etat.caravanes[comptoirI].cargaison.length) toast("L'entrepôt est plein : le reste demeure dans la charrette.");
   rendreComptoir();
 });
 
@@ -698,28 +808,37 @@ function rendreResume(now: number): void {
   if (!c) return;
   const { l, h } = grille(etat);
   const occupees = occupation(c.cargaison).size;
-  const vente = valeurCargaison(c.cargaison, destination, now, marcheA(etat, now));
-  const benef = vente - c.cout;
-  $("resume").innerHTML = `
-    <div><dt>Payé</dt><dd>${formatEcus(c.cout)}</dd></div>
-    <div><dt>Vente estimée</dt><dd>${formatEcus(vente)}</dd></div>
-    <div><dt>Bénéfice</dt><dd class="${benef >= 0 ? "positif" : "negatif"}">${benef >= 0 ? "+" : ""}${formatEcus(benef)}</dd></div>
-    <div><dt>Charrette</dt><dd>${occupees}/${l * h} cases</dd></div>
-    <div><dt>En poche</dt><dd>${formatEcus(etat.ecus)}</dd></div>`;
-  const d = VILLE_PAR_ID[destination];
+  const lignes = [`<div><dt>${c.ville === "qg" ? "Coût du stock" : "Payé"}</dt><dd>${formatEcus(c.cout)}</dd></div>`];
+  if (destination === "qg") {
+    const libre = capaciteQG(etat.qg!) - casesQG(etat.qg!);
+    lignes.push(`<div><dt>Place à l'entrepôt</dt><dd class="${occupees > libre ? "negatif" : ""}">${libre} cases</dd></div>`);
+  } else {
+    const vente = valeurCargaison(c.cargaison, destination, now, marcheA(etat, now));
+    const benef = vente - c.cout;
+    lignes.push(
+      `<div><dt>Vente estimée</dt><dd>${formatEcus(vente)}</dd></div>`,
+      `<div><dt>Bénéfice</dt><dd class="${benef >= 0 ? "positif" : "negatif"}">${benef >= 0 ? "+" : ""}${formatEcus(benef)}</dd></div>`
+    );
+  }
+  lignes.push(
+    `<div><dt>Charrette</dt><dd>${occupees}/${l * h} cases</dd></div>`,
+    `<div><dt>En poche</dt><dd>${formatEcus(etat.ecus)}</dd></div>`
+  );
+  $("resume").innerHTML = lignes.join("");
+  const nomDest = destination === "qg" ? "le QG" : infoLieu(destination).nom;
   const temps = formatDuree(duree(etat, c.ville, destination) / 1000);
   setText(
     $("btn-partir"),
-    c.cargaison.length ? `🐪 En route pour ${d.nom} (${temps})` : `🐪 Partir à vide pour ${d.nom} (${temps})`
+    c.cargaison.length ? `🐪 En route pour ${nomDest} (${temps})` : `🐪 Partir à vide pour ${nomDest} (${temps})`
   );
 }
 
 $("btn-partir").addEventListener("click", () => {
   if (comptoirI === null) return;
   const c = etat.caravanes[comptoirI];
-  const confier = c.caravanier ? ($("confier") as HTMLInputElement).checked : undefined;
+  const confier = c.caravanier && !$("confier-ligne").hidden ? ($("confier") as HTMLInputElement).checked : undefined;
   if (partir(etat, comptoirI, destination, Date.now(), confier)) {
-    toast(`🐪 ${c.nom} prend la route de ${VILLE_PAR_ID[destination].nom} !`);
+    toast(`🐪 ${c.nom} prend la route ${destination === "qg" ? "du QG" : `de ${infoLieu(destination).nom}`} !`);
     fermerTout();
   }
 });
@@ -753,7 +872,7 @@ function ouvrirMarche(i: number): void {
   const c = etat.caravanes[i];
   if (!c.aVendre) return;
   fermerTout();
-  const m = VILLE_PAR_ID[c.ville].marchand;
+  const m = VILLE_PAR_ID[c.ville as VilleId].marchand;
   marche = {
     i,
     n: ouvrirNegociation(m.caractere, valeurAffichee(etat, i, Date.now()), Math.random, talents(etat)),
@@ -778,7 +897,7 @@ function rendreMarche(): void {
   if (!marche) return;
   const { n, demande } = marche;
   const c = etat.caravanes[marche.i];
-  const m = VILLE_PAR_ID[c.ville].marchand;
+  const m = VILLE_PAR_ID[c.ville as VilleId].marchand;
   const car = CARACTERES[m.caractere];
   const humeur = n.fin?.fache
     ? "😡"
@@ -814,7 +933,7 @@ function rendreMarche(): void {
 
   $("marche").innerHTML = `
     <div class="marche-tete">
-      <span>🤝 Marché de ${VILLE_PAR_ID[c.ville].nom}</span>
+      <span>🤝 Marché de ${VILLE_PAR_ID[c.ville as VilleId].nom}</span>
       ${commence || n.fin ? "" : `<button type="button" class="fermer" data-m="fermer" aria-label="fermer">✕</button>`}
     </div>
     <div class="marchand">
@@ -871,13 +990,24 @@ $("marche").addEventListener("click", (e) => {
   rendreMarche();
 });
 
-// ---- panneaux (atelier, aide, ville) ----
+// ---- panneaux (atelier, aide, ville, QG) ----
 
-type Panneau = { type: "atelier" } | { type: "talents" } | { type: "aide" } | { type: "ville"; id: VilleId };
+type OngletQG = "entrepot" | "fabrication" | "caravaniers";
+type Panneau =
+  | { type: "atelier" }
+  | { type: "talents" }
+  | { type: "aide" }
+  | { type: "ville"; id: VilleId }
+  | { type: "qg"; onglet: OngletQG };
 let panneau: Panneau | null = null;
+let ongletQG: OngletQG = "entrepot";
 
 function ouvrirPanneau(p: Panneau): void {
   fermerTout();
+  if (p.type === "qg") {
+    ongletQG = p.onglet;
+    if (etat.qg) etat.qg.pretes = 0; // les fabrications finies sont vues
+  }
   panneau = p;
   $("panneau").hidden = false;
   $("voile").hidden = false;
@@ -899,9 +1029,9 @@ function fermerTout(): void {
 
 document.querySelectorAll<HTMLButtonElement>("[data-panneau]").forEach((b) =>
   b.addEventListener("click", () => {
-    const type = b.dataset.panneau as "atelier" | "talents" | "aide";
+    const type = b.dataset.panneau as "atelier" | "talents" | "aide" | "qg";
     if (panneau?.type === type) fermerTout();
-    else ouvrirPanneau({ type });
+    else ouvrirPanneau(type === "qg" ? { type, onglet: ongletQG } : { type });
   })
 );
 document.querySelectorAll("[data-fermer]").forEach((b) => b.addEventListener("click", fermerTout));
@@ -933,6 +1063,8 @@ function lignesAtelier(): string {
       formatEcus(v.deblocage),
       v.deblocage
     );
+
+  html += lignesQG();
 
   const ch = CHARRETTES[etat.charrette];
   const chSuiv = CHARRETTES[etat.charrette + 1];
@@ -971,10 +1103,159 @@ function lignesAtelier(): string {
   return html;
 }
 
+// Achats liés au QG : sa fondation, puis l'entrepôt et les emplacements.
+function lignesQG(): string {
+  if (qgAchetable(etat))
+    return ligne(
+      QG.icone,
+      "Fonder ton QG",
+      "Au centre de la carte : un entrepôt pour stocker ce que tu veux, et un atelier pour fabriquer des produits qui valent plus cher.",
+      "qg",
+      formatEcus(PRIX_QG),
+      PRIX_QG
+    );
+  if (!etat.qg) return "";
+  const en = ENTREPOTS[etat.qg.entrepot];
+  const enSuiv = ENTREPOTS[etat.qg.entrepot + 1];
+  let html = enSuiv
+    ? ligne("📦", `${enSuiv.nom} · ${enSuiv.cases} cases`, `Au QG. Actuel : ${en.nom}, ${en.cases} cases.`, "entrepot", formatEcus(enSuiv.prix), enSuiv.prix)
+    : ligne("📦", `${en.nom} · ${en.cases} cases`, "Le plus grand entrepôt du royaume.", "", "✓", null);
+  const pe = prixEmplacement(etat);
+  html +=
+    pe !== null
+      ? ligne("⚒️", "Nouvel emplacement de fabrication", `Tu en as ${etat.qg.emplacements.length}. Une fabrication de plus en même temps.`, "emplacement", formatEcus(pe), pe)
+      : ligne("⚒️", "Atelier complet", `${etat.qg.emplacements.length} emplacements de fabrication.`, "", "✓", null);
+  return html;
+}
+
+function nbCases(n: number): string {
+  return `${n} case${n > 1 ? "s" : ""}`;
+}
+
+// Durée d'une recette : « 15 min », « 1 h 30 » (pas « 15:00 », qu'on lirait comme une heure).
+function dureeLisible(ms: number): string {
+  const min = Math.round(ms / 60_000);
+  if (min < 60) return `${min} min`;
+  return `${Math.floor(min / 60)} h${min % 60 ? ` ${String(min % 60).padStart(2, "0")}` : ""}`;
+}
+
+function htmlQG(onglet: OngletQG): string {
+  const qg = etat.qg!;
+  const onglets = (
+    [
+      ["entrepot", "📦 Entrepôt"],
+      ["fabrication", "⚒️ Fabrication"],
+      ["caravaniers", "🤠 Caravaniers"],
+    ] as const
+  )
+    .map(([id, nom]) => `<button type="button" class="onglet${id === onglet ? " actif" : ""}" data-onglet="${id}">${nom}</button>`)
+    .join("");
+  let corps = "";
+  if (onglet === "entrepot") {
+    const pris = casesQG(qg);
+    const cap = capaciteQG(qg);
+    const lignes = (Object.entries(qg.stock) as [BienId, { n: number; cout: number }][])
+      .sort(([a], [b]) => BIEN_PAR_ID[b].base - BIEN_PAR_ID[a].base)
+      .map(([b, e]) => {
+        const d = BIEN_PAR_ID[b];
+        return `<li><span>${d.icone} ${d.nom} <b>×${e.n}</b></span><small>${nbCases(e.n * d.forme.length)} · coût ${formatNombre(e.cout / e.n)} pièce</small></li>`;
+      })
+      .join("");
+    const enCours = qg.emplacements.filter((f) => f).length;
+    corps = `
+      <div class="jauge-qg">
+        <div class="rep-ligne"><b>${ENTREPOTS[qg.entrepot].nom}</b><small>${pris} / ${cap} cases${enCours ? ` (dont ${enCours} produit${enCours > 1 ? "s" : ""} en fabrication)` : ""}</small></div>
+        <div class="rep-barre"><div style="width:${Math.min(100, (pris / cap) * 100).toFixed(1)}%"></div></div>
+      </div>
+      ${lignes ? `<ul class="stock">${lignes}</ul>` : `<p class="vide-qg">L'entrepôt est vide. Envoie une caravane au ⛺ QG et dépose sa cargaison : tu peux y garder ce que tu veux, des ingrédients ou une marchandise achetée pas cher à ressortir un jour de fête.</p>`}
+      <p class="astuce-qg">Pour repartir avec du stock, charge une caravane à quai au QG.</p>
+      ${lignesQG()}`;
+  } else if (onglet === "fabrication") {
+    const now = Date.now();
+    const libre = qg.emplacements.findIndex((f) => !f);
+    const emplacements = qg.emplacements
+      .map((f, k) => {
+        if (!f) return `<div class="emplacement libre">⚒️ Emplacement ${k + 1} · libre</div>`;
+        const d = BIEN_PAR_ID[f.recette];
+        const pct = Math.min(100, ((now - f.debut) / (f.fin - f.debut)) * 100);
+        return `
+          <div class="emplacement">
+            <span>${d.icone} ${d.nom} · <span class="fab-temps" data-fin="${f.fin}">${formatDuree((f.fin - now) / 1000)}</span></span>
+            <div class="fiche-barre"><div class="fiche-rempli fab-rempli" data-debut="${f.debut}" data-fin="${f.fin}" style="width:${pct.toFixed(1)}%"></div></div>
+          </div>`;
+      })
+      .join("");
+    const recettes = RECETTES.filter((r) => recetteVisible(etat, r))
+      .map((r) => {
+        const d = BIEN_PAR_ID[r.produit];
+        const ingr = r.ingredients
+          .map(([b, n]) => {
+            const a = stockN(qg, b);
+            return `<span class="${a >= n ? "ok" : "manque"}">${BIEN_PAR_ID[b].icone} ${a}/${n}</span>`;
+          })
+          .join(" ");
+        const cout = r.ingredients.reduce((k, [b, n]) => k + coutMoyen(qg, b) * n, 0);
+        const villes = r.reclame.map((v) => VILLE_PAR_ID[v].icone + " " + VILLE_PAR_ID[v].nom).join(", ");
+        const ok = peutFabriquer(etat, r) && libre >= 0;
+        return `
+          <div class="item recette">
+            <span class="item-icone">${d.icone}</span>
+            <div class="item-texte">
+              <b>${d.nom} <small>· ${dureeLisible(dureeFabrication(etat, r))} · ${nbCases(d.forme.length)}</small></b>
+              <small class="ingredients">${ingr}</small>
+              <small>★ réclamé à ${villes} (≈ ${formatNombre(d.base * 1.7)} pièce)${cout > 0 && peutFabriquer(etat, r) ? ` · ingrédients ${formatNombre(cout)}` : ""}</small>
+            </div>
+            <button type="button" class="item-bouton" data-fabriquer="${r.produit}" ${ok ? "" : "disabled"}>Lancer</button>
+          </div>`;
+      })
+      .join("");
+    corps = `
+      <div class="emplacements">${emplacements}</div>
+      ${recettes || `<p class="vide-qg">Ouvre plus de routes pour découvrir des recettes.</p>`}
+      <p class="astuce-qg">Les ingrédients se prennent dans l'entrepôt. La fabrication continue même onglet fermé${sait(etat, "compagnon") ? ", et l'atelier relance la même recette tant qu'il a de quoi faire" : ""}.</p>`;
+  } else {
+    // les biens qu'on peut déjà se procurer, puis les produits de l'atelier
+    const produits = VILLES.filter((v) => etat.villes.includes(v.id)).flatMap((v) => v.produit);
+    const fabriques = RECETTES.filter((r) => recetteVisible(etat, r)).map((r) => r.produit);
+    const liste = (nom: "appro" | "ecoulement", biens: BienId[], defaut: number) =>
+      biens
+        .map((b) => {
+          const d = BIEN_PAR_ID[b];
+          const n = qg[nom][b];
+          const coche = n !== undefined;
+          return `
+            <label class="regle${coche ? " cochee" : ""}">
+              <input type="checkbox" data-liste="${nom}" data-bien="${b}" ${coche ? "checked" : ""}>
+              <span>${d.icone} ${d.nom}</span>
+              <small>en stock ${stockN(qg, b)}</small>
+              <input type="number" min="0" max="999" inputmode="numeric" data-qte="${nom}" data-bien="${b}" value="${n ?? defaut}" ${coche ? "" : "disabled"}>
+            </label>`;
+        })
+        .join("");
+    corps = `
+      ${
+        sait(etat, "intendant")
+          ? ""
+          : `<p class="avis-qg">🔒 Apprends <b>📋 Intendant</b> (compétences, branche ⛺ QG) pour que tes caravaniers fassent la navette avec le QG. Tu peux déjà préparer tes listes.</p>`
+      }
+      <h3>📥 Approvisionnement</h3>
+      <p class="astuce-qg">Ce que les caravaniers apportent au QG, jusqu'au <b>stock visé</b>.</p>
+      <div class="regles">${liste("appro", produits, 10)}</div>
+      <h3>📤 Écoulement</h3>
+      <p class="astuce-qg">Ce qu'ils emportent du QG pour le vendre, en <b>gardant</b> ce nombre en stock.</p>
+      <div class="regles">${liste("ecoulement", [...fabriques, ...produits], 0)}</div>`;
+  }
+  return `<div class="onglets">${onglets}</div>${corps}`;
+}
+
 function rendrePanneau(): void {
   if (!panneau) return;
   const corps = $("panneau-corps");
-  if (panneau.type === "atelier") {
+  if (panneau.type === "qg") {
+    setText($("panneau-titre"), "⛺ QG du marchand");
+    corps.innerHTML = htmlQG(panneau.onglet);
+    signatureQG = signaturePanneauQG();
+  } else if (panneau.type === "atelier") {
     setText($("panneau-titre"), "🛠️ Atelier");
     corps.innerHTML = lignesAtelier();
   } else if (panneau.type === "talents") {
@@ -992,6 +1273,7 @@ function rendrePanneau(): void {
         <p><b>📉 Marchés saturés.</b> Chaque pièce vendue fait baisser le prix de ce bien dans la ville (ça remonte tout seul en une demi-heure environ). Varie tes cargaisons et tes destinations.</p>
         <p><b>🤠 Embauche des caravaniers</b> (atelier) : ils font la navette tout seuls, même onglet fermé, en rejouant ton dernier rangement. Range bien, ils rangeront bien.</p>
         <p><b>🌟 Réputation.</b> Chaque bénéfice te fait connaître, et bien marchander en rapporte davantage. Chaque niveau donne un point de compétence.</p>
+        <p><b>⛺ Le QG</b> (atelier, une fois Sablemire ouverte) : au centre de la carte. Dépose-y ce que tu veux (des ingrédients, ou une marchandise achetée pas cher à ressortir un jour de fête), et fabrique des produits qui valent plus cher que leurs ingrédients. La fabrication prend du temps, même onglet fermé.</p>
         <p><b>🙈 Échap</b> : mode discret.</p>
       </div>`;
   } else {
@@ -1012,12 +1294,14 @@ function rendrePanneau(): void {
         })
         .join("");
     const evt = m.evenement?.ville === v.id ? `<p class="nouvelle-ville">${texteEvenement(m.evenement)}</p>` : "";
+    const fabriques = etat.qg ? RECETTES.filter((r) => r.reclame.includes(v.id) && recetteVisible(etat, r)).map((r) => r.produit) : [];
     corps.innerHTML = `
       <div class="fiche-ville">
         ${evt}
         <p class="marchand-ligne">${v.marchand.portrait} <b>${v.marchand.nom}</b><br><small>${car.nom} — ${car.indice}</small></p>
         <h3>Produit (prix d'achat)</h3><ul>${liste(v.produit, true)}</ul>
         <h3>Réclame ★ (prix de vente)</h3><ul>${liste(v.demande, false)}</ul>
+        ${fabriques.length ? `<h3>Réclame ★ (produits du QG)</h3><ul>${liste(fabriques, false)}</ul>` : ""}
       </div>`;
   }
   majPanneau();
@@ -1042,7 +1326,9 @@ function htmlTalents(): string {
           : "Vends avec bénéfice pour gagner de la réputation (bien marchander en rapporte davantage)."
       }</p>
     </div>`;
-  const colonnes = BRANCHES.map((br) => {
+  // la branche du QG n'apparaît qu'une fois le QG fondé
+  const branches = BRANCHES.filter((br) => br.id !== "qg" || etat.qg);
+  const colonnes = branches.map((br) => {
     const noeuds = COMPETENCES.filter((c) => c.branche === br.id)
       .map((c) => {
         const appris = sait(etat, c.id);
@@ -1060,15 +1346,50 @@ function htmlTalents(): string {
       .join(`<span class="lien"></span>`);
     return `<div class="branche"><h3>${br.icone} ${br.nom}</h3>${noeuds}</div>`;
   }).join("");
-  return tete + `<div class="arbre">${colonnes}</div>`;
+  return tete + `<div class="arbre${branches.length > 3 ? " quatre" : ""}">${colonnes}</div>`;
+}
+
+// Ce qui, au QG, demande de redessiner le panneau (le reste se met à jour sur place).
+let signatureQG = "";
+function signaturePanneauQG(): string {
+  const qg = etat.qg;
+  if (!qg || panneau?.type !== "qg" || panneau.onglet === "caravaniers") return "";
+  return JSON.stringify([panneau.onglet, qg.stock, qg.entrepot, qg.emplacements.map((f) => f?.recette ?? null)]);
 }
 
 function majPanneau(): void {
-  if (panneau?.type !== "atelier") return;
+  if (panneau?.type !== "atelier" && panneau?.type !== "qg") return;
+  if (panneau.type === "qg") {
+    if (signaturePanneauQG() !== signatureQG) return rendrePanneau();
+    const now = Date.now();
+    document.querySelectorAll<HTMLElement>("#panneau-corps .fab-temps").forEach((el) => {
+      setText(el, formatDuree((Number(el.dataset.fin) - now) / 1000));
+    });
+    document.querySelectorAll<HTMLElement>("#panneau-corps .fab-rempli").forEach((el) => {
+      const debut = Number(el.dataset.debut);
+      el.style.width = `${Math.min(100, ((now - debut) / (Number(el.dataset.fin) - debut)) * 100).toFixed(1)}%`;
+    });
+  }
   document.querySelectorAll<HTMLButtonElement>("#panneau-corps [data-prix]").forEach((b) => {
     b.disabled = Number(b.dataset.prix) > etat.ecus;
   });
 }
+
+// Listes des caravaniers : case cochée = bien suivi, nombre = stock visé / gardé.
+$("panneau-corps").addEventListener("change", (e) => {
+  const el = e.target as HTMLInputElement;
+  const bien = el.dataset.bien as BienId | undefined;
+  if (!bien || !etat.qg) return;
+  const nom = (el.dataset.liste ?? el.dataset.qte) as "appro" | "ecoulement";
+  const qte = $("panneau-corps").querySelector<HTMLInputElement>(`input[data-qte="${nom}"][data-bien="${bien}"]`)!;
+  const coche = $("panneau-corps").querySelector<HTMLInputElement>(`input[data-liste="${nom}"][data-bien="${bien}"]`)!;
+  const n = Math.max(0, Math.min(999, Math.floor(Number(qte.value) || 0)));
+  qte.value = String(n);
+  qte.disabled = !coche.checked;
+  coche.closest(".regle")!.classList.toggle("cochee", coche.checked);
+  regler(etat, nom, bien, coche.checked ? n : null);
+  sauver(etat, Date.now());
+});
 
 $("panneau-corps").addEventListener("click", (e) => {
   const t = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-talent]");
@@ -1082,11 +1403,35 @@ $("panneau-corps").addEventListener("click", (e) => {
     }
     return;
   }
+  const o = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-onglet]");
+  if (o) {
+    ouvrirPanneau({ type: "qg", onglet: o.dataset.onglet as OngletQG });
+    return;
+  }
+  const f = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-fabriquer]");
+  if (f && !f.disabled && etat.qg) {
+    const produit = f.dataset.fabriquer as BienId;
+    if (fabriquer(etat, etat.qg.emplacements.findIndex((x) => !x), produit, Date.now())) {
+      toast(`⚒️ ${BIEN_PAR_ID[produit].icone} ${BIEN_PAR_ID[produit].nom} en fabrication !`);
+      sauver(etat, Date.now());
+      rendrePanneau();
+    }
+    return;
+  }
   const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-action]");
   if (!b || b.disabled) return;
   const [type, arg] = b.dataset.action!.split(":");
   let ok = false;
-  if (type === "ville") {
+  if (type === "qg") {
+    ok = acheterQG(etat);
+    if (ok) toast("⛺ Ton QG est fondé, au centre de la carte ! Une nouvelle branche de compétences s'ouvre.");
+  } else if (type === "entrepot") {
+    ok = ameliorerEntrepot(etat);
+    if (ok) toast(`📦 ${ENTREPOTS[etat.qg!.entrepot].nom} : ${ENTREPOTS[etat.qg!.entrepot].cases} cases au QG.`);
+  } else if (type === "emplacement") {
+    ok = acheterEmplacement(etat);
+    if (ok) toast(`⚒️ ${etat.qg!.emplacements.length} fabrications en même temps au QG.`);
+  } else if (type === "ville") {
     const v = prochaineVille(etat)!;
     ok = debloquerVille(etat);
     if (ok) toast(`🗺️ La route de ${v.nom} est ouverte !`);
@@ -1147,6 +1492,13 @@ function nbAchetables(): number {
   if (pc !== null && pc <= etat.ecus) n++;
   const pv = prixCaravanier(etat);
   if (pv !== null && pv <= etat.ecus && etat.caravanes.some((c) => !c.caravanier)) n++;
+  if (qgAchetable(etat) && PRIX_QG <= etat.ecus) n++;
+  if (etat.qg) {
+    const en = ENTREPOTS[etat.qg.entrepot + 1];
+    if (en && en.prix <= etat.ecus) n++;
+    const pe = prixEmplacement(etat);
+    if (pe !== null && pe <= etat.ecus) n++;
+  }
   return n;
 }
 
@@ -1160,6 +1512,11 @@ function majBadges(): void {
   const bt = $("badge-talents");
   bt.hidden = libres <= 0;
   if (libres > 0) setText(bt, String(libres));
+  $("btn-qg").hidden = !etat.qg;
+  const pretes = etat.qg?.pretes ?? 0;
+  const bq = $("badge-qg");
+  bq.hidden = pretes <= 0;
+  if (pretes > 0) setText(bq, String(pretes));
   const niv = niveau(etat.reputation);
   if (niv > niveauAnnonce) {
     toast(`🌟 Réputation niveau ${niv} ! Un point de compétence à dépenser.`);
@@ -1220,9 +1577,16 @@ function majTitre(): void {
   if (discret) return setText(document.querySelector("title")!, "Budget_T3_v2.xlsx");
   const n = etat.caravanes.filter((c) => c.aVendre || (enChargement(c) && !(c.caravanier && c.auto))).length;
   const arrivees = etat.caravanes.filter((c) => c.aVendre).length;
+  const pretes = etat.qg?.pretes ?? 0;
   setText(
     document.querySelector("title")!,
-    arrivees ? `(${arrivees}) 🐪 Caravane arrivée !` : n ? `(${n}) ${TITRE}` : TITRE
+    arrivees
+      ? `(${arrivees}) 🐪 Caravane arrivée !`
+      : pretes
+        ? `(${pretes}) ⛺ Fabrication terminée !`
+        : n
+          ? `(${n}) ${TITRE}`
+          : TITRE
   );
 }
 
@@ -1249,8 +1613,12 @@ function frame(): void {
   const avant = etat.caravanes.map((c) => c.aVendre);
   const bilan = avancer(etat, now);
   if (bilan.gain > 0) flotterGain(bilan.gain);
+  if (bilan.fabrications > 0) {
+    if (panneau?.type === "qg") etat.qg!.pretes = 0; // déjà sous les yeux
+    toast(`⛺ ${bilan.fabrications > 1 ? `${bilan.fabrications} fabrications terminées` : "Fabrication terminée"} au QG !`);
+  }
   etat.caravanes.forEach((c, i) => {
-    if (c.aVendre && !avant[i]) toast(`🐪 ${c.nom} est arrivée à ${VILLE_PAR_ID[c.ville].nom} !`);
+    if (c.aVendre && !avant[i]) toast(`🐪 ${c.nom} est arrivée ${c.ville === "qg" ? "au QG" : `à ${infoLieu(c.ville).nom}`} !`);
   });
 
   majEntete();
@@ -1279,7 +1647,7 @@ function accueillir(): void {
   const absence = now - etat.savedAt;
   const bilan = avancer(etat, now);
   const attendent = etat.caravanes.filter((c) => c.aVendre).length;
-  if (absence < 60_000 || (bilan.voyages === 0 && attendent === 0)) return;
+  if (absence < 60_000 || (bilan.voyages === 0 && attendent === 0 && bilan.fabrications === 0)) return;
   const popup = $("popup");
   popup.innerHTML = `
     <div class="popup-cadre">
@@ -1291,7 +1659,9 @@ function accueillir(): void {
              <p class="popup-gain">+${formatEcus(bilan.gain)}</p>`
           : ""
       }
-      ${attendent ? `<p>🐪 ${attendent} caravane${attendent > 1 ? "s t'attendent" : " t'attend"} au marché.</p>` : ""}
+      ${bilan.depots ? `<p>📥 Ils ont déposé <b>${bilan.depots}</b> pièce${bilan.depots > 1 ? "s" : ""} au QG.</p>` : ""}
+      ${bilan.fabrications ? `<p>⚒️ L'atelier du QG a terminé <b>${bilan.fabrications}</b> fabrication${bilan.fabrications > 1 ? "s" : ""}.</p>` : ""}
+      ${attendent ? `<p>🐪 ${attendent} caravane${attendent > 1 ? "s t'attendent" : " t'attend"} à l'arrivée.</p>` : ""}
       <button type="button" class="gros-bouton">En route !</button>
     </div>`;
   popup.hidden = false;
