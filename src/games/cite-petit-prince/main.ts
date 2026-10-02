@@ -24,8 +24,10 @@ import {
   coutProchainEtage,
   dejaConstruit,
   embaucher,
+  embaucherGerant,
   employes,
   estDebloque,
+  prixGerant,
   etagesConstruits,
   finirChantier,
   finirLivraison,
@@ -53,15 +55,21 @@ const canvas = $<HTMLCanvasElement>("tour");
 const ctx = canvas.getContext("2d")!;
 const vue: Vue = { W: 0, H: 0, scroll: 0, now: Date.now(), course: null, selection: null };
 
+// Sur grand écran, on grossit toute la scène : la tour remplit l'écran au
+// lieu de flotter au milieu du ciel. Coordonnées du dessin = pixels / zoom.
+let zoom = 1;
+
 function redimensionner(): void {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  vue.W = window.innerWidth;
-  vue.H = window.innerHeight;
-  canvas.width = Math.round(vue.W * dpr);
-  canvas.height = Math.round(vue.H * dpr);
-  canvas.style.width = `${vue.W}px`;
-  canvas.style.height = `${vue.H}px`;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  zoom = Math.max(1, Math.min(1.7, window.innerWidth / 600, window.innerHeight / 560));
+  vue.W = window.innerWidth / zoom;
+  vue.H = window.innerHeight / zoom;
+  canvas.width = Math.round(window.innerWidth * dpr);
+  canvas.height = Math.round(window.innerHeight * dpr);
+  canvas.style.width = `${window.innerWidth}px`;
+  canvas.style.height = `${window.innerHeight}px`;
+  ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
+  ctx.imageSmoothingEnabled = false;
   borner();
 }
 window.addEventListener("resize", redimensionner);
@@ -115,7 +123,7 @@ canvas.addEventListener("pointerdown", (e) => {
 });
 canvas.addEventListener("pointermove", (e) => {
   if (!appui || appui.id !== e.pointerId) return;
-  const dy = e.clientY - appui.y0;
+  const dy = (e.clientY - appui.y0) / zoom;
   if (Math.abs(dy) > 6) appui.bouge = true;
   if (appui.bouge) {
     vue.scroll = appui.scroll0 + dy;
@@ -127,7 +135,7 @@ canvas.addEventListener("pointerup", (e) => {
   const clic = !appui.bouge;
   appui = null;
   if (!clic) return;
-  const cible = hitTest(etat, vue, e.clientX, e.clientY);
+  const cible = hitTest(etat, vue, e.clientX / zoom, e.clientY / zoom);
   if (!cible) return;
   if (cible.type === "ascenseur") lancerAscenseur();
   else if (cible.type === "fantome") ouvrir({ k: "construire" });
@@ -138,7 +146,7 @@ canvas.addEventListener(
   "wheel",
   (e) => {
     e.preventDefault();
-    vue.scroll -= e.deltaY;
+    vue.scroll -= e.deltaY / zoom;
     borner();
   },
   { passive: false }
@@ -285,6 +293,16 @@ function panneauEtage(i: number, now: number): [string, string] {
     }
     html += item(["①", "②", "③"][k], esc(def.nom), sous, droite, p.etat === "vide" && emp.length >= k + 1 ? "alerte" : "");
   });
+  html += `<h3>Gérant</h3>`;
+  const pg = prixGerant(etat, i)!;
+  html += e.gerant
+    ? item("🧑‍💼", "Gérant en poste", "Il recommande tout seul chaque stock épuisé, même onglet fermé (s'il y a de quoi payer).", "")
+    : item(
+        "🧑‍💼",
+        "Embaucher un gérant",
+        "Il recommande tout seul chaque stock épuisé, même onglet fermé. Idéal quand tu n'as pas le temps.",
+        bouton(`gerant:${i}`, formatArgent(pg), etat.argent >= pg)
+      );
   return [titre, html];
 }
 
@@ -427,6 +445,8 @@ corps.addEventListener("click", (e) => {
     commander(etat, Number(x), Number(y), now);
   } else if (a === "livrer") {
     finirLivraison(etat, Number(x), Number(y), now);
+  } else if (a === "gerant") {
+    if (embaucherGerant(etat, Number(x))) toast("🧑‍💼 Gérant embauché : il s'occupe des commandes !");
   } else if (a === "construire") {
     if (construire(etat, x, now)) {
       const c = COMMERCE_PAR_ID[x];
@@ -460,6 +480,65 @@ function majHud(): void {
   badge("badge-fil", Math.min(99, etat.filNonLus));
 }
 
+// ---- mode discret et titre de l'onglet ----
+
+const TITRE = document.title;
+let discret = false;
+
+function construireDiscret(): void {
+  const cols = "ABCDEFGHIJKL".split("");
+  const libelles = ["Loyers", "Charges", "Entretien", "Ascenseur", "Gardiennage", "Eau", "Électricité", "Assurances", "Travaux", "Divers"];
+  const mois = ["Juil.", "Août", "Sept.", "Total T3", "Budget", "Écart"];
+  let lignes = `<tr><th></th>${cols.map((c) => `<th>${c}</th>`).join("")}</tr>`;
+  let somme = 0;
+  for (let r = 1; r <= 40; r++) {
+    let cellules: string[] = cols.map(() => "");
+    if (r === 1) cellules = ["Poste", ...mois];
+    else if (r >= 2 && r < 2 + libelles.length) {
+      const base = 500 + ((Math.imul(r, 2654435761) >>> 0) % 4200);
+      const m = [base, Math.round(base * 1.03), Math.round(base * 0.98)];
+      const total = m[0] + m[1] + m[2];
+      const budget = Math.round((total * 1.02) / 100) * 100;
+      somme += total;
+      cellules = [libelles[r - 2], ...m.map(String), String(total), String(budget), String(budget - total)];
+    } else if (r === 2 + libelles.length) cellules = ["TOTAL", "", "", "", String(somme), "", ""];
+    lignes += `<tr><th>${r}</th>${cols.map((_, k) => `<td>${cellules[k] ?? ""}</td>`).join("")}</tr>`;
+  }
+  $("discret").innerHTML = `
+    <div class="d-ruban"><span>Fichier</span><span>Accueil</span><span>Insertion</span><span>Mise en page</span><span>Formules</span><span>Données</span><span>Révision</span><span>Affichage</span></div>
+    <div class="d-formule"><span>E12</span><span>fx</span><span>=SOMME(E2:E11)</span></div>
+    <div class="d-feuille"><table>${lignes}</table></div>
+    <div class="d-onglets"><span class="actif">Charges T3</span><span>Détail</span><span>Hypothèses</span></div>`;
+}
+
+function basculerDiscret(): void {
+  discret = !discret;
+  if (discret && !$("discret").innerHTML) construireDiscret();
+  $("discret").hidden = !discret;
+  majTitre();
+}
+$("btn-discret").addEventListener("click", basculerDiscret);
+$("discret").addEventListener("dblclick", basculerDiscret);
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  e.preventDefault();
+  basculerDiscret();
+});
+
+// Ruptures à commander (hors gérants) : annoncées dans le titre de l'onglet.
+function majTitre(): void {
+  if (discret) return setText(document.querySelector("title")!, "Charges_T3_v2.xlsx");
+  let ruptures = 0;
+  etat.etages.forEach((e, i) => {
+    if (e.gerant || !commerceDe(e) || e.chantierFin !== null) return;
+    const n = employes(etat, i).length;
+    e.produits.forEach((p, k) => {
+      if (p.etat === "vide" && n >= k + 1) ruptures++;
+    });
+  });
+  setText(document.querySelector("title")!, ruptures ? `(${ruptures}) 📦 Rupture de stock !` : TITRE);
+}
+
 // ---- boucle ----
 
 let dernierLent = 0;
@@ -473,6 +552,7 @@ function frame(): void {
   if (now - dernierLent > 300) {
     dernierLent = now;
     majHud();
+    majTitre();
     rafraichirPanneau();
   }
   requestAnimationFrame(frame);

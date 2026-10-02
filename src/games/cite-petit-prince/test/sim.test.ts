@@ -7,6 +7,7 @@ import {
   commander,
   construire,
   embaucher,
+  embaucherGerant,
   employes,
   finirChantier,
   finirLivraison,
@@ -168,4 +169,19 @@ test("l'ascenseur : au plus 3 visiteurs, un pourboire par course", () => {
 
 test("le prix des étages augmente toujours", () => {
   for (let n = 2; n < 80; n++) assert.ok(coutEtage(n + 1) > coutEtage(n), `étage ${n + 1}`);
+});
+
+test("le gerant recommande tout seul, meme pendant une longue absence", () => {
+  const s = partieAvecEmployes(1);
+  s.argent = 100_000;
+  assert.ok(embaucherGerant(s, 1));
+  assert.equal(embaucherGerant(s, 1), false, "un seul gerant");
+  avancer(s, 0, rngFixe()); // il passe sa premiere commande
+  const avant = s.argent;
+  const bilan = avancer(s, 3 * 3_600_000, rngFixe());
+  // produit 1 : 20 s de livraison + 3 min de vente, en boucle pendant 3 h
+  assert.ok(bilan.ventes > 50 * 60, `${bilan.ventes} de ventes`);
+  assert.ok(s.argent > avant);
+  assert.notEqual(s.etages[1].produits[0].etat, "vide");
+  assert.equal(s.etages[1].produits[1].etat, "vide", "il faut 2 employes pour le produit 2");
 });
