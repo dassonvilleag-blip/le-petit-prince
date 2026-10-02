@@ -14,6 +14,8 @@ import {
   MULT_FETE,
   MULT_FOIRE,
   MULT_RECOLTE,
+  QG,
+  RECETTE_PAR_PRODUIT,
   PERIODE_COURS_MAX,
   PERIODE_COURS_MIN,
   SATURATION_MAX,
@@ -22,6 +24,7 @@ import {
   VILLE_PAR_ID,
   type BienId,
   type Forme,
+  type Lieu,
   type VilleId,
 } from "./data.ts";
 
@@ -197,6 +200,8 @@ export function prixAchat(ville: VilleId, bien: BienId, t: number, m: Marche = M
 }
 
 export function coefVente(ville: VilleId, bien: BienId): number {
+  const recette = RECETTE_PAR_PRODUIT[bien];
+  if (recette) return recette.reclame.includes(ville) ? COEF_DEMANDE : COEF_NEUTRE;
   const v = VILLE_PAR_ID[ville];
   if (v.demande.includes(bien)) return COEF_DEMANDE;
   if (v.produit.includes(bien)) return COEF_PRODUCTEUR;
@@ -236,15 +241,20 @@ export function coutCargaison(pieces: Piece[], ville: VilleId, t: number, m: Mar
 
 // ---- trajets ----
 
-export function distance(a: VilleId, b: VilleId): number {
-  const va = VILLE_PAR_ID[a];
-  const vb = VILLE_PAR_ID[b];
+// Position sur la carte et palier d'un lieu (le QG compte comme palier 1).
+export function infoLieu(l: Lieu): { nom: string; icone: string; x: number; y: number; palier: number } {
+  return l === "qg" ? QG : VILLE_PAR_ID[l];
+}
+
+export function distance(a: Lieu, b: Lieu): number {
+  const va = infoLieu(a);
+  const vb = infoLieu(b);
   return Math.hypot(va.x - vb.x, va.y - vb.y);
 }
 
 // `mult` : raccourcis des compétences (1 = aucun).
-export function dureeTrajet(a: VilleId, b: VilleId, attelage: number, mult = 1): number {
-  const palier = Math.max(VILLE_PAR_ID[a].palier, VILLE_PAR_ID[b].palier);
+export function dureeTrajet(a: Lieu, b: Lieu, attelage: number, mult = 1): number {
+  const palier = Math.max(infoLieu(a).palier, infoLieu(b).palier);
   const secondes = (distance(a, b) * SECONDES_PAR_UNITE * FACTEUR_PALIER[palier] * mult) / ATTELAGES[attelage].vitesse;
   return Math.round(secondes * 1000);
 }
@@ -258,17 +268,21 @@ export function chargementAuto(
   l: number,
   h: number,
   depuis: VilleId,
-  vers: VilleId,
+  vers: Lieu,
   t: number,
   budget: number,
   deja: Piece[] = [],
-  m: Marche = MARCHE_NEUTRE
+  m: Marche = MARCHE_NEUTRE,
+  quota?: Quota
 ): Piece[] {
   const pieces = [...deja];
+  // vers le QG, on ne vend rien : on range ce qui vaut le plus par case
+  const valeur = (bien: BienId) => (vers === "qg" ? BIEN_PAR_ID[bien].base : prixVente(vers, bien, t, m));
   const candidats = VILLE_PAR_ID[depuis].produit
+    .filter((bien) => !quota || (quota[bien] ?? 0) > 0)
     .map((bien) => {
       const achat = prixAchat(depuis, bien, t, m)!;
-      const marge = prixVente(vers, bien, t, m) - achat;
+      const marge = valeur(bien) - achat;
       return { bien, achat, parCase: marge / BIEN_PAR_ID[bien].forme.length };
     })
     .filter((c) => c.parCase > 0)
@@ -280,10 +294,11 @@ export function chargementAuto(
     const rots = rotationsUtiles(BIEN_PAR_ID[c.bien].forme);
     for (let y = 0; y < h; y++)
       for (let x = 0; x < l; x++) {
-        if (reste < c.achat) break;
+        if (reste < c.achat || (quota && (quota[c.bien] ?? 0) <= 0)) break;
         for (const rot of rots) {
           const p: Piece = { bien: c.bien, rot, x, y };
           if (peutPlacer(l, h, pieces, p, occ)) {
+            prendre(quota, c.bien);
             pieces.push(p);
             for (const [a, b] of casesPiece(p)) occ.add(`${a},${b}`);
             reste -= c.achat;
@@ -296,6 +311,8 @@ export function chargementAuto(
 }
 
 // Rejoue un rangement enregistré, pièce par pièce, tant que le budget suit.
+// `quota` : combien de pièces de chaque bien on a le droit de prendre (sans
+// limite si absent) ; il est décompté au fil du rangement.
 export function rejouerGabarit(
   gabarit: Piece[],
   l: number,
@@ -303,15 +320,70 @@ export function rejouerGabarit(
   ville: VilleId,
   t: number,
   budget: number,
-  m: Marche = MARCHE_NEUTRE
+  m: Marche = MARCHE_NEUTRE,
+  quota?: Quota
 ): Piece[] {
   const pieces: Piece[] = [];
   let reste = budget;
   for (const p of gabarit) {
     const prix = prixAchat(ville, p.bien, t, m);
-    if (prix === null || prix > reste || !peutPlacer(l, h, pieces, p)) continue;
+    if (prix === null || prix > reste || !peutPlacer(l, h, pieces, p) || !prendre(quota, p.bien)) continue;
     pieces.push({ ...p });
     reste -= prix;
+  }
+  return pieces;
+}
+
+// Pièces encore permises par bien : liste d'approvisionnement, stock du QG…
+export type Quota = Partial<Record<BienId, number>>;
+
+function prendre(quota: Quota | undefined, bien: BienId): boolean {
+  if (!quota) return true;
+  const n = quota[bien] ?? 0;
+  if (n <= 0) return false;
+  quota[bien] = n - 1;
+  return true;
+}
+
+// Le même rangement, mais en puisant dans un stock (rien à payer), autour de
+// ce qui est déjà chargé. Renvoie tout le chargement, `deja` compris.
+export function rejouerGabaritStock(gabarit: Piece[], l: number, h: number, quota: Quota, deja: Piece[] = []): Piece[] {
+  const pieces = [...deja];
+  for (const p of gabarit) if (peutPlacer(l, h, pieces, p) && prendre(quota, p.bien)) pieces.push({ ...p });
+  return pieces;
+}
+
+// Remplissage glouton depuis un stock : ce qui se vend le mieux par case à
+// destination d'abord, dans la limite des pièces disponibles.
+export function chargementStock(
+  l: number,
+  h: number,
+  quota: Quota,
+  vers: VilleId,
+  t: number,
+  deja: Piece[] = [],
+  m: Marche = MARCHE_NEUTRE
+): Piece[] {
+  const pieces = [...deja];
+  const biens = (Object.keys(quota) as BienId[])
+    .filter((b) => (quota[b] ?? 0) > 0)
+    .sort((a, b) => prixVente(vers, b, t, m) / BIEN_PAR_ID[b].forme.length - prixVente(vers, a, t, m) / BIEN_PAR_ID[a].forme.length);
+  const occ = occupation(pieces);
+  for (const bien of biens) {
+    const rots = rotationsUtiles(BIEN_PAR_ID[bien].forme);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < l; x++) {
+        if ((quota[bien] ?? 0) <= 0) break;
+        for (const rot of rots) {
+          const p: Piece = { bien, rot, x, y };
+          if (peutPlacer(l, h, pieces, p, occ)) {
+            pieces.push(p);
+            for (const [a, b] of casesPiece(p)) occ.add(`${a},${b}`);
+            prendre(quota, bien);
+            break;
+          }
+        }
+      }
   }
   return pieces;
 }

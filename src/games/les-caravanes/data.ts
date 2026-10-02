@@ -3,6 +3,9 @@
 
 export type VilleId = "portvent" | "terracuite" | "lainebourg" | "clos-vermeil" | "sablemire" | "mirazur";
 
+// Un lieu où une caravane peut se trouver : une ville, ou le QG du marchand.
+export type Lieu = VilleId | "qg";
+
 export type BienId =
   | "sel"
   | "poisson"
@@ -21,7 +24,14 @@ export type BienId =
   | "epices"
   | "perles"
   | "parfum"
-  | "soie";
+  | "soie"
+  // fabriqués au QG
+  | "salaisons"
+  | "panier"
+  | "tarte"
+  | "hypocras"
+  | "douceurs"
+  | "robe";
 
 // Une forme = liste de cases [x, y], normalisée (min x = min y = 0).
 export type Forme = [number, number][];
@@ -75,6 +85,7 @@ export interface BienDef {
   forme: Forme;
   base: number; // prix de référence d'une pièce, en écus
   couleur: string;
+  fabrique?: boolean; // produit nulle part : ne sort que de l'atelier du QG
 }
 
 // Plus une pièce est grosse, meilleur est son prix par case : c'est ce qui
@@ -105,6 +116,13 @@ export const BIENS: BienDef[] = [
   { id: "perles", nom: "Perles", icone: "🦪", forme: FORMES.un, base: 60, couleur: "#dfe6ee" },
   { id: "parfum", nom: "Parfum", icone: "🧴", forme: FORMES.i3, base: 195, couleur: "#e58fc4" },
   { id: "soie", nom: "Soie", icone: "🧣", forme: FORMES.s4, base: 280, couleur: "#4fb3c9" },
+  // Fabriqués à l'atelier du QG (prix de référence = 1,5 × celui des ingrédients)
+  { id: "salaisons", nom: "Salaisons en jarre", icone: "🥫", forme: FORMES.o4, base: 51, couleur: "#c98a5a", fabrique: true },
+  { id: "panier", nom: "Panier du berger", icone: "🧺", forme: FORMES.l3, base: 69, couleur: "#d6b25e", fabrique: true },
+  { id: "tarte", nom: "Tarte au miel", icone: "🥧", forme: FORMES.i3, base: 74, couleur: "#e8b04a", fabrique: true },
+  { id: "hypocras", nom: "Hypocras", icone: "🍶", forme: FORMES.o4, base: 270, couleur: "#8c2f4a", fabrique: true },
+  { id: "douceurs", nom: "Douceurs d'Orient", icone: "🍬", forme: FORMES.t4, base: 256, couleur: "#e27fa6", fabrique: true },
+  { id: "robe", nom: "Robe d'apparat", icone: "👗", forme: FORMES.l4, base: 654, couleur: "#6a5acd", fabrique: true },
 ];
 
 export const BIEN_PAR_ID = Object.fromEntries(BIENS.map((b) => [b.id, b])) as Record<BienId, BienDef>;
@@ -271,6 +289,51 @@ export const VILLES: VilleDef[] = [
 
 export const VILLE_PAR_ID = Object.fromEntries(VILLES.map((v) => [v.id, v])) as Record<VilleId, VilleDef>;
 
+// ---- QG du marchand ----
+
+// Un seul QG, au centre de gravité des villes. Il compte comme un lieu de
+// palier 1 : un trajet vers lui prend le palier de la ville d'en face.
+export const QG = { nom: "QG", icone: "⛺", x: 48, y: 32, palier: 1 };
+export const PRIX_QG = 40_000;
+export const VILLE_AVANT_QG: VilleId = "sablemire"; // le QG s'achète une fois cette ville ouverte
+
+export interface NiveauEntrepot {
+  nom: string;
+  cases: number;
+  prix: number;
+}
+
+export const ENTREPOTS: NiveauEntrepot[] = [
+  { nom: "Hangar", cases: 40, prix: 0 },
+  { nom: "Entrepôt", cases: 100, prix: 25_000 },
+  { nom: "Grand entrepôt", cases: 250, prix: 150_000 },
+  { nom: "Docks royaux", cases: 600, prix: 800_000 },
+];
+
+// Prix du n-ième emplacement de fabrication (index 0 = celui fourni avec le QG).
+export const PRIX_EMPLACEMENTS = [0, 60_000, 400_000];
+
+export interface RecetteDef {
+  produit: BienId;
+  ingredients: [BienId, number][];
+  duree: number; // ms
+  reclame: VilleId[]; // villes qui paient le produit au prix fort
+}
+
+export const RECETTES: RecetteDef[] = [
+  { produit: "salaisons", ingredients: [["poisson", 2], ["sel", 1], ["poterie", 1]], duree: 15 * 60_000, reclame: ["lainebourg", "clos-vermeil"] },
+  { produit: "panier", ingredients: [["fromage", 2], ["ble", 1], ["olives", 1]], duree: 20 * 60_000, reclame: ["portvent", "mirazur"] },
+  { produit: "tarte", ingredients: [["miel", 2], ["ble", 1], ["fromage", 1]], duree: 30 * 60_000, reclame: ["portvent", "sablemire"] },
+  { produit: "hypocras", ingredients: [["vin", 1], ["miel", 2], ["epices", 1]], duree: 45 * 60_000, reclame: ["lainebourg", "mirazur"] },
+  { produit: "douceurs", ingredients: [["dattes", 2], ["miel", 1], ["the", 1]], duree: 45 * 60_000, reclame: ["terracuite", "lainebourg"] },
+  { produit: "robe", ingredients: [["tissu", 1], ["soie", 1], ["perles", 2]], duree: 90 * 60_000, reclame: ["clos-vermeil", "sablemire"] },
+];
+
+export const RECETTE_PAR_PRODUIT = Object.fromEntries(RECETTES.map((r) => [r.produit, r])) as Partial<Record<BienId, RecetteDef>>;
+
+// Un caravanier qui n'a rien à livrer attend, et réessaie au bout de :
+export const ATTENTE_CARAVANIER = 5 * 60_000;
+
 // ---- prix ----
 
 export const COEF_ACHAT = 0.6; // on achète à 60 % du prix de référence chez le producteur
@@ -351,7 +414,7 @@ export const DECOTE_FACHE = 0.9;
 
 // ---- compétences ----
 
-export type BrancheId = "negoce" | "routes" | "logistique";
+export type BrancheId = "negoce" | "routes" | "logistique" | "qg";
 
 export type CompetenceId =
   | "beau-parleur"
@@ -368,7 +431,10 @@ export type CompetenceId =
   | "marches-profonds"
   | "double-fond"
   | "contremaitre"
-  | "flotte-royale";
+  | "flotte-royale"
+  | "intendant"
+  | "compagnon"
+  | "maitre-artisan";
 
 export interface BrancheDef {
   id: BrancheId;
@@ -380,6 +446,7 @@ export const BRANCHES: BrancheDef[] = [
   { id: "negoce", nom: "Négoce", icone: "🤝" },
   { id: "routes", nom: "Routes", icone: "🗺️" },
   { id: "logistique", nom: "Logistique", icone: "📦" },
+  { id: "qg", nom: "QG", icone: "⛺" }, // visible une fois le QG acheté
 ];
 
 export interface CompetenceDef {
@@ -407,6 +474,9 @@ export const COMPETENCES: CompetenceDef[] = [
   { id: "double-fond", branche: "logistique", nom: "Double fond", icone: "🧰", effet: "+1 rangée dans toutes les charrettes." },
   { id: "contremaitre", branche: "logistique", nom: "Contremaître", icone: "👷", effet: "Les caravaniers comblent les trous de ton rangement." },
   { id: "flotte-royale", branche: "logistique", nom: "Flotte royale", icone: "⚜️", effet: "Débloque une 6e caravane." },
+  { id: "intendant", branche: "qg", nom: "Intendant", icone: "📋", effet: "Les caravaniers font la navette avec le QG, selon tes listes." },
+  { id: "compagnon", branche: "qg", nom: "Compagnon", icone: "🔁", effet: "L'atelier relance la même recette tant qu'il a les ingrédients." },
+  { id: "maitre-artisan", branche: "qg", nom: "Maître artisan", icone: "⚒️", effet: "Fabrications −30 % de temps." },
 ];
 
 export const COMPETENCE_PAR_ID = Object.fromEntries(COMPETENCES.map((c) => [c.id, c])) as Record<CompetenceId, CompetenceDef>;
@@ -425,3 +495,4 @@ export const AMPLIF_INFORMATEURS = 1.5;
 export const REMISE_EN_GROS = 0.9;
 export const FACTEUR_MARCHES_PROFONDS = 0.6;
 export const PRIX_FLOTTE_ROYALE = 1_000_000; // la 6e caravane
+export const MULT_MAITRE_ARTISAN = 0.7;
