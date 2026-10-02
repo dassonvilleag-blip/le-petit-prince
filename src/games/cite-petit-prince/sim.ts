@@ -61,6 +61,7 @@ export interface Etage {
   type: string; // "appartement" ou id de commerce
   chantierFin: number | null;
   produits: ProduitEtat[]; // vide pour un appartement
+  gerant?: boolean; // recommande tout seul les stocks épuisés
 }
 
 export interface Post {
@@ -259,29 +260,41 @@ export function avancer(s: Etat, now: number, rng: Rng = Math.random): Bilan {
     }
   });
 
-  // livraisons et ventes
+  // livraisons et ventes ; le gérant recommande dès que le stock est épuisé,
+  // autant de cycles que le temps écoulé le permet (absence comprise)
   s.etages.forEach((e, i) => {
     const c = commerceDe(e);
     if (!c || !estConstruit(e)) return;
     e.produits.forEach((p, k) => {
       const def = c.produits[k];
-      if (p.etat === "livraison" && now >= p.fin) {
-        p.etat = "vente";
-        p.debut = p.fin;
-        p.vendus = 0;
-      }
-      if (p.etat !== "vente") return;
-      const vendus = Math.min(def.quantite, Math.floor(((now - p.debut) / (def.dureeVente * 1000)) * def.quantite));
-      if (vendus > p.vendus) {
-        const gain = (vendus - p.vendus) * prixUnitaire(s, i, def);
-        s.argent += gain;
-        bilan.ventes += gain;
-        p.vendus = vendus;
-      }
-      if (p.vendus >= def.quantite) {
+      const reassort = (t: number): boolean => {
+        if (!e.gerant || employes(s, i).length < k + 1 || def.cout > s.argent) return false;
+        s.argent -= def.cout;
+        p.etat = "livraison";
+        p.fin = t + def.livraison * 1000;
+        return true;
+      };
+      if (p.etat === "vide") reassort(now);
+      for (let garde = 0; garde < 10_000; garde++) {
+        if (p.etat === "livraison" && now >= p.fin) {
+          p.etat = "vente";
+          p.debut = p.fin;
+          p.vendus = 0;
+        }
+        if (p.etat !== "vente") return;
+        const vendus = Math.min(def.quantite, Math.floor(((now - p.debut) / (def.dureeVente * 1000)) * def.quantite));
+        if (vendus > p.vendus) {
+          const gain = (vendus - p.vendus) * prixUnitaire(s, i, def);
+          s.argent += gain;
+          bilan.ventes += gain;
+          p.vendus = vendus;
+        }
+        if (p.vendus < def.quantite) return;
         p.etat = "vide";
+        if (reassort(p.debut + def.dureeVente * 1000)) continue;
         const auteur = s.habitants.length ? pick(s.habitants, rng) : undefined;
         if (rng() < 0.35) poster(s, auteur, remplir(pick(POSTS_RUPTURE, rng), { produit: def.nom, commerce: c.nom }), now);
+        return;
       }
     });
   });
@@ -362,6 +375,21 @@ export function commander(s: Etat, i: number, k: number, now: number): boolean {
   s.argent -= def.cout;
   p.etat = "livraison";
   p.fin = now + def.livraison * 1000;
+  return true;
+}
+
+// Le gérant coûte trois commandes du produit le plus cher du commerce.
+export function prixGerant(s: Etat, i: number): number | null {
+  const c = commerceDe(s.etages[i]);
+  return c ? c.produits[2].cout * 3 : null;
+}
+
+export function embaucherGerant(s: Etat, i: number): boolean {
+  const e = s.etages[i];
+  const prix = prixGerant(s, i);
+  if (!e || e.gerant || !estConstruit(e) || prix === null || prix > s.argent) return false;
+  s.argent -= prix;
+  e.gerant = true;
   return true;
 }
 
