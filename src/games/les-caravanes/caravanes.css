@@ -1608,3 +1608,13 @@ kbd {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.item-bouton.secondaire {
+  background: #fff7e4;
+  border-color: var(--parchemin-2);
+}
+
+.ravit.en-mission {
+  border-radius: 8px;
+  background: #f1f7e8;
+}
