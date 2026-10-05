@@ -80,6 +80,8 @@ import {
   qgAchetable,
   recetteVisible,
   regler,
+  affecterRavitaillement,
+  rappeler,
   stockN,
   apprendre,
   duree,
@@ -362,8 +364,16 @@ function toutDeposer(i: number): void {
   if (panneau?.type === "qg") rendrePanneau();
 }
 
+function rappelerRavitailleuse(i: number): void {
+  const c = etat.caravanes[i];
+  rappeler(etat, i);
+  toast(c.trajet ? `↩️ ${c.nom} finit son trajet, puis redevient une caravane normale.` : `↩️ ${c.nom} est libre.`);
+  sauver(etat, Date.now());
+  majRavitailleuses();
+}
+
 function signatureFiche(c: Caravane): string {
-  return [c.ville, c.trajet?.de ?? "", c.aVendre, c.caravanier, c.auto, c.cargaison.length, etat.charrette, c.attente != null].join("|");
+  return [c.ville, c.trajet?.de ?? "", c.aVendre, c.caravanier, c.auto, c.mission ?? "", c.cargaison.length, etat.charrette, c.attente != null].join("|");
 }
 
 let signaturesFiches: string[] = [];
@@ -372,7 +382,9 @@ function htmlFiche(c: Caravane, i: number): string {
   const ville = infoLieu(c.ville);
   const bouton = (action: string, txt: string, cls = "") =>
     `<button type="button" class="${cls}" data-action="${action}" data-i="${i}">${txt}</button>`;
-  const auto = c.caravanier
+  const auto = c.mission
+    ? `<span class="auto actif">📥 Ravitailleuse</span>`
+    : c.caravanier
     ? bouton("auto", c.auto ? "🤠 Caravanier en service" : "🤠 Caravanier en pause", c.auto ? "auto actif" : "auto")
     : "";
 
@@ -395,6 +407,11 @@ function htmlFiche(c: Caravane, i: number): string {
     actions =
       bouton("vendre", "💰 Vendre", "") +
       bouton("marchander", `🤝 Marchander avec ${VILLE_PAR_ID[c.ville as VilleId].marchand.portrait}`, "principal");
+  } else if (c.mission) {
+    etatCls = "quai";
+    statut = `À quai au ${ville.icone} <b>${ville.nom}</b>${
+      c.attente != null ? `<br><small>⏸ Rien à faire : elle réessaie dans quelques minutes.</small>` : ""
+    }`;
   } else {
     etatCls = "quai";
     statut = `À quai ${c.ville === "qg" ? "au" : "à"} ${ville.icone} <b>${ville.nom}</b>${
@@ -402,6 +419,7 @@ function htmlFiche(c: Caravane, i: number): string {
     }${c.attente != null && c.auto ? `<br><small>⏸ Rien à livrer : le caravanier réessaie dans quelques minutes.</small>` : ""}`;
     actions = bouton("charger", c.cargaison.length ? "📦 Finir le chargement" : "📦 Charger", "principal");
   }
+  if (c.mission) actions = bouton("rappeler", "↩️ Rappeler");
 
   return `
     <article class="fiche ${etatCls}" data-i="${i}">
@@ -457,6 +475,8 @@ $("caravanes").addEventListener("click", (e) => {
         return ouvrirMarche(i);
       case "deposer":
         return toutDeposer(i);
+      case "rappeler":
+        return rappelerRavitailleuse(i);
       case "vendre": {
         const montant = valeurAffichee(etat, i, now);
         const benef = encaisser(etat, i, montant, now);
@@ -1139,6 +1159,59 @@ function dureeLisible(ms: number): string {
   return `${Math.floor(min / 60)} h${min % 60 ? ` ${String(min % 60).padStart(2, "0")}` : ""}`;
 }
 
+function pieces(n: number): string {
+  return `${n} pièce${n > 1 ? "s" : ""}`;
+}
+
+// Où en est une caravane, vue du QG.
+function etatRavitailleuse(c: Caravane): string {
+  const lieu = infoLieu(c.ville);
+  if (c.mission) {
+    if (c.trajet?.vers === "qg") return `rentre au ⛺ QG ${c.cargaison.length ? `avec ${pieces(c.cargaison.length)}` : "à vide"}`;
+    if (c.trajet) return `en route vers ${lieu.icone} ${lieu.nom}${c.cargaison.length ? ` avec ${pieces(c.cargaison.length)} à vendre` : ""}`;
+    return "⏸ rien à faire pour l'instant, elle réessaie dans quelques minutes";
+  }
+  if (c.trajet) return `en voyage vers ${lieu.icone} ${lieu.nom}`;
+  if (c.aVendre && c.ville !== "qg") return `à vendre d'abord, à ${lieu.icone} ${lieu.nom}`;
+  if (c.cargaison.length && c.ville !== "qg") return `chargée à ${lieu.icone} ${lieu.nom}`;
+  return `à quai ${c.ville === "qg" ? "au" : "à"} ${lieu.icone} ${lieu.nom}`;
+}
+
+function htmlRavitailleuses(): string {
+  const qg = etat.qg!;
+  const avecCaravanier = etat.caravanes.map((c, i) => [c, i] as const).filter(([c]) => c.caravanier);
+  if (!avecCaravanier.length)
+    return `<p class="vide-qg">Embauche un caravanier (🛠️ Atelier) pour affecter une de ses caravanes au QG.</p>`;
+  const lignes = avecCaravanier
+    .map(([c, i]) => {
+      const libre = !c.trajet && (c.ville === "qg" || !c.cargaison.length);
+      const bouton = c.mission
+        ? `<button type="button" class="item-bouton secondaire" data-rappeler="${i}">Rappeler</button>`
+        : `<button type="button" class="item-bouton" data-affecter="${i}" ${libre ? "" : "disabled"}>Affecter</button>`;
+      return `
+        <div class="item ravit${c.mission ? " en-mission" : ""}">
+          <span class="item-icone">${c.mission ? "📥" : "🐪"}</span>
+          <div class="item-texte"><b>${c.nom}</b><small>${etatRavitailleuse(c)}</small></div>
+          ${bouton}
+        </div>`;
+    })
+    .join("");
+  const rien = !Object.keys(qg.appro).length && !Object.keys(qg.ecoulement).length;
+  return lignes + (rien ? `<p class="avis-qg">Coche des biens dans les listes ci-dessous, sinon elle n'aura rien à faire.</p>` : "");
+}
+
+// L'état des ravitailleuses bouge tout seul : on redessine leur bloc sans
+// toucher aux listes (qu'on est peut-être en train de remplir).
+function majRavitailleuses(): void {
+  const el = document.getElementById("ravitailleuses");
+  if (!el || !etat.qg) return;
+  const html = htmlRavitailleuses();
+  if (el.dataset.html !== html) {
+    el.innerHTML = html;
+    el.dataset.html = html;
+  }
+}
+
 function htmlQG(onglet: OngletQG): string {
   const qg = etat.qg!;
   const onglets = (
@@ -1233,17 +1306,20 @@ function htmlQG(onglet: OngletQG): string {
         })
         .join("");
     corps = `
-      ${
-        sait(etat, "intendant")
-          ? ""
-          : `<p class="avis-qg">🔒 Apprends <b>📋 Intendant</b> (compétences, branche ⛺ QG) pour que tes caravaniers fassent la navette avec le QG. Tu peux déjà préparer tes listes.</p>`
-      }
+      <h3>🚚 Ravitailleuses</h3>
+      <p class="astuce-qg">Une caravane affectée au QG fait ses tournées toute seule : elle emporte ce que la liste 📤 autorise, le vend dans la ville la plus rentable, y achète ce qui manque à la liste 📥 et le rapporte.</p>
+      <div id="ravitailleuses">${htmlRavitailleuses()}</div>
       <h3>📥 Approvisionnement</h3>
       <p class="astuce-qg">Ce que les caravaniers apportent au QG, jusqu'au <b>stock visé</b>.</p>
       <div class="regles">${liste("appro", produits, 10)}</div>
       <h3>📤 Écoulement</h3>
       <p class="astuce-qg">Ce qu'ils emportent du QG pour le vendre, en <b>gardant</b> ce nombre en stock.</p>
-      <div class="regles">${liste("ecoulement", [...fabriques, ...produits], 0)}</div>`;
+      <div class="regles">${liste("ecoulement", [...fabriques, ...produits], 0)}</div>
+      ${
+        sait(etat, "intendant")
+          ? ""
+          : `<p class="astuce-qg">🔒 Avec <b>📋 Intendant</b> (compétences, branche ⛺ QG), tes caravaniers peuvent aussi faire la navette entre une ville et le QG, selon ces listes.</p>`
+      }`;
   }
   return `<div class="onglets">${onglets}</div>${corps}`;
 }
@@ -1273,7 +1349,7 @@ function rendrePanneau(): void {
         <p><b>📉 Marchés saturés.</b> Chaque pièce vendue fait baisser le prix de ce bien dans la ville (ça remonte tout seul en une demi-heure environ). Varie tes cargaisons et tes destinations.</p>
         <p><b>🤠 Embauche des caravaniers</b> (atelier) : ils font la navette tout seuls, même onglet fermé, en rejouant ton dernier rangement. Range bien, ils rangeront bien.</p>
         <p><b>🌟 Réputation.</b> Chaque bénéfice te fait connaître, et bien marchander en rapporte davantage. Chaque niveau donne un point de compétence.</p>
-        <p><b>⛺ Le QG</b> (atelier, une fois Sablemire ouverte) : au centre de la carte. Dépose-y ce que tu veux (des ingrédients, ou une marchandise achetée pas cher à ressortir un jour de fête), et fabrique des produits qui valent plus cher que leurs ingrédients. La fabrication prend du temps, même onglet fermé.</p>
+        <p><b>⛺ Le QG</b> (atelier, une fois Sablemire ouverte) : au centre de la carte. Dépose-y ce que tu veux (des ingrédients, ou une marchandise achetée pas cher à ressortir un jour de fête), et fabrique des produits qui valent plus cher que leurs ingrédients. La fabrication prend du temps, même onglet fermé. Dans l'onglet 🤠 Caravaniers du QG, affecte une caravane au ravitaillement : elle écoule ton stock et rapporte ce qui manque, toute seule.</p>
         <p><b>🙈 Échap</b> : mode discret.</p>
       </div>`;
   } else {
@@ -1361,6 +1437,7 @@ function majPanneau(): void {
   if (panneau?.type !== "atelier" && panneau?.type !== "qg") return;
   if (panneau.type === "qg") {
     if (signaturePanneauQG() !== signatureQG) return rendrePanneau();
+    majRavitailleuses();
     const now = Date.now();
     document.querySelectorAll<HTMLElement>("#panneau-corps .fab-temps").forEach((el) => {
       setText(el, formatDuree((Number(el.dataset.fin) - now) / 1000));
@@ -1408,6 +1485,19 @@ $("panneau-corps").addEventListener("click", (e) => {
     ouvrirPanneau({ type: "qg", onglet: o.dataset.onglet as OngletQG });
     return;
   }
+  const a = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-affecter]");
+  if (a && !a.disabled) {
+    const i = Number(a.dataset.affecter);
+    if (affecterRavitaillement(etat, i, Date.now())) {
+      const c = etat.caravanes[i];
+      toast(c.trajet ? `📥 ${c.nom} part vers ${infoLieu(c.ville).icone} ${infoLieu(c.ville).nom} !` : `📥 ${c.nom} attend au QG : rien à faire pour l'instant.`);
+      sauver(etat, Date.now());
+      majRavitailleuses();
+    }
+    return;
+  }
+  const r = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-rappeler]");
+  if (r) return rappelerRavitailleuse(Number(r.dataset.rappeler));
   const f = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-fabriquer]");
   if (f && !f.disabled && etat.qg) {
     const produit = f.dataset.fabriquer as BienId;
@@ -1660,6 +1750,7 @@ function accueillir(): void {
           : ""
       }
       ${bilan.depots ? `<p>📥 Ils ont déposé <b>${bilan.depots}</b> pièce${bilan.depots > 1 ? "s" : ""} au QG.</p>` : ""}
+      ${bilan.achats ? `<p>🛒 Tes ravitailleuses ont dépensé ${formatEcus(bilan.achats)} en achats pour le QG.</p>` : ""}
       ${bilan.fabrications ? `<p>⚒️ L'atelier du QG a terminé <b>${bilan.fabrications}</b> fabrication${bilan.fabrications > 1 ? "s" : ""}.</p>` : ""}
       ${attendent ? `<p>🐪 ${attendent} caravane${attendent > 1 ? "s t'attendent" : " t'attend"} à l'arrivée.</p>` : ""}
       <button type="button" class="gros-bouton">En route !</button>

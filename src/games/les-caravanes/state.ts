@@ -50,6 +50,7 @@ import {
   evenementDuCreneau,
   peutPlacer,
   prixAchat,
+  prixVente,
   rejouerGabarit,
   saturationPiece,
   valeurCargaison,
@@ -85,6 +86,8 @@ export interface Caravane {
   // et réessaie à `attente`, pour repartir vers `navette`
   attente?: number | null;
   navette?: Lieu | null;
+  // ravitailleuse : tournées QG → ville → QG, pour écouler et réapprovisionner
+  mission?: "ravitaillement" | null;
 }
 
 export interface Fabrication {
@@ -181,8 +184,9 @@ export function aQuai(c: Caravane): boolean {
   return c.trajet === null;
 }
 
+// (une ravitailleuse se charge toute seule)
 export function enChargement(c: Caravane): boolean {
-  return c.trajet === null && !c.aVendre;
+  return c.trajet === null && !c.aVendre && !c.mission;
 }
 
 export function prochaineVille(s: Etat) {
@@ -375,14 +379,34 @@ export function deposer(s: Etat, i: number): number {
   return n;
 }
 
-// Pièces que les caravaniers peuvent encore apporter (jusqu'au stock visé),
-// éventuellement limitées à ce que produit une ville.
+// Ce qui roule vers le QG, pour ne pas l'acheter deux fois.
+function enRouteVersQG(s: Etat): { pieces: Quota; cases: number } {
+  const pieces: Quota = {};
+  let n = 0;
+  for (const c of s.caravanes)
+    if (c.trajet?.vers === "qg")
+      for (const p of c.cargaison) {
+        pieces[p.bien] = (pieces[p.bien] ?? 0) + 1;
+        n += cases(p.bien);
+      }
+  return { pieces, cases: n };
+}
+
+// Place de l'entrepôt qui n'est ni prise ni promise à une caravane en route.
+export function placeLibreQG(s: Etat): number {
+  return s.qg ? Math.max(0, capaciteQG(s.qg) - casesQG(s.qg) - enRouteVersQG(s).cases) : 0;
+}
+
+// Pièces que les caravaniers peuvent encore apporter (jusqu'au stock visé,
+// ce qui est déjà en route compris), éventuellement limitées à ce que produit
+// une ville.
 export function quotaAppro(s: Etat, ville?: VilleId): Quota {
   const q: Quota = {};
   if (!s.qg) return q;
+  const route = enRouteVersQG(s).pieces;
   for (const [bien, vise] of Object.entries(s.qg.appro) as [BienId, number][]) {
     if (ville && !VILLE_PAR_ID[ville].produit.includes(bien)) continue;
-    const n = vise - stockN(s.qg, bien);
+    const n = vise - stockN(s.qg, bien) - (route[bien] ?? 0);
     if (n > 0) q[bien] = n;
   }
   return q;
@@ -467,11 +491,21 @@ export interface Bilan {
   voyages: number;
   fabrications: number;
   depots: number; // pièces déposées au QG par les caravaniers
+  achats: number; // écus dépensés par les ravitailleuses
+}
+
+function bilanVide(): Bilan {
+  return { gain: 0, voyages: 0, fabrications: 0, depots: 0, achats: 0 };
 }
 
 // Le caravanier conduit-il ce trajet ? Avec le QG, il lui faut l'Intendant.
 function enService(s: Etat, c: Caravane, a: Lieu, b: Lieu): boolean {
   return c.caravanier && c.auto && ((a !== "qg" && b !== "qg") || (s.qg !== null && sait(s, "intendant")));
+}
+
+// Une ravitailleuse travaille tant qu'elle a son caravanier et que le QG existe.
+function enMission(s: Etat, c: Caravane): boolean {
+  return c.mission === "ravitaillement" && c.caravanier && s.qg !== null;
 }
 
 // Prend des pièces au stock du QG et les charge (au coût moyen).
@@ -524,26 +558,135 @@ function arriver(s: Etat, c: Caravane, bilan: Bilan): void {
   const { de, arrivee: t } = c.trajet!;
   c.trajet = null;
   s.stats.voyages++;
+  if (enMission(s, c)) return arriverEnMission(s, c, t, bilan);
   if (!enService(s, c, de, c.ville)) {
     c.aVendre = c.cargaison.length > 0;
     if (!c.aVendre) c.cout = 0;
     return;
   }
   bilan.voyages++;
-  if (c.ville === "qg") {
-    bilan.depots += decharger(s, c);
-  } else {
-    const m = marche(s, t);
-    const vente = valeurCargaison(c.cargaison, c.ville, t, m) * (sait(s, "maitre-negociant") ? BONUS_MAITRE_NEGOCIANT : 1);
-    saturer(s, c.ville, c.cargaison, t);
-    s.reputation += Math.max(0, vente - c.cout) * REPUTATION_AUTO;
-    gagner(s, vente);
-    bilan.gain += vente;
-    c.cargaison = [];
-    c.cout = 0;
-  }
+  if (c.ville === "qg") bilan.depots += decharger(s, c);
+  else vendreAuto(s, c, c.ville, t, bilan);
   c.navette = de;
   repartir(s, c, t);
+}
+
+// Le caravanier vend toute sa cargaison au prix affiché.
+function vendreAuto(s: Etat, c: Caravane, ville: VilleId, t: number, bilan: Bilan): void {
+  if (c.cargaison.length === 0) return;
+  const m = marche(s, t);
+  const vente = valeurCargaison(c.cargaison, ville, t, m) * (sait(s, "maitre-negociant") ? BONUS_MAITRE_NEGOCIANT : 1);
+  saturer(s, ville, c.cargaison, t);
+  s.reputation += Math.max(0, vente - c.cout) * REPUTATION_AUTO;
+  gagner(s, vente);
+  bilan.gain += vente;
+  c.cargaison = [];
+  c.cout = 0;
+}
+
+// ---- ravitailleuse ----
+
+// Ce que la ravitailleuse achèterait dans cette ville pour le QG : la liste
+// d'approvisionnement, dans la place libre de l'entrepôt et la limite des écus.
+function achatsRavitaillement(s: Etat, ville: VilleId, t: number): Piece[] {
+  const quota = quotaAppro(s, ville);
+  if (vide(quota)) return [];
+  const { l, h } = grille(s);
+  const pieces = chargementAuto(l, h, ville, "qg", t, s.ecus, [], marche(s, t), quota);
+  let libre = placeLibreQG(s);
+  return pieces.filter((p) => {
+    if (cases(p.bien) > libre) return false;
+    libre -= cases(p.bien);
+    return true;
+  });
+}
+
+// Le stock à écouler qui se vend avec bénéfice dans cette ville, rangé autour
+// de ce qui est déjà chargé.
+function ventesRavitaillement(s: Etat, c: Caravane, ville: VilleId, t: number): Piece[] {
+  const qg = s.qg!;
+  const m = marche(s, t);
+  const quota: Quota = {};
+  for (const [bien, n] of Object.entries(quotaEcoulement(s)) as [BienId, number][])
+    if (prixVente(ville, bien, t, m) > coutMoyen(qg, bien)) quota[bien] = n;
+  const { l, h } = grille(s);
+  const deja: Piece[] = c.cargaison.map(({ bien, rot, x, y }) => ({ bien, rot, x, y }));
+  return chargementStock(l, h, quota, ville, t, deja, m).slice(deja.length);
+}
+
+// La ville où la tournée rapporte le plus par minute d'aller-retour : le
+// bénéfice des ventes, plus la valeur de référence de ce qu'on rapporte au QG.
+export function villeRavitaillement(s: Etat, c: Caravane, t: number): { ville: VilleId; ventes: Piece[] } | null {
+  const qg = s.qg;
+  if (!qg) return null;
+  const m = marche(s, t);
+  let meilleure: { ville: VilleId; ventes: Piece[] } | null = null;
+  let meilleurScore = 0;
+  for (const ville of s.villes) {
+    const ventes = ventesRavitaillement(s, c, ville, t);
+    const benefice = ventes.reduce((k, p) => k + prixVente(ville, p.bien, t, m) - coutMoyen(qg, p.bien), 0);
+    const apport = achatsRavitaillement(s, ville, t).reduce((k, p) => k + BIEN_PAR_ID[p.bien].base, 0);
+    const score = (benefice + apport) / (duree(s, "qg", ville) + duree(s, ville, "qg"));
+    if (score > meilleurScore) {
+      meilleurScore = score;
+      meilleure = { ville, ventes };
+    }
+  }
+  return meilleure;
+}
+
+// La ravitailleuse à quai : au QG, elle charge le stock à écouler et part vers
+// la meilleure ville (ou attend) ; en ville, elle achète ce qui manque et
+// rentre au QG.
+function tournee(s: Etat, c: Caravane, t: number, bilan: Bilan): void {
+  c.attente = null;
+  c.navette = null;
+  if (c.ville === "qg") {
+    // ce qui n'avait pas trouvé place (entrepôt plein) retente sa chance
+    if (c.cargaison.length) bilan.depots += decharger(s, c);
+    const choix = villeRavitaillement(s, c, t);
+    if (!choix) {
+      c.attente = t + ATTENTE_CARAVANIER;
+      return;
+    }
+    chargerDepuisStock(s, c, choix.ventes);
+    lancer(s, c, choix.ville, t);
+    return;
+  }
+  const avant = s.ecus;
+  payerChargement(s, c, achatsRavitaillement(s, c.ville, t), c.ville, t);
+  bilan.achats += avant - s.ecus;
+  lancer(s, c, "qg", t);
+}
+
+function arriverEnMission(s: Etat, c: Caravane, t: number, bilan: Bilan): void {
+  bilan.voyages++;
+  if (c.ville !== "qg") vendreAuto(s, c, c.ville, t, bilan);
+  tournee(s, c, t, bilan);
+}
+
+// Affecte une caravane (avec caravanier, à quai et vide) au ravitaillement du
+// QG. Au QG, sa cargaison est d'abord déposée.
+export function affecterRavitaillement(s: Etat, i: number, now: number): boolean {
+  const c = s.caravanes[i];
+  if (!c || !s.qg || !c.caravanier || c.mission || c.trajet) return false;
+  if (c.cargaison.length && c.ville !== "qg") return false;
+  c.aVendre = false;
+  c.mission = "ravitaillement";
+  c.auto = true;
+  tournee(s, c, now, bilanVide());
+  return true;
+}
+
+// Fin de mission : elle finit son trajet et redevient une caravane normale à
+// l'arrivée (le caravanier se met en pause).
+export function rappeler(s: Etat, i: number): void {
+  const c = s.caravanes[i];
+  if (!c?.mission) return;
+  c.mission = null;
+  c.auto = false;
+  c.attente = null;
+  c.navette = null;
 }
 
 // Fait arriver les caravanes dont le trajet est fini et finir les
@@ -553,7 +696,7 @@ function arriver(s: Etat, c: Caravane, bilan: Bilan): void {
 // trajet, sinon un chargement auto) et repartent d'où elles viennent — autant
 // de fois que le temps écoulé le permet.
 export function avancer(s: Etat, now: number): Bilan {
-  const bilan: Bilan = { gain: 0, voyages: 0, fabrications: 0, depots: 0 };
+  const bilan = bilanVide();
   for (;;) {
     let t = Infinity;
     let suite: (() => void) | null = null;
@@ -574,7 +717,8 @@ export function avancer(s: Etat, now: number): Bilan {
         t = quand;
         suite = () => {
           c.attente = null;
-          if (c.navette && enService(s, c, c.ville, c.navette)) repartir(s, c, quand);
+          if (enMission(s, c)) tournee(s, c, quand, bilan);
+          else if (c.navette && enService(s, c, c.ville, c.navette)) repartir(s, c, quand);
           else c.navette = null;
         };
       }
