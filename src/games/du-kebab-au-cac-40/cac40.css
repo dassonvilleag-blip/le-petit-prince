@@ -645,3 +645,174 @@ button {
 [hidden] {
   display: none !important;
 }
+
+/* ---- effets temporaires ---- */
+
+.effets {
+  min-height: 0;
+  font-size: 18px;
+  color: var(--or);
+  font-variant-numeric: tabular-nums;
+}
+
+.effets:empty {
+  display: none;
+}
+
+.effets.malus {
+  color: #ffb3a8;
+}
+
+.carte.booste {
+  border-color: var(--or);
+  box-shadow:
+    0 4px 0 var(--or-fonce),
+    0 0 18px rgba(242, 193, 78, 0.75);
+}
+
+.carte.booste .barre-rempli {
+  background: linear-gradient(#ffd977, var(--or-fonce));
+}
+
+.carte.freine {
+  border-color: #e7a59a;
+  box-shadow:
+    0 4px 0 #b9786c,
+    0 8px 16px rgba(0, 0, 0, 0.25);
+}
+
+/* ---- clients pressés ---- */
+
+.client {
+  position: fixed;
+  z-index: 15;
+  left: 0;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 224, 130, 0.55) 0%, rgba(255, 224, 130, 0) 70%);
+  animation: traverse 13s linear forwards;
+}
+
+.client.retour {
+  animation-name: traverse-retour;
+}
+
+.client-emoji {
+  font-size: 46px;
+  line-height: 1;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35));
+  animation: sautille 0.5s ease-in-out infinite alternate;
+}
+
+.client-bulle {
+  position: absolute;
+  top: -4px;
+  right: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--rouge);
+  color: #fff;
+  font-family: "Pixelify Sans", sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 24px;
+  animation: clignote 0.8s steps(2) infinite;
+}
+
+/* les émojis regardent vers la gauche : à l'aller (gauche → droite) on les
+   retourne, au retour ils vont dans le bon sens */
+.client:not(.retour) .client-emoji {
+  transform: scaleX(-1);
+}
+.client.retour .client-emoji {
+  transform: none;
+}
+
+@keyframes traverse {
+  from {
+    transform: translateX(-80px);
+  }
+  to {
+    transform: translateX(calc(100vw + 10px));
+  }
+}
+
+@keyframes traverse-retour {
+  from {
+    transform: translateX(calc(100vw + 10px));
+  }
+  to {
+    transform: translateX(-80px);
+  }
+}
+
+@keyframes sautille {
+  to {
+    translate: 0 -6px;
+  }
+}
+
+.flotte-client {
+  position: fixed;
+  right: auto;
+  z-index: 16;
+  max-width: 260px;
+  translate: -50% -50%;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--encre);
+  color: var(--or);
+  font-size: 16px;
+  text-align: center;
+  animation-duration: 1.6s;
+}
+
+/* ---- événements ---- */
+
+.evenement-icone {
+  font-size: 54px;
+  line-height: 1.1;
+}
+
+.evenement p {
+  margin-bottom: 8px;
+}
+
+.evenement-detail {
+  color: #5c5446;
+  font-size: 18px;
+}
+
+.choix {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.choix-bouton {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  white-space: normal;
+  font-family: "Pixelify Sans", sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.choix-bouton small {
+  font-family: "VT323", monospace;
+  font-weight: normal;
+  font-size: 16px;
+  color: #5c4610;
+}
+
+.choix-bouton:disabled small {
+  color: var(--gris);
+}

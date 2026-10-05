@@ -19,6 +19,16 @@ export interface Etat {
   commerces: Record<CommerceId, CommerceEtat>;
   gerants: CommerceId[];
   ameliorations: string[];
+  effets: Effet[]; // bonus et malus temporaires (clients, événements)
+}
+
+// Multiplicateur de revenus valable jusqu'à `fin` (ms) : s'applique à chaque
+// cycle qui se termine avant cette heure-là.
+export interface Effet {
+  cible: CommerceId | "tous";
+  mult: number;
+  fin: number;
+  icone: string;
 }
 
 const STORAGE_KEY = "du-kebab-au-cac-40:v1";
@@ -38,6 +48,7 @@ export function nouvelEtat(now: number, actions = 0, gainsCumules = 0): Etat {
     commerces,
     gerants: [],
     ameliorations: [],
+    effets: [],
   };
 }
 
@@ -54,9 +65,19 @@ export function multAmelio(s: Etat, id: CommerceId): number {
   return m;
 }
 
-export function revenuCycle(s: Etat, def: CommerceDef): number {
+// Produit des effets temporaires sur ce commerce à l'instant `t`.
+export function multTemporaire(s: Etat, id: CommerceId, t: number): number {
+  let m = 1;
+  for (const e of s.effets) if ((e.cible === id || e.cible === "tous") && t < e.fin) m *= e.mult;
+  return m;
+}
+
+// Revenu d'un cycle qui se termine à l'instant `t` ; sans `t`, hors effets
+// temporaires.
+export function revenuCycle(s: Etat, def: CommerceDef, t?: number): number {
   const nb = s.commerces[def.id].nb;
-  return def.revenu * nb * multAmelio(s, def.id) * multPalierRevenu(nb) * multActions(s.actions);
+  const base = def.revenu * nb * multAmelio(s, def.id) * multPalierRevenu(nb) * multActions(s.actions);
+  return t === undefined ? base : base * multTemporaire(s, def.id, t);
 }
 
 export function dureeMs(s: Etat, def: CommerceDef): number {
@@ -64,8 +85,16 @@ export function dureeMs(s: Etat, def: CommerceDef): number {
 }
 
 // Revenu par seconde d'un commerce tournant en continu.
-export function revenuParSeconde(s: Etat, def: CommerceDef): number {
-  return (revenuCycle(s, def) * 1000) / dureeMs(s, def);
+export function revenuParSeconde(s: Etat, def: CommerceDef, t?: number): number {
+  return (revenuCycle(s, def, t) * 1000) / dureeMs(s, def);
+}
+
+// Ce que rapportent tous les commerces ouverts s'ils tournent en continu, en
+// €/s : l'étalon des gains et des coûts « en minutes de revenus ».
+export function debit(s: Etat, t?: number): number {
+  let d = 0;
+  for (const def of COMMERCES) if (s.commerces[def.id].nb > 0) d += revenuParSeconde(s, def, t);
+  return d;
 }
 
 // Progression du cycle en cours, entre 0 et 1.
@@ -92,16 +121,46 @@ export function avancer(s: Etat, now: number): number {
     if (ecoule < duree) continue;
     if (aGerant(s, def.id)) {
       const cycles = Math.floor(ecoule / duree);
-      gain += cycles * revenuCycle(s, def);
+      gain += revenuCycles(s, def, c.debut, duree, cycles);
       c.debut += cycles * duree;
     } else {
-      gain += revenuCycle(s, def);
+      gain += revenuCycle(s, def, c.debut + duree);
       c.debut = null;
     }
   }
-  s.argent += gain;
-  s.gainsCumules += gain;
+  s.effets = s.effets.filter((e) => e.fin > now);
+  encaisser(s, gain);
   return gain;
+}
+
+// Revenu de `cycles` cycles enchaînés depuis `debut` : le k-ième se termine à
+// debut + k·duree et touche les effets encore actifs à cet instant. Les fins
+// d'effets découpent la série en tranches au multiplicateur constant.
+function revenuCycles(s: Etat, def: CommerceDef, debut: number, duree: number, cycles: number): number {
+  const base = revenuCycle(s, def);
+  const fins = [...new Set(s.effets.filter((e) => e.cible === def.id || e.cible === "tous").map((e) => e.fin))].sort(
+    (a, b) => a - b
+  );
+  let total = 0;
+  let faits = 0;
+  for (const fin of fins) {
+    // cycles terminés strictement avant `fin`
+    const n = Math.min(cycles, Math.max(0, Math.ceil((fin - debut) / duree) - 1));
+    if (n > faits) {
+      total += (n - faits) * base * multTemporaire(s, def.id, fin - 1e-6);
+      faits = n;
+    }
+  }
+  return total + (cycles - faits) * base;
+}
+
+export function encaisser(s: Etat, montant: number): void {
+  s.argent += montant;
+  s.gainsCumules += montant;
+}
+
+export function ajouterEffet(s: Etat, e: Effet): void {
+  s.effets.push(e);
 }
 
 // ---- actions du joueur ----
@@ -158,6 +217,7 @@ export function charger(now: number): Etat {
         // un commerce ajouté après la sauvegarde démarre à zéro
         const neuf = nouvelEtat(now);
         s.commerces = { ...neuf.commerces, ...s.commerces };
+        s.effets ??= [];
         return s;
       }
     }
