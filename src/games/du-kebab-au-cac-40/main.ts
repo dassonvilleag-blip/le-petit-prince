@@ -11,6 +11,7 @@ import {
   type CommerceId,
 } from "./data.ts";
 import { coutAchat, formatArgent, formatDuree, formatNombre, maxAchetable, prochainPalier } from "./eco.ts";
+import { CLIENTS, choisir, coutImmediat, decrire, evenementsPossibles, recompenseClient, type Evenement } from "./evenements.ts";
 import {
   aGerant,
   acheterCommerce,
@@ -18,10 +19,12 @@ import {
   ameliorer,
   avancer,
   charger,
+  debit,
   dureeMs,
   embaucher,
   entrerEnBourse,
   lancer,
+  multTemporaire,
   progression,
   revenuCycle,
   revenuParSeconde,
@@ -156,6 +159,9 @@ function majCarte(c: Carte, now: number): void {
   const gerant = aGerant(etat, def.id);
   el.classList.toggle("verrouille", !possede);
   el.classList.toggle("auto", gerant);
+  const temp = possede ? multTemporaire(etat, def.id, now) : 1;
+  el.classList.toggle("booste", temp > 1);
+  el.classList.toggle("freine", temp < 1);
 
   // bouton d'achat
   const n = quantite(def);
@@ -185,11 +191,11 @@ function majCarte(c: Carte, now: number): void {
   el.classList.toggle("attente", attente);
   if (rapide) {
     c.rempli.style.width = "100%";
-    setText(c.gain, `${formatArgent(revenuParSeconde(etat, def))}/s`);
+    setText(c.gain, `${formatArgent(revenuParSeconde(etat, def, now))}/s`);
     setText(c.temps, "");
   } else {
     c.rempli.style.width = `${progression(etat, def, now) * 100}%`;
-    setText(c.gain, formatArgent(revenuCycle(etat, def)));
+    setText(c.gain, formatArgent(revenuCycle(etat, def, now)));
     const reste = ce.debut === null ? duree : duree - (now - ce.debut);
     setText(c.temps, attente ? "tape !" : formatDuree(reste / 1000));
   }
@@ -201,12 +207,23 @@ function majCarte(c: Carte, now: number): void {
 
 // ---- en-tête ----
 
-function majEntete(): void {
+function majEntete(now: number): void {
   setText($("argent"), formatArgent(etat.argent));
-  let debit = 0;
+  let parSeconde = 0;
   for (const def of COMMERCES)
-    if (aGerant(etat, def.id) && etat.commerces[def.id].nb > 0) debit += revenuParSeconde(etat, def);
-  setText($("debit"), debit > 0 ? `+${formatArgent(debit)}/s` : "");
+    if (aGerant(etat, def.id) && etat.commerces[def.id].nb > 0) parSeconde += revenuParSeconde(etat, def, now);
+  setText($("debit"), parSeconde > 0 ? `+${formatArgent(parSeconde)}/s` : "");
+  const actifs = etat.effets.filter((e) => e.fin > now);
+  setText(
+    $("effets"),
+    actifs
+      .map((e) => {
+        const cible = e.cible === "tous" ? "" : `${COMMERCE_PAR_ID[e.cible].nom} `;
+        return `${e.icone} ${cible}×${String(e.mult).replace(".", ",")} ${formatDuree((e.fin - now) / 1000)}`;
+      })
+      .join("  ·  ")
+  );
+  $("effets").classList.toggle("malus", actifs.some((e) => e.mult < 1));
   const pa = $("actions");
   pa.hidden = etat.actions === 0;
   setText(pa, `📈 ${formatNombre(etat.actions)} actions · +${formatNombre(etat.actions * BONUS_PAR_ACTION * 100)} %`);
@@ -394,6 +411,97 @@ function majBadges(): void {
   badge("badge-bourse", bourse ? "!" : null);
 }
 
+// ---- clients pressés et événements ----
+
+// Les deux minuteries n'avancent que page visible et sans fenêtre ouverte :
+// rien ne tombe pendant que tu es ailleurs.
+const hasard = Math.random;
+const entre = (a: number, b: number) => (a + hasard() * (b - a)) * 1000;
+let avantClient = entre(45, 90);
+let avantEvenement = entre(180, 300);
+let derniereImage = Date.now();
+
+function rythmer(now: number): void {
+  const dt = Math.min(now - derniereImage, 1000);
+  derniereImage = now;
+  if (!$("popup").hidden) return;
+  avantClient -= dt;
+  if (avantClient <= 0) {
+    avantClient = entre(120, 240);
+    lancerClient();
+  }
+  if (panneauOuvert) return;
+  avantEvenement -= dt;
+  if (avantEvenement <= 0) {
+    avantEvenement = entre(360, 600);
+    const possibles = evenementsPossibles(etat);
+    if (possibles.length) montrerEvenement(possibles[Math.floor(hasard() * possibles.length)]);
+  }
+}
+
+function lancerClient(): void {
+  const c = CLIENTS[Math.floor(hasard() * CLIENTS.length)];
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "client";
+  b.setAttribute("aria-label", `${c.nom} : clique vite !`);
+  b.innerHTML = `<span class="client-bulle">!</span><span class="client-emoji">${c.icone}</span>`;
+  b.style.top = `${20 + hasard() * 50}%`;
+  if (hasard() < 0.5) b.classList.add("retour");
+  b.addEventListener("click", (e) => {
+    const msg = recompenseClient(etat, Date.now(), hasard);
+    const f = document.createElement("span");
+    f.className = "flotte flotte-client";
+    f.textContent = msg;
+    f.style.left = `${e.clientX}px`;
+    f.style.top = `${e.clientY}px`;
+    document.body.append(f);
+    f.addEventListener("animationend", () => f.remove());
+    toast(`${c.nom} : ${msg}`);
+    b.remove();
+  });
+  b.addEventListener("animationend", (e) => {
+    if (e.target === b) b.remove();
+  });
+  document.body.append(b);
+}
+
+function montrerEvenement(ev: Evenement): void {
+  const popup = $("popup");
+  const d = debit(etat);
+  popup.innerHTML = `
+    <div class="popup-cadre evenement">
+      <div class="evenement-icone">${ev.icone}</div>
+      <h2>${ev.titre}</h2>
+      <p>${ev.texte}</p>
+      <div class="choix">
+        ${ev.options
+          .map(
+            (o, i) => `
+          <button type="button" class="item-bouton choix-bouton" data-i="${i}" ${coutImmediat(o, d) > etat.argent ? "disabled" : ""}>
+            ${o.libelle}<small>${decrire(o.effets, d)}</small>
+          </button>`
+          )
+          .join("")}
+      </div>
+    </div>`;
+  popup.hidden = false;
+  popup.querySelectorAll<HTMLButtonElement>(".choix-bouton").forEach((b) =>
+    b.addEventListener("click", () => {
+      const issue = choisir(etat, ev, ev.options[Number(b.dataset.i)], Date.now(), hasard);
+      const signe = issue.reussi === null ? ev.icone : issue.reussi ? "✅" : "❌";
+      popup.innerHTML = `
+        <div class="popup-cadre evenement">
+          <div class="evenement-icone">${signe}</div>
+          <p>${issue.texte}</p>
+          <p class="evenement-detail">${issue.detail}</p>
+          <button type="button" class="item-bouton large">Continuer</button>
+        </div>`;
+      popup.querySelector("button")!.addEventListener("click", () => (popup.hidden = true));
+    })
+  );
+}
+
 // ---- boucle ----
 
 let dernierLent = 0;
@@ -404,11 +512,14 @@ function frame(): void {
     const ce = etat.commerces[c.def.id];
     return ce.debut !== null && !aGerant(etat, c.def.id);
   });
+  const effets = etat.effets.slice(); // avancer purge ceux qui expirent
   avancer(etat, now);
   for (const c of manuels)
-    if (etat.commerces[c.def.id].debut === null) flotter(c, `+${formatArgent(revenuCycle(etat, c.def))}`);
+    if (etat.commerces[c.def.id].debut === null)
+      flotter(c, `+${formatArgent(revenuCycle({ ...etat, effets }, c.def, now))}`);
 
-  majEntete();
+  rythmer(now);
+  majEntete(now);
   for (const c of cartes) majCarte(c, now);
   if (now - dernierLent > 250) {
     dernierLent = now;
