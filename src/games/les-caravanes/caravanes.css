@@ -121,6 +121,26 @@ button:disabled {
   animation: flotte 1.4s ease-out forwards;
 }
 
+.piece-vole {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-size: 15px;
+  pointer-events: none;
+  animation: vole 0.8s cubic-bezier(0.2, 0.7, 0.6, 1) both;
+}
+
+@keyframes vole {
+  from {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1);
+    opacity: 0;
+  }
+}
+
 @keyframes flotte {
   from {
     opacity: 1;
@@ -158,40 +178,166 @@ button:disabled {
   fill: var(--parchemin);
 }
 
+#carte .grain,
+#carte .nuages,
+#carte .oiseaux,
+#carte .taches,
+#carte .vagues,
+#carte .bateau,
+#carte .foret,
+#carte .cadre,
+#carte .boussole {
+  pointer-events: none;
+}
+
+#carte .taches circle {
+  fill: rgba(120, 80, 30, 0.09);
+  filter: url(#flou);
+}
+
+#carte .cadre {
+  fill: none;
+  stroke: var(--or-fonce);
+  stroke-width: 0.35;
+  stroke-dasharray: 2 0.8 0.3 0.8;
+  opacity: 0.6;
+}
+
 #carte .mer {
-  fill: var(--mer);
+  fill: url(#mer-deg);
 }
 
 #carte .rivage {
   fill: none;
-  stroke: #6b9fae;
-  stroke-width: 0.4;
-  stroke-dasharray: 1 1;
+  stroke: #5f93a3;
+  stroke-width: 0.45;
+}
+
+#carte .vagues path {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.7);
+  stroke-width: 0.3;
+  stroke-linecap: round;
+  animation: vague 3s ease-in-out infinite alternate;
+}
+
+#carte .vagues path:nth-child(2n) {
+  animation-delay: -1.5s;
+}
+
+@keyframes vague {
+  to {
+    transform: translateX(-1.2px);
+    opacity: 0.4;
+  }
+}
+
+#carte .bateau {
+  text-anchor: middle;
+  dominant-baseline: central;
+  transform: translate(2.5px, 50px);
 }
 
 #carte .desert {
-  fill: var(--sable);
-  opacity: 0.55;
+  fill: url(#desert-deg);
 }
 
-#carte .deco text {
-  font-size: 3.2px;
-  opacity: 0.55;
-  text-anchor: middle;
+#carte .crayon {
+  filter: url(#crayon);
 }
 
-#carte .route {
+#carte .dune {
+  fill: none;
+  stroke: #cfa65a;
+  stroke-width: 0.5;
+  stroke-linecap: round;
+  opacity: 0.7;
+}
+
+#carte .colline {
+  fill: none;
   stroke: var(--encre-douce);
-  stroke-width: 0.3;
-  stroke-dasharray: 0.8 1.2;
+  stroke-width: 0.35;
+  stroke-linecap: round;
   opacity: 0.5;
 }
 
+#carte .riviere {
+  fill: none;
+  stroke: #7fb3c3;
+  stroke-width: 0.9;
+  stroke-linecap: round;
+}
+
+#carte .nuage {
+  fill: rgba(50, 30, 10, 0.1);
+  filter: url(#flou);
+  animation: nuage 100s linear infinite;
+}
+
+@keyframes nuage {
+  from {
+    transform: translateX(-16px);
+  }
+  to {
+    transform: translateX(118px);
+  }
+}
+
+#carte .oiseaux path {
+  fill: none;
+  stroke: var(--encre);
+  stroke-width: 0.28;
+  stroke-linecap: round;
+  opacity: 0.55;
+  animation: battement 0.7s ease-in-out infinite alternate;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes battement {
+  to {
+    transform: scaleY(0.45);
+  }
+}
+
+#carte .boussole circle {
+  fill: #fff7e4;
+  stroke: var(--encre-douce);
+  stroke-width: 0.3;
+}
+
+#carte .boussole path {
+  fill: var(--encre);
+}
+
+#carte .boussole .nord {
+  fill: var(--rouge);
+}
+
+#carte .boussole text {
+  font-size: 2.4px;
+  font-weight: 700;
+  text-anchor: middle;
+  fill: var(--encre);
+}
+
+#carte .route {
+  fill: none;
+  stroke: var(--encre-douce);
+  stroke-width: 0.35;
+  stroke-dasharray: 0.9 1.1;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
 #carte .trajet {
+  fill: none;
   stroke: var(--rouge);
-  stroke-width: 0.45;
+  stroke-width: 0.5;
   stroke-dasharray: 1.2 1;
-  opacity: 0.8;
+  stroke-linecap: round;
+  opacity: 0.85;
   animation: defile 1.5s linear infinite;
 }
 
@@ -211,9 +357,56 @@ button:disabled {
   stroke-width: 0.5;
 }
 
-#carte .ville:hover circle {
+#carte .ville .ombre {
+  fill: rgba(40, 20, 0, 0.3);
+  stroke: none;
+  filter: url(#flou);
+}
+
+#carte .ville .anneau {
+  fill: none;
+  stroke: var(--or-fonce);
+  stroke-width: 0.25;
+  stroke-dasharray: 0.5 0.5;
+  opacity: 0.8;
+}
+
+#carte .ville .halo {
+  fill: var(--or);
+  stroke: none;
+  opacity: 0.35;
+  animation: halo 1.6s ease-in-out infinite alternate;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes halo {
+  from {
+    transform: scale(0.85);
+    opacity: 0.2;
+  }
+  to {
+    transform: scale(1.15);
+    opacity: 0.45;
+  }
+}
+
+#carte .ville:hover circle:not(.ombre):not(.halo) {
   fill: #fff;
   stroke: var(--or-fonce);
+}
+
+#carte .ville.neuve > * {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: eclosion 0.9s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+@keyframes eclosion {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
 }
 
 #carte .ville-icone {
@@ -235,6 +428,10 @@ button:disabled {
   fill: #d8c7a3;
   stroke: #9a8567;
   stroke-dasharray: 0.8 0.6;
+}
+
+#carte .verrouillee .anneau {
+  display: none;
 }
 
 #carte .verrouillee .ville-icone {
@@ -260,6 +457,10 @@ button:disabled {
   fill: var(--or-fonce);
 }
 
+#carte .prochaine .ville-icone {
+  opacity: 0.8;
+}
+
 #carte .pion {
   cursor: pointer;
 }
@@ -268,6 +469,35 @@ button:disabled {
   font-size: 4.4px;
   text-anchor: middle;
   dominant-baseline: central;
+  filter: drop-shadow(0 0.4px 0.3px rgba(0, 0, 0, 0.45));
+}
+
+#carte .poussiere circle {
+  fill: #c9ad7a;
+  opacity: 0;
+}
+
+#carte .pion.roule .poussiere circle {
+  animation: poussiere 0.9s ease-out infinite;
+}
+
+#carte .pion.roule .poussiere circle:nth-child(2) {
+  animation-delay: -0.3s;
+}
+
+#carte .pion.roule .poussiere circle:nth-child(3) {
+  animation-delay: -0.6s;
+}
+
+@keyframes poussiere {
+  0% {
+    opacity: 0.7;
+    transform: translate(0, 0) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(1.6px, -1.4px) scale(1.6);
+  }
 }
 
 #carte .pion-alerte {
@@ -976,7 +1206,9 @@ kbd {
   justify-content: center;
   font-size: calc(var(--case) * 0.5);
   background: var(--c);
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18), inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.35), transparent 45%, rgba(0, 0, 0, 0.12));
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18), inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 2px 3px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   pointer-events: none;
 }
 
@@ -1411,6 +1643,12 @@ kbd {
   fill: #fff2cf;
   stroke: var(--or-fonce);
   stroke-width: 0.6;
+}
+
+#carte .qg .ombre {
+  fill: rgba(40, 20, 0, 0.3);
+  stroke: none;
+  filter: url(#flou);
 }
 
 #carte .qg:hover rect {

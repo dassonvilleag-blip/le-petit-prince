@@ -198,29 +198,82 @@ function majNouvelles(now: number): void {
 // ---- carte ----
 
 const carte = document.getElementById("carte") as unknown as SVGSVGElement;
+// Décor dessiné une fois : symboles réutilisés par <use>, filtres « papier »
+// (grain) et « crayon » (tracés tremblés), puis les calques dynamiques.
+const use = (id: string, pts: [number, number, number?][]) =>
+  pts.map(([x, y, s = 1]) => `<use href="#${id}" transform="translate(${x} ${y}) scale(${s})"/>`).join("");
+
 carte.innerHTML = `
   <defs>
     <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
       <stop offset="60%" stop-color="#5a3a1a" stop-opacity="0"/>
       <stop offset="100%" stop-color="#5a3a1a" stop-opacity="0.35"/>
     </radialGradient>
+    <linearGradient id="mer-deg" x1="0" x2="1">
+      <stop offset="0" stop-color="#6fa9bd"/><stop offset="1" stop-color="#a5d2dd"/>
+    </linearGradient>
+    <radialGradient id="desert-deg" cx="0.6" cy="0.5" r="0.7">
+      <stop offset="0" stop-color="#f1d79a"/><stop offset="1" stop-color="#e3c27e" stop-opacity="0.4"/>
+    </radialGradient>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" seed="2"/><feColorMatrix values="0 0 0 0 .36  0 0 0 0 .24  0 0 0 0 .1  0 0 0 .22 0"/></filter>
+    <filter id="crayon" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="2" seed="7" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="1.2" xChannelSelector="R" yChannelSelector="G"/></filter>
+    <filter id="flou"><feGaussianBlur stdDeviation="1.6"/></filter>
+    <g id="mont"><path d="M-4 0 L0 -5 L4 0 Z" fill="#c2b08f" stroke="#5f4b33" stroke-width="0.3" stroke-linejoin="round"/><path d="M0 -5 L4 0 L0 0 Z" fill="rgba(0,0,0,.14)"/><path d="M-1.3 -3.3 L0 -5 L1.3 -3.3 L.7 -3 L0 -3.5 L-.7 -3 Z" fill="#fff"/></g>
+    <g id="pin"><line y2="-.6" stroke="#5a3d22" stroke-width=".35"/><path d="M-1.1 -.5 L0 -2.8 L1.1 -.5 Z" fill="#4e7d3f" stroke="#2f4f27" stroke-width=".22" stroke-linejoin="round"/></g>
+    <g id="arbre"><line y2="-1.2" stroke="#6b4a2a" stroke-width=".35"/><circle cy="-1.9" r="1.1" fill="#5f8d47" stroke="#3f6330" stroke-width=".22"/><circle cx="-.45" cy="-2.2" r=".6" fill="#78a85a"/></g>
+    <g id="palme"><line y2="-2.2" stroke="#7a5a2a" stroke-width=".3"/><path d="M0 -2.2 q-1.4 -.3 -2 .6 M0 -2.2 q1.4 -.3 2 .6 M0 -2.2 q-.6 -1.2 -1.6 -1.2 M0 -2.2 q.6 -1.2 1.6 -1.2" fill="none" stroke="#4e8a3a" stroke-width=".35" stroke-linecap="round"/></g>
   </defs>
   <rect class="fond" width="100" height="60"/>
-  <path class="mer" d="M0 0 H6 Q3 7 5 14 Q8 22 4 30 Q1 38 5 46 Q8 53 4 60 H0 Z"/>
-  <path class="rivage" d="M6 0 Q3 7 5 14 Q8 22 4 30 Q1 38 5 46 Q8 53 4 60"/>
-  <ellipse class="desert" cx="84" cy="40" rx="22" ry="17"/>
-  <g class="deco">
-    <text x="45" y="11">⛰️</text><text x="49" y="13.5">⛰️</text><text x="67" y="9">⛰️</text>
-    <text x="19" y="51">🌲</text><text x="22" y="53">🌲</text><text x="31" y="35">🌲</text>
-    <text x="64" y="30">🌳</text><text x="31" y="11">🌳</text>
-    <text x="88" y="55">🌵</text><text x="64" y="54">🌵</text><text x="95" y="33">🌵</text>
-    <text x="1.2" y="22">⛵</text>
+  <g class="taches"><circle cx="22" cy="12" r="9"/><circle cx="78" cy="54" r="12"/><circle cx="60" cy="40" r="7"/></g>
+  <path class="desert" d="M60 30 Q68 22 84 23 Q100 24 100 60 L60 60 Q55 46 60 30 Z"/>
+  <g class="crayon">
+    <path class="dune" d="M68 56 q5 -3 10 0 M84 50 q5 -3 10 0 M92 42 q4 -2.5 8 0 M70 36 q4 -2 8 0 M88 28 q3 -2 6 0"/>
+    <path class="colline" d="M52 55 q3 -2.5 6 0 M58 52 q3 -2.5 6 0 M20 42 q3 -2.5 6 0 M24 46 q3 -2.5 6 0 M72 14 q3 -2.5 6 0"/>
+    <path class="riviere" d="M48 14 C42 18 40 26 36 32 C32 38 18 30 6 28"/>
   </g>
-  <g id="routes"></g>
+  <path class="mer" d="M0 0 H6 Q3 7 5 14 Q8 22 4 30 Q1 38 5 46 Q8 53 4 60 H0 Z"/>
+  <g class="crayon"><path class="rivage" d="M6 0 Q3 7 5 14 Q8 22 4 30 Q1 38 5 46 Q8 53 4 60"/></g>
+  <g class="vagues"><path d="M1 8 q1 -.5 2 0 t2 0"/><path d="M2 20 q1 -.5 2 0 t2 0"/><path d="M.5 40 q1 -.5 2 0 t2 0"/><path d="M2 52 q1 -.5 2 0 t2 0"/></g>
+  <text class="bateau" font-size="3">⛵<animateMotion dur="70s" repeatCount="indefinite" path="M0 0 Q2 -16 0 -32 Q-2 -16 0 0"/></text>
+  <g class="foret">
+    ${use("mont", [[42, 12, 1.1], [47, 10.5, 1.4], [52, 12.5, 1], [58, 9.5, 1.3], [64, 11, 1.1], [69, 8, 0.9]])}
+    ${use("pin", [[18, 51], [21, 54], [24, 51.5], [20, 56.5], [27, 55], [30, 34], [33, 36.5], [28, 37.5], [36, 11], [14, 18], [17, 15.5], [12, 21.5]])}
+    ${use("arbre", [[62, 29], [66, 31.5], [63.5, 33.5], [31, 10], [33.5, 13], [41, 52], [15, 10]])}
+    ${use("palme", [[88, 55], [93, 33], [64, 54], [80, 30], [96, 50]])}
+  </g>
+  <rect class="grain" width="100" height="60" filter="url(#grain)"/>
+  <g id="routes" class="crayon"></g>
   <g id="trajets"></g>
   <g id="villes"></g>
   <g id="pions"></g>
+  <g class="nuages"><ellipse class="nuage" cy="16" rx="14" ry="6"/><ellipse class="nuage" cy="44" rx="10" ry="4.5" style="animation-duration:130s;animation-delay:-60s"/></g>
+  <g class="oiseaux"><path d="M0 0 q.8 -.9 1.6 0 q.8 -.9 1.6 0 M2.4 -1.4 q.8 -.9 1.6 0 q.8 -.9 1.6 0 M-1.8 -1.1 q.8 -.9 1.6 0 q.8 -.9 1.6 0"/><animateMotion dur="80s" repeatCount="indefinite" path="M-8 26 Q30 12 60 20 T112 4"/></g>
+  <g class="boussole" transform="translate(13 7)"><circle r="3.4"/><path d="M0 -3 L.8 -.8 L3 0 L.8 .8 L0 3 L-.8 .8 L-3 0 L-.8 -.8 Z"/><path class="nord" d="M0 -3 L.8 -.8 L0 0 L-.8 -.8 Z"/><text y="-4.3">N</text></g>
+  <rect class="cadre" x="1.2" y="1.2" width="97.6" height="57.6"/>
   <rect width="100" height="60" fill="url(#vignette)" pointer-events="none"/>`;
+
+// Les routes sont des arcs : même courbe quel que soit le sens du trajet.
+function courbe(a: Lieu, b: Lieu) {
+  const [p, q] = a < b ? [infoLieu(a), infoLieu(b)] : [infoLieu(b), infoLieu(a)];
+  const dx = q.x - p.x;
+  const dy = q.y - p.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const c = { x: (p.x + q.x) / 2 - (dy / len) * len * 0.14, y: (p.y + q.y) / 2 + (dx / len) * len * 0.14 };
+  return { p, q, c, inverse: a > b };
+}
+
+function cheminRoute(a: Lieu, b: Lieu): string {
+  const { p, q, c } = courbe(a, b);
+  return `M${p.x} ${p.y} Q${c.x.toFixed(1)} ${c.y.toFixed(1)} ${q.x} ${q.y}`;
+}
+
+// Position sur la route, f de 0 (départ a) à 1 (arrivée b).
+function pointRoute(a: Lieu, b: Lieu, f: number): { x: number; y: number } {
+  const { p, q, c, inverse } = courbe(a, b);
+  const t = inverse ? 1 - f : f;
+  const u = 1 - t;
+  return { x: u * u * p.x + 2 * u * t * c.x + t * t * q.x, y: u * u * p.y + 2 * u * t * c.y + t * t * q.y };
+}
 
 const gRoutes = carte.querySelector("#routes")!;
 const gTrajets = carte.querySelector("#trajets")!;
@@ -238,7 +291,9 @@ function rendreCarte(): void {
     "|" +
     (evt ? evt.type + evt.ville : "") +
     "|" +
-    (etat.qg ? `qg${etat.qg.pretes > 0}` : qgAchetable(etat));
+    (etat.qg ? `qg${etat.qg.pretes > 0}` : qgAchetable(etat)) +
+    "|" +
+    etat.attelage;
   if (sig === signatureCarte) return;
   signatureCarte = sig;
 
@@ -246,24 +301,20 @@ function rendreCarte(): void {
   let routes = "";
   for (let a = 0; a < ouvertes.length; a++)
     for (let b = a + 1; b < ouvertes.length; b++)
-      routes += `<line class="route" x1="${ouvertes[a].x}" y1="${ouvertes[a].y}" x2="${ouvertes[b].x}" y2="${ouvertes[b].y}"/>`;
-  if (etat.qg)
-    for (const v of ouvertes) routes += `<line class="route route-qg" x1="${QG.x}" y1="${QG.y}" x2="${v.x}" y2="${v.y}"/>`;
+      routes += `<path class="route" d="${cheminRoute(ouvertes[a].id, ouvertes[b].id)}"/>`;
+  if (etat.qg) for (const v of ouvertes) routes += `<path class="route route-qg" d="${cheminRoute("qg", v.id)}"/>`;
   gRoutes.innerHTML = routes;
 
   gTrajets.innerHTML = etat.caravanes
     .filter((c) => c.trajet)
-    .map((c) => {
-      const a = infoLieu(c.trajet!.de);
-      const b = infoLieu(c.trajet!.vers);
-      return `<line class="trajet" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`;
-    })
+    .map((c) => `<path class="trajet" d="${cheminRoute(c.trajet!.de, c.trajet!.vers)}"/>`)
     .join("");
 
   // le QG : visible dès qu'on peut le fonder
   const qg = etat.qg
     ? `
       <g class="ville qg" data-lieu="qg" transform="translate(${QG.x} ${QG.y})">
+        <rect class="ombre" x="-3.9" y="-3.7" width="8.4" height="8.4" rx="1.6"/>
         <rect x="-4.2" y="-4.2" width="8.4" height="8.4" rx="1.6"/>
         <text class="ville-icone" y="1.5">${QG.icone}</text>
         <text class="ville-nom" y="7.6">${QG.nom}</text>
@@ -281,21 +332,33 @@ function rendreCarte(): void {
   gVilles.innerHTML = qg + VILLES.map((v) => {
     const ouverte = etat.villes.includes(v.id);
     const estProchaine = prochaine?.id === v.id;
-    const cls = ouverte ? "ville" : estProchaine ? "ville verrouillee prochaine" : "ville verrouillee";
+    const neuve = ouverte && !villesConnues.has(v.id);
+    const cls = (ouverte ? "ville" : estProchaine ? "ville verrouillee prochaine" : "ville verrouillee") + (neuve ? " neuve" : "");
     const nom = ouverte ? v.nom : estProchaine ? `🔒 ${formatEcus(v.deblocage)}` : "???";
     return `
       <g class="${cls}" data-ville="${v.id}" transform="translate(${v.x} ${v.y})">
+        ${evt?.ville === v.id || estProchaine ? `<circle class="halo" r="5.4"/>` : ""}
+        <circle class="ombre" cx=".4" cy=".6" r="4.2"/>
         <circle r="4.2"/>
+        <circle class="anneau" r="3.3"/>
         <text class="ville-icone" y="1.5">${ouverte || estProchaine ? v.icone : "❔"}</text>
         <text class="ville-nom" y="7.6">${nom}</text>
         ${evt?.ville === v.id ? `<text class="ville-evt" x="3.6" y="-2.6">${ICONES_EVT[evt.type]}</text>` : ""}
       </g>`;
   }).join("");
+  etat.villes.forEach((id) => villesConnues.add(id));
 
+  const bete = ATTELAGES[etat.attelage].icone;
   gPions.innerHTML = etat.caravanes
-    .map((_, i) => `<g class="pion" data-i="${i}"><text>🐪</text><circle class="pion-alerte" cx="1.8" cy="-2.6" r="1.1"/></g>`)
+    .map(
+      (_, i) => `<g class="pion" data-i="${i}">
+        <g class="corps"><g class="poussiere"><circle cx="2.4" cy="1.4" r=".65"/><circle cx="3.3" cy=".5" r=".55"/><circle cx="4.1" cy="1.3" r=".45"/></g><text>${bete}</text></g>
+        <circle class="pion-alerte" cx="1.8" cy="-2.6" r="1.1"/>
+      </g>`,
+    )
     .join("");
 }
+const villesConnues = new Set<VilleId>(etat.villes); // pour animer l'ouverture d'une ville
 
 function majPions(now: number): void {
   gPions.querySelectorAll<SVGGElement>(".pion").forEach((g) => {
@@ -306,14 +369,13 @@ function majPions(now: number): void {
     let y: number;
     let sens = 1;
     if (c.trajet) {
-      const a = infoLieu(c.trajet.de);
-      const b = infoLieu(c.trajet.vers);
       const f = Math.min(1, Math.max(0, (now - c.trajet.depart) / (c.trajet.arrivee - c.trajet.depart)));
-      x = a.x + (b.x - a.x) * f;
-      y = a.y + (b.y - a.y) * f;
+      const pt = pointRoute(c.trajet.de, c.trajet.vers, f);
+      const devant = pointRoute(c.trajet.de, c.trajet.vers, Math.min(1, f + 0.02));
+      x = pt.x;
       // léger balancement de marche
-      y += Math.sin(now / 180 + i) * 0.25;
-      sens = b.x > a.x ? -1 : 1; // l'emoji regarde à gauche
+      y = pt.y + Math.sin(now / 180 + i) * 0.25;
+      sens = devant.x > pt.x ? -1 : 1; // l'emoji regarde à gauche
     } else {
       // à quai : en éventail autour de la ville
       const v = infoLieu(c.ville);
@@ -324,7 +386,8 @@ function majPions(now: number): void {
       y = v.y + Math.sin(angle) * 6.2 - 1;
     }
     g.setAttribute("transform", `translate(${x.toFixed(2)} ${y.toFixed(2)})`);
-    g.firstElementChild!.setAttribute("transform", `scale(${sens} 1)`);
+    g.querySelector(".corps")!.setAttribute("transform", `scale(${sens} 1)`);
+    g.classList.toggle("roule", !!c.trajet);
     g.classList.toggle("attend", c.aVendre || (enChargement(c) && !(c.caravanier && c.auto)));
   });
 }
@@ -423,7 +486,7 @@ function htmlFiche(c: Caravane, i: number): string {
 
   return `
     <article class="fiche ${etatCls}" data-i="${i}">
-      <div class="fiche-icone">🐪</div>
+      <div class="fiche-icone">${ATTELAGES[etat.attelage].icone}</div>
       <div class="fiche-corps">
         <div class="fiche-ligne"><b class="fiche-nom">${c.nom}</b>${auto}</div>
         <div class="fiche-statut">${statut}</div>
@@ -1692,6 +1755,17 @@ function flotterGain(montant: number): void {
   f.textContent = `+${formatEcus(montant)}`;
   $("ecus").append(f);
   f.addEventListener("animationend", () => f.remove());
+  // quelques pièces qui giclent de la bourse
+  for (let k = 0; k < 6; k++) {
+    const p = document.createElement("span");
+    p.className = "piece-vole";
+    p.textContent = "🪙";
+    p.style.setProperty("--dx", `${(Math.random() - 0.5) * 120}px`);
+    p.style.setProperty("--dy", `${-30 - Math.random() * 40}px`);
+    p.style.animationDelay = `${k * 40}ms`;
+    $("ecus").append(p);
+    p.addEventListener("animationend", () => p.remove());
+  }
 }
 
 // ---- boucle ----
