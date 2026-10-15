@@ -1,0 +1,1012 @@
+/* Le Tarot — tapis vert de café, bord en bois, cartes ivoire. */
+
+:root {
+  --tapis: #1d5c3f;
+  --tapis-sombre: #123b29;
+  --bois: #5a3720;
+  --bois-clair: #8a5a35;
+  --creme: #f6efdf;
+  --encre: #22201c;
+  --sourdine: rgba(246, 239, 223, 0.66);
+  --or: #f2c45a;
+  --rouge: #c8322b;
+  --noir: #1f1d1a;
+  --bleu-atout: #2b4a8b;
+  --ok: #7fe0a3;
+  --ko: #ff8a7a;
+  --cw: clamp(44px, 6.4vw, 76px);
+  --ch: calc(var(--cw) * 1.55);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: "Nunito", system-ui, sans-serif;
+  color: var(--creme);
+  background:
+    radial-gradient(ellipse at 50% 40%, var(--tapis) 0%, var(--tapis-sombre) 75%),
+    var(--tapis-sombre);
+  overflow-x: hidden;
+}
+
+.hidden {
+  display: none !important;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.back-link {
+  position: fixed;
+  top: 0.6rem;
+  left: 0.8rem;
+  color: var(--sourdine);
+  text-decoration: none;
+  font-size: 0.85rem;
+  z-index: 30;
+}
+
+.back-link:hover {
+  color: var(--creme);
+}
+
+/* ─── accueil ─────────────────────────────────────────────────────────── */
+
+.accueil {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 3.4rem 1rem 3rem;
+  text-align: center;
+}
+
+.titre {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 800;
+  font-size: clamp(2.4rem, 9vw, 3.6rem);
+  margin: 0.4rem 0 0.2rem;
+  color: var(--or);
+  letter-spacing: 0.01em;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
+}
+
+.sous-titre {
+  color: var(--sourdine);
+  margin: 0.3rem auto 1.8rem;
+  max-width: 40ch;
+  line-height: 1.45;
+}
+
+.reglages {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  padding: 1.3rem 1.1rem;
+  text-align: left;
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.champ > span {
+  font-weight: 800;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sourdine);
+}
+
+.champ input {
+  font: inherit;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--creme);
+}
+
+.choix {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.choix button {
+  flex: 1 1 0;
+  min-width: 6rem;
+  padding: 0.65rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--creme);
+  font-weight: 700;
+}
+
+.choix button small {
+  display: block;
+  font-weight: 500;
+  font-size: 0.72rem;
+  color: var(--sourdine);
+}
+
+.choix button.actif {
+  background: var(--or);
+  color: var(--encre);
+  border-color: var(--or);
+}
+
+.choix button.actif small {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.aide {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--sourdine);
+}
+
+.btn-principal {
+  padding: 0.8rem 1.4rem;
+  border: none;
+  border-radius: 12px;
+  background: var(--or);
+  color: var(--encre);
+  font-weight: 800;
+  font-size: 1.05rem;
+  box-shadow: 0 4px 0 #b48a2c;
+}
+
+.btn-principal:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #b48a2c;
+}
+
+.btn-discret {
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+  color: var(--creme);
+  font-weight: 700;
+}
+
+.regles {
+  margin-top: 1.6rem;
+  text-align: left;
+  color: var(--sourdine);
+  line-height: 1.5;
+}
+
+.regles summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--creme);
+}
+
+.regles li {
+  margin: 0.4rem 0;
+}
+
+/* ─── table ───────────────────────────────────────────────────────────── */
+
+.table {
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 0 0 max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.bandeau {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.8rem 0.45rem 9.5rem;
+  background: rgba(0, 0, 0, 0.28);
+  border-bottom: 3px solid var(--bois);
+  flex-wrap: wrap;
+}
+
+.info-donne {
+  margin: 0;
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+
+.bandeau-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.btn-mini {
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--creme);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.btn-mini:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tapis {
+  position: relative;
+  margin: 0.6rem;
+  border-radius: 999px / 220px;
+  border: 10px solid var(--bois);
+  box-shadow:
+    inset 0 0 0 2px var(--bois-clair),
+    inset 0 0 60px rgba(0, 0, 0, 0.35),
+    0 8px 30px rgba(0, 0, 0, 0.35);
+  background: radial-gradient(ellipse at 50% 45%, #237049 0%, var(--tapis) 55%, #164a33 100%);
+  min-height: 260px;
+}
+
+/* ─── sièges ──────────────────────────────────────────────────────────── */
+
+.siege {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  width: 7.5rem;
+  text-align: center;
+  z-index: 2;
+}
+
+.pos-haut {
+  top: 0.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pos-haut-gauche {
+  top: 0.4rem;
+  left: 24%;
+  transform: translateX(-50%);
+}
+
+.pos-haut-droite {
+  top: 0.4rem;
+  left: 76%;
+  transform: translateX(-50%);
+}
+
+.pos-gauche {
+  left: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.pos-droite {
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.pos-bas {
+  bottom: 0.3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  width: auto;
+  gap: 0.4rem;
+}
+
+.pos-bas .avatar {
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.1rem;
+}
+
+.pos-bas .bulle {
+  position: static;
+  margin: 0;
+}
+
+.avatar {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1.45rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.a-son-tour .avatar {
+  border-color: var(--or);
+  box-shadow: 0 0 0 4px rgba(242, 196, 90, 0.3);
+}
+
+.preneur .avatar {
+  background: rgba(200, 50, 43, 0.55);
+}
+
+.partenaire .avatar {
+  background: rgba(200, 50, 43, 0.3);
+}
+
+.nom {
+  font-weight: 800;
+  font-size: 0.82rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.dos {
+  width: 1.7rem;
+  height: 2.3rem;
+  border-radius: 4px;
+  border: 2px solid var(--creme);
+  background: repeating-linear-gradient(45deg, #7a2a2a 0 4px, #93403a 4px 8px);
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  box-shadow: 3px 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.dos span {
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 4px;
+  padding: 0 0.2rem;
+}
+
+.badges {
+  display: flex;
+  gap: 0.2rem;
+  min-height: 0;
+}
+
+.badge {
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.05rem 0.35rem;
+  border-radius: 6px;
+  background: var(--rouge);
+}
+
+.badge.donneur {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.bulle {
+  margin-top: 0.15rem;
+  background: var(--creme);
+  color: var(--encre);
+  border-radius: 10px;
+  padding: 0.18rem 0.55rem;
+  font-weight: 800;
+  font-size: 0.78rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  animation: apparait 0.2s ease-out;
+  max-width: 9rem;
+}
+
+@keyframes apparait {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+}
+
+/* ─── centre : pli et chien ───────────────────────────────────────────── */
+
+.centre {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--cw) * 4.4);
+  height: calc(var(--ch) * 2.05);
+  transform: translate(-50%, -54%);
+  z-index: 1;
+}
+
+.au-pli {
+  position: absolute;
+  animation: pose 0.22s ease-out;
+}
+
+.pli-bas {
+  bottom: 0;
+  left: 50%;
+  translate: -50% 0;
+}
+
+.pli-haut {
+  top: 0;
+  left: 50%;
+  translate: -50% 0;
+}
+
+.pli-gauche {
+  left: 0;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.pli-droite {
+  right: 0;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.pli-haut-gauche {
+  top: 0;
+  left: 22%;
+  translate: -50% 0;
+}
+
+.pli-haut-droite {
+  top: 0;
+  left: 78%;
+  translate: -50% 0;
+}
+
+@keyframes pose {
+  from {
+    opacity: 0;
+    scale: 1.25;
+  }
+}
+
+.au-pli.gagnante {
+  box-shadow:
+    0 0 0 3px var(--or),
+    0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.chien {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: 92vw;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.4rem;
+}
+
+.etiquette {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--sourdine);
+}
+
+.rangee-cartes {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.message {
+  position: absolute;
+  left: 50%;
+  bottom: 3.6rem;
+  transform: translateX(-50%);
+  margin: 0;
+  width: min(92%, 34rem);
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--creme);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ─── cartes ──────────────────────────────────────────────────────────── */
+
+.carte {
+  position: relative;
+  flex: none;
+  width: var(--cw);
+  height: calc(var(--cw) * 1.55);
+  border-radius: calc(var(--cw) * 0.1);
+  background: linear-gradient(160deg, #fffdf7 0%, var(--creme) 100%);
+  color: var(--noir);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 3px 8px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  user-select: none;
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 800;
+}
+
+.carte.coeur,
+.carte.carreau {
+  color: var(--rouge);
+}
+
+.carte .coin {
+  position: absolute;
+  top: 3%;
+  left: 7%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0.95;
+  font-size: calc(var(--cw) * 0.24);
+}
+
+.carte .coin i {
+  font-style: normal;
+  font-size: 0.85em;
+}
+
+.carte .coin-bas {
+  top: auto;
+  left: auto;
+  bottom: 3%;
+  right: 7%;
+  transform: rotate(180deg);
+}
+
+.carte .milieu {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  line-height: 1;
+}
+
+.carte .milieu i {
+  font-style: normal;
+  font-size: calc(var(--cw) * 0.5);
+}
+
+.carte.tete .milieu b {
+  font-size: calc(var(--cw) * 0.42);
+}
+
+.carte.tete .milieu i {
+  font-size: calc(var(--cw) * 0.28);
+}
+
+.carte.atout {
+  background:
+    repeating-linear-gradient(135deg, transparent 0 6px, rgba(43, 74, 139, 0.05) 6px 7px),
+    linear-gradient(160deg, #fffdf7 0%, #efe7d4 100%);
+  color: var(--bleu-atout);
+  border-color: rgba(43, 74, 139, 0.45);
+}
+
+/* vignette de ciel : couleurs et position de l'astre posées par main.ts */
+.carte.atout .vignette {
+  position: absolute;
+  inset: 21% 10%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: calc(var(--cw) * 0.07);
+  background: linear-gradient(180deg, var(--ciel-haut) 0%, var(--ciel-bas) 80%);
+  box-shadow:
+    0 0 0 1px rgba(43, 74, 139, 0.6),
+    0 0 0 calc(var(--cw) * 0.03) #fffaf0,
+    0 0 0 calc(var(--cw) * 0.045) rgba(43, 74, 139, 0.35);
+}
+
+.carte.atout .vignette.nuit::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 22%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 70% 14%, #fff 0 0.8px, transparent 1.4px),
+    radial-gradient(circle at 84% 40%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 40% 9%, #fff 0 0.7px, transparent 1.3px),
+    radial-gradient(circle at 10% 48%, #fff 0 0.7px, transparent 1.3px),
+    radial-gradient(circle at 58% 32%, #fff 0 0.6px, transparent 1.2px);
+  opacity: 0.85;
+}
+
+/* collines en ombre chinoise, devant l'astre */
+.carte.atout .vignette::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 32%;
+  z-index: 1;
+  background:
+    radial-gradient(75% 100% at 22% 100%, var(--colline) 0 70%, transparent 71%),
+    radial-gradient(80% 85% at 88% 100%, color-mix(in srgb, var(--colline) 70%, var(--ciel-bas)) 0 70%, transparent 71%);
+}
+
+.carte.atout .astre {
+  position: absolute;
+  left: var(--ax);
+  top: var(--ay);
+  width: calc(var(--cw) * 0.2);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 40% 38%, #fffbe2 0%, #ffd45c 55%, #ffae3a 100%);
+  box-shadow: 0 0 calc(var(--cw) * 0.12) rgba(255, 205, 90, 0.85);
+}
+
+.carte.atout .astre.lune {
+  width: calc(var(--cw) * 0.15);
+  background: none;
+  box-shadow: calc(var(--cw) * 0.045) calc(var(--cw) * -0.02) 0 0 #f5ebc4;
+  filter: drop-shadow(0 0 calc(var(--cw) * 0.04) rgba(245, 235, 196, 0.7));
+}
+
+.carte.atout .vignette b {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 12%;
+  color: #fffaf0;
+  font-size: calc(var(--cw) * 0.42);
+  line-height: 1;
+  -webkit-text-stroke: calc(var(--cw) * 0.035) var(--bleu-atout);
+  paint-order: stroke fill;
+  text-shadow: 0 calc(var(--cw) * 0.02) calc(var(--cw) * 0.06) rgba(10, 20, 50, 0.5);
+}
+
+/* le Petit et le 21 : cadre doré */
+.carte.atout.bout {
+  border-color: #c99a3a;
+}
+
+.carte.atout.bout .vignette {
+  box-shadow:
+    0 0 0 1px #9a6a12,
+    0 0 0 calc(var(--cw) * 0.03) #fff3c9,
+    0 0 0 calc(var(--cw) * 0.05) var(--or),
+    0 0 calc(var(--cw) * 0.14) rgba(242, 196, 90, 0.7);
+}
+
+.carte.atout.bout .coin {
+  color: #9a6a12;
+}
+
+.carte.excuse {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(242, 196, 90, 0.4) 0 30%, transparent 31%),
+    linear-gradient(160deg, #fffdf7 0%, #efe7d4 100%);
+  color: #8a5a10;
+}
+
+.carte.excuse .milieu b {
+  font-size: calc(var(--cw) * 0.5);
+}
+
+.carte.excuse .milieu small {
+  font-family: "Nunito", sans-serif;
+  font-size: calc(var(--cw) * 0.16);
+  letter-spacing: 0.05em;
+}
+
+/* ─── ma main ─────────────────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.6rem;
+  min-height: 2.6rem;
+}
+
+.consigne {
+  font-weight: 800;
+  font-size: 0.9rem;
+  margin-right: 0.3rem;
+}
+
+.consigne.discrete {
+  color: var(--sourdine);
+  font-weight: 700;
+}
+
+.consigne.erreur {
+  color: var(--ko);
+}
+
+.btn-action {
+  padding: 0.5rem 0.9rem;
+  border-radius: 10px;
+  border: none;
+  background: var(--creme);
+  color: var(--encre);
+  font-weight: 800;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.btn-action.passe {
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--creme);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.btn-action:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.btn-action .sym {
+  margin-left: 0.15rem;
+}
+
+.btn-action .sym.coeur,
+.btn-action .sym.carreau {
+  color: var(--rouge);
+}
+
+.ma-main {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.6rem 0.5rem 0.3rem;
+  min-height: calc(var(--ch) + 1.2rem);
+}
+
+.ma-main .carte {
+  transition: transform 0.12s ease, filter 0.12s;
+}
+
+.ma-main .carte.jouable {
+  cursor: pointer;
+}
+
+.ma-main .carte.jouable:hover,
+.ma-main .carte.selectionnable:hover {
+  transform: translateY(-10px);
+  z-index: 2;
+}
+
+.ma-main .carte.interdite {
+  filter: brightness(0.62) saturate(0.6);
+}
+
+.ma-main .carte.selectionnable {
+  cursor: pointer;
+}
+
+.ma-main .carte.choisie {
+  transform: translateY(-16px);
+  box-shadow:
+    0 0 0 3px var(--or),
+    0 6px 14px rgba(0, 0, 0, 0.4);
+}
+
+.ma-main .carte.nouvelle::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--or);
+}
+
+/* ─── voiles : fin de donne, feuille, dernier pli ─────────────────────── */
+
+.voile {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 20, 12, 0.66);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 20;
+  animation: fondu 0.2s ease-out;
+}
+
+@keyframes fondu {
+  from {
+    opacity: 0;
+  }
+}
+
+.fiche {
+  width: min(100%, 34rem);
+  max-height: 92dvh;
+  overflow: auto;
+  background: var(--creme);
+  color: var(--encre);
+  border-radius: 18px;
+  padding: 1.2rem 1.2rem 1rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.fiche h2 {
+  font-family: "Fraunces", Georgia, serif;
+  margin: 0.1rem 0 0.7rem;
+  font-size: 1.45rem;
+}
+
+.fiche .etiquette,
+.fiche .aide {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.verdict {
+  margin: 0;
+  font-weight: 800;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.verdict.bon {
+  color: #1d7a45;
+}
+
+.verdict.mauvais {
+  color: var(--rouge);
+}
+
+.detail {
+  margin: 0 0 0.9rem;
+  padding-left: 1.1rem;
+  line-height: 1.55;
+}
+
+.scores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 0.9rem;
+}
+
+.score-joueur {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.06);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.score-joueur.moi {
+  background: rgba(242, 196, 90, 0.35);
+}
+
+.pos {
+  color: #1d7a45;
+}
+
+.neg {
+  color: var(--rouge);
+}
+
+.fiche .rangee-cartes {
+  margin: 0.4rem 0 0.8rem;
+  --cw: 42px;
+}
+
+.fiche .carte {
+  --cw: 42px;
+}
+
+.fiche-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+.fiche .btn-discret {
+  color: var(--encre);
+  border-color: rgba(0, 0, 0, 0.25);
+}
+
+.feuille {
+  overflow-x: auto;
+}
+
+.feuille table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.feuille th,
+.feuille td {
+  padding: 0.35rem 0.4rem;
+  text-align: right;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.feuille th {
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+.feuille td.contrat-cell {
+  text-align: left;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.feuille tbody tr:last-child td {
+  font-weight: 800;
+}
+
+.carte-signee {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ─── petits écrans ───────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .bandeau {
+    padding-left: 0.8rem;
+    padding-top: 2rem;
+  }
+
+  .siege {
+    width: 5.2rem;
+  }
+
+  .avatar {
+    width: 2.1rem;
+    height: 2.1rem;
+    font-size: 1.15rem;
+  }
+
+  .dos {
+    display: none;
+  }
+
+  .pos-gauche {
+    left: 0.1rem;
+  }
+
+  .pos-droite {
+    right: 0.1rem;
+  }
+
+  .tapis {
+    margin: 0.4rem;
+    border-width: 7px;
+    border-radius: 40px;
+  }
+
+  .message {
+    font-size: 0.8rem;
+  }
+}

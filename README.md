@@ -19,6 +19,11 @@ interactives inspirées de l'univers du Petit Prince.
   six villes. On range sa charrette façon Tetris, on marchande à l'arrivée
   avec des marchands qui ont chacun leur caractère, et des caravaniers font la
   navette tout seuls, même onglet fermé. Échap = mode discret.
+- **Le Tarot** (`/games/tarot/`) — tarot FFT à 4 ou à 5 (appel au roi), en
+  solo contre trois ou quatre habitués du café. Trois niveaux : facile
+  (heuristiques sans mémoire), moyen (compte les cartes, charge son
+  partenaire), difficile (Monte-Carlo : simule des donnes compatibles avec ce
+  qu'il a vu avant chaque carte). Règles dans `src/games/tarot/regles.ts`.
 - **Les Dés Menteurs** (`/games/les-des-menteurs/`) — Perudo en ligne, de 2 à
   6 joueurs dans un salon à code. Enchères, bluff, « Menteur ! » et « Pile
   poil ! » ; l'étoile ⭐ est joker, manches palifico incluses. Les dés vivent
