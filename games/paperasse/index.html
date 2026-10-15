@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Paperasse</title>
+    <meta name="description" content="De stagiaire à la mairie de Trifouilly-les-Oies à ministre de la Simplification : tamponnez l'Univers." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=Courier+Prime:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/paperasse/paperasse.css" />
+  </head>
+  <body>
+    <nav class="barre-haut">
+      <a class="retour" href="../../">← le petit prince</a>
+      <span class="medailles" id="medailles" hidden></span>
+      <button type="button" class="btn-discret" id="btn-discret" title="Mode discret (Échap)">🙈</button>
+    </nav>
+
+    <main class="formulaire" id="formulaire">
+      <header class="entete-cerfa">
+        <div class="rf">
+          <strong>RÉPUBLIQUE<br />FRANÇAISE</strong>
+          <small>Liberté<br />Égalité<br />Paperasse</small>
+        </div>
+        <div class="titre-cerfa">
+          <h1>Demande de carrière administrative</h1>
+          <p><span id="lieu"></span> — <em id="grade"></em></p>
+        </div>
+        <div class="num-cerfa" id="num-cerfa"></div>
+      </header>
+
+      <section class="compteur">
+        <span class="compteur-libelle">Dossiers tamponnés</span>
+        <span class="compteur-valeur" id="dossiers">0</span>
+      </section>
+
+      <ol class="journal" id="journal" aria-live="polite"></ol>
+
+      <div class="colonnes">
+        <div class="colonne" id="col-g"></div>
+        <div class="colonne" id="col-d"></div>
+      </div>
+
+      <footer class="pied">
+        <span>Fait pour valoir ce que de droit.</span>
+        <span>Ancienneté : <span id="anciennete">0 s</span></span>
+        <span class="signature">Signature : <span>~~~~~~</span></span>
+      </footer>
+    </main>
+
+    <aside class="guichet" id="guichet" hidden></aside>
+    <div class="greve" id="greve" hidden></div>
+    <div class="voile" id="popup" hidden></div>
+    <div class="mode-discret" id="discret" hidden></div>
+
+    <script type="module" src="/src/games/paperasse/main.ts"></script>
+  </body>
+</html>

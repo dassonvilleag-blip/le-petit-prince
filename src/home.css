@@ -562,3 +562,162 @@ body {
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Ctext y='21' font-size='20'%3E%F0%9F%AA%90%3C/text%3E%3C/svg%3E") 4 4,
     auto;
 }
+
+/* ------------------------------------------------------------------------- */
+/* Mes parties : sauvegarde / restauration de toutes les parties             */
+/* ------------------------------------------------------------------------- */
+
+.pp-sauvegarde-btn {
+  position: fixed;
+  z-index: 30;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: "Pixelify Sans", "VT323", monospace;
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+}
+
+.pp-sauvegarde-btn:hover {
+  box-shadow: 5px 5px 0 var(--purple);
+}
+
+.pp-sauvegarde-btn.rappel::after {
+  content: "!";
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--pink);
+  color: #fff;
+  font-size: 0.8rem;
+  animation: pp-pouls 1.6s ease-in-out infinite;
+}
+
+@keyframes pp-pouls {
+  50% {
+    transform: scale(1.25);
+  }
+}
+
+@media (max-width: 520px) {
+  .pp-sauvegarde-btn span {
+    display: none;
+  }
+}
+
+.pp-voile {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(23, 23, 27, 0.6);
+}
+
+.pp-voile[hidden] {
+  display: none;
+}
+
+.pp-fenetre {
+  position: relative;
+  width: min(480px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 20px 22px;
+  color: var(--ink);
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 6px 6px 0 var(--purple);
+  font-size: 1.15rem;
+}
+
+.pp-fenetre h2 {
+  margin: 0 0 6px;
+  font-family: "Pixelify Sans", monospace;
+}
+
+.pp-fenetre h3 {
+  margin: 18px 0 4px;
+  font-family: "Pixelify Sans", monospace;
+  font-size: 1.15rem;
+}
+
+.pp-fenetre p {
+  margin: 6px 0;
+}
+
+.pp-doux {
+  color: var(--soft);
+}
+
+.pp-fermer {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: 0;
+  background: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.pp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.pp-btn {
+  padding: 6px 14px;
+  font: inherit;
+  font-family: "Pixelify Sans", monospace;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+}
+
+.pp-btn-2 {
+  background: var(--card);
+}
+
+.pp-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+
+.pp-fenetre textarea {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 8px;
+  font-family: "VT323", monospace;
+  font-size: 1rem;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: #fff;
+  resize: vertical;
+}
+
+.pp-message {
+  min-height: 1.2em;
+  color: #138a72;
+}
+
+.pp-message.erreur {
+  color: #c8102e;
+}
