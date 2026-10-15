@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140">
+  <!-- le bureau -->
+  <rect width="200" height="140" fill="#3d4a3f"/>
+  <!-- une pile de dossiers -->
+  <g fill="#fbf8ef" stroke="#b9b2a0" stroke-width="1">
+    <rect x="128" y="104" width="56" height="8" transform="rotate(-2 156 108)"/>
+    <rect x="130" y="96" width="56" height="8" transform="rotate(3 158 100)"/>
+    <rect x="127" y="88" width="56" height="8" transform="rotate(-1 155 92)"/>
+    <rect x="131" y="80" width="56" height="8" transform="rotate(2 159 84)"/>
+    <rect x="128" y="72" width="56" height="8" transform="rotate(-3 156 76)"/>
+  </g>
+  <!-- le formulaire -->
+  <g transform="rotate(-4 70 70)">
+    <rect x="18" y="14" width="100" height="116" fill="#fbf8ef" stroke="#1d1d1b" stroke-width="1.5"/>
+    <rect x="18" y="14" width="100" height="12" fill="#1d1d1b"/>
+    <text x="24" y="23.5" font-family="Arial Narrow, Arial, sans-serif" font-size="8" fill="#fbf8ef" font-weight="700">CERFA N° 15-PAPE*01</text>
+    <g stroke="#b7b1a0" stroke-width="1.2" stroke-dasharray="1.5 2.5">
+      <line x1="26" y1="42" x2="110" y2="42"/>
+      <line x1="26" y1="54" x2="110" y2="54"/>
+      <line x1="26" y1="66" x2="110" y2="66"/>
+      <line x1="26" y1="78" x2="110" y2="78"/>
+    </g>
+    <g fill="none" stroke="#1d1d1b" stroke-width="1.3">
+      <rect x="26" y="90" width="8" height="8"/>
+      <rect x="26" y="104" width="8" height="8"/>
+    </g>
+    <path d="M27 107 L30 111 L36 101" fill="none" stroke="#1f3d8f" stroke-width="2"/>
+    <path d="M70 114 q6 -8 12 0 t12 0 t10 -2" fill="none" stroke="#1f3d8f" stroke-width="1.5"/>
+    <!-- le coup de tampon -->
+    <g transform="rotate(-14 72 70)">
+      <rect x="40" y="58" width="64" height="22" rx="2" fill="none" stroke="#c8102e" stroke-width="3"/>
+      <text x="72" y="74.5" text-anchor="middle" font-family="Arial Narrow, Arial, sans-serif" font-size="15" font-weight="700" fill="#c8102e" letter-spacing="2">TRAITÉ</text>
+    </g>
+  </g>
+  <!-- le tampon -->
+  <g transform="translate(150 16)">
+    <rect x="9" y="0" width="16" height="22" rx="7" fill="#8a5a32"/>
+    <rect x="0" y="20" width="34" height="12" rx="2" fill="#2b2b2b" stroke="#c8102e" stroke-width="2"/>
+  </g>
+</svg>
