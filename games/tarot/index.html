@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🃏</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/tarot/tarot.css" />
+    <title>Le Tarot — Le Petit Prince</title>
+  </head>
+  <body>
+    <a class="back-link" href="../../">← le petit prince</a>
+
+    <!-- accueil : réglages de la partie -->
+    <section id="ecran-accueil" class="accueil">
+      <h1 class="titre">Le Tarot</h1>
+      <p class="sous-titre">Une table au fond du café, trois habitués qui t'attendent. Règles FFT, à 4 ou à 5.</p>
+
+      <div class="reglages">
+        <label class="champ">
+          <span>Ton prénom</span>
+          <input id="pseudo" type="text" maxlength="16" placeholder="Toi" autocomplete="nickname" />
+        </label>
+
+        <div class="champ">
+          <span>Joueurs</span>
+          <div class="choix" id="choix-n">
+            <button data-n="4" class="actif">4 joueurs</button>
+            <button data-n="5">5 joueurs <small>(appel au roi)</small></button>
+          </div>
+        </div>
+
+        <div class="champ">
+          <span>Adversaires</span>
+          <div class="choix" id="choix-niveau">
+            <button data-niveau="facile">Facile</button>
+            <button data-niveau="moyen" class="actif">Moyen</button>
+            <button data-niveau="difficile">Difficile</button>
+          </div>
+          <p class="aide" id="aide-niveau"></p>
+        </div>
+
+        <button id="btn-jouer" class="btn-principal">S'asseoir à la table</button>
+        <button id="btn-reprendre" class="btn-discret hidden">Reprendre la partie en cours</button>
+      </div>
+
+      <details class="regles">
+        <summary>Rappel des règles</summary>
+        <ul>
+          <li><strong>Enchères</strong> : Prise ×1, Garde ×2, Garde sans ×4 (le chien compte pour toi sans que tu le voies), Garde contre ×6 (il part en défense).</li>
+          <li><strong>Contrat</strong> : 56 points sans bout, 51 avec un, 41 avec deux, 36 avec les trois (Petit, 21, Excuse).</li>
+          <li><strong>Jeu</strong> : on fournit la couleur, sinon on coupe, et on monte toujours à l'atout si on peut. L'Excuse se joue n'importe quand et revient à son camp.</li>
+          <li><strong>Marque</strong> : (25 + écart) × multiplicateur, plus le Petit au bout (10 × mult.), les poignées (20 / 30 / 40) et le chelem.</li>
+          <li><strong>À 5</strong> : le preneur appelle un roi ; celui qui l'a est son partenaire secret, jusqu'à ce que la carte tombe.</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- la table -->
+    <section id="ecran-table" class="table hidden">
+      <header class="bandeau">
+        <p id="info-donne" class="info-donne"></p>
+        <div class="bandeau-actions">
+          <button id="btn-dernier-pli" class="btn-mini" disabled>Dernier pli</button>
+          <button id="btn-feuille" class="btn-mini">Feuille de marque</button>
+          <button id="btn-quitter" class="btn-mini">Quitter</button>
+        </div>
+      </header>
+
+      <div id="tapis" class="tapis">
+        <div id="sieges"></div>
+        <div id="centre" class="centre"></div>
+        <p id="message" class="message"></p>
+      </div>
+
+      <div id="actions" class="actions"></div>
+      <div id="ma-main" class="ma-main"></div>
+    </section>
+
+    <!-- fin de donne -->
+    <div id="voile-fin" class="voile hidden">
+      <div class="fiche" id="fiche-fin"></div>
+    </div>
+
+    <!-- feuille de marque -->
+    <div id="voile-feuille" class="voile hidden">
+      <div class="fiche">
+        <h2>Feuille de marque</h2>
+        <div id="feuille" class="feuille"></div>
+        <div class="fiche-actions">
+          <button id="btn-nouvelle-partie" class="btn-discret">Remettre les scores à zéro</button>
+          <button id="btn-fermer-feuille" class="btn-principal">Fermer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- dernier pli -->
+    <div id="voile-pli" class="voile hidden">
+      <div class="fiche">
+        <h2>Dernier pli</h2>
+        <div id="dernier-pli" class="rangee-cartes"></div>
+        <p id="dernier-pli-gagnant" class="aide"></p>
+        <div class="fiche-actions"><button id="btn-fermer-pli" class="btn-principal">Fermer</button></div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/games/tarot/main.ts"></script>
+  </body>
+</html>

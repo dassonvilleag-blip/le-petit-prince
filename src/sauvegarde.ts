@@ -39,6 +39,7 @@ const JEUX: [RegExp, string][] = [
   [/^ca-coute-combien/, "Ça coûte combien ?!"],
   [/^les-des-menteurs/, "Les Dés Menteurs"],
   [/^roi-des-pirates/, "Le Roi des Pirates"],
+  [/^tarot-/, "Le Tarot"],
 ];
 
 export function nomDuJeu(cle: string): string {
