@@ -18,6 +18,7 @@
     <header class="barre" id="barre"></header>
     <section class="panneau" id="panneau" hidden></section>
     <div class="bulle" id="bulle"></div>
+    <canvas class="mini" id="mini" title="Mini-carte : clic gauche pour y aller, clic droit pour y envoyer les unités choisies"></canvas>
 
     <div class="intro" id="intro">
       <div class="parchemin">
@@ -30,11 +31,27 @@
           <li><b data-code="KeyF">F</b> (économie) ou <b data-code="KeyG">G</b> (militaire) puis la touche du bâtiment : bâtir · <b data-code="KeyQ">Q</b>, <b data-code="KeyW">W</b>, <b data-code="KeyE">E</b> sur un bâtiment : former (<b>Maj</b> : 5)</li>
           <li><b data-code="KeyH">H</b> : Hôtel de ville · <b>.</b> : villageois oisif · <b>Ctrl+1…9</b> / <b>1…9</b> : groupes · <b>Suppr</b> : supprimer · <b>double-clic</b> : ce type d'unité à l'écran</li>
           <li><b>Flèches</b> ou bord de l'écran : déplacer la vue · <b>molette</b> : zoom · <b>Échap</b> : annuler</li>
+          <li><b>F3</b> : pause · <b>F10</b> : menu (recommencer, changer de niveau, quitter)</li>
         </ul>
         <p>Un royaume adverse 🟥 se développe de l'autre côté de la carte et finira par attaquer. Rase tous ses bâtiments et ses unités pour gagner. Méfie-toi aussi des loups 🐺.</p>
-        <p class="go">Clique pour commencer</p>
+        <p class="go">Choisis le niveau de l'adversaire</p>
+        <div class="niveaux" id="niveaux"></div>
       </div>
     </div>
+
+    <div class="intro" id="menu" hidden>
+      <div class="parchemin">
+        <h1>Pause</h1>
+        <div class="menu">
+          <button type="button" data-menu="reprendre">Reprendre</button>
+          <button type="button" data-menu="recommencer">Recommencer (nouvelle carte)</button>
+          <button type="button" data-menu="niveau">Changer de niveau</button>
+          <button type="button" data-menu="quitter">Quitter</button>
+        </div>
+        <p class="etape"><b>F10</b> : menu · <b>F3</b> : pause</p>
+      </div>
+    </div>
+    <div class="bandeau" id="pause" hidden>⏸ Pause — <b>F3</b> pour reprendre</div>
 
     <script type="module" src="/src/games/age-des-royaumes/main.ts"></script>
   </body>

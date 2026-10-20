@@ -32,7 +32,7 @@ import {
   type Noeud,
   type Unite,
 } from "./sim.ts";
-import { creerIA, penser } from "./ia.ts";
+import { creerIA, NIVEAUX, penser, type Niveau } from "./ia.ts";
 import { SPRITES } from "./sprites.ts";
 
 const TW = 64; // largeur d'une case à l'écran
@@ -60,7 +60,7 @@ const intro = document.getElementById("intro")!;
 const bulle = document.getElementById("bulle")!;
 
 const p = nouvellePartie();
-const ia = creerIA(1);
+let ia = creerIA(1); // remplacée au lancement, selon le niveau choisi
 const atlas = new Image();
 atlas.src = "/sprites/royaumes.webp";
 const moi = p.camps[MOI];
@@ -466,6 +466,7 @@ function ordreDroit(x: number, y: number): void {
 
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 canvas.addEventListener("mousedown", (e) => {
+  if (enPause) return;
   if (e.button === 0) glisse = { x: e.clientX, y: e.clientY };
   if (e.button === 2) ordreDroit(e.clientX / zoom, e.clientY / zoom);
 });
@@ -529,6 +530,15 @@ function allerAuGroupe(unites: number[], bat: Batiment | null): void {
 const fleches = new Set<string>();
 window.addEventListener("keydown", (e) => {
   if (!enCours) return;
+  // F10 : le menu, F3 : la pause, comme dans AoE II
+  if (e.key === "F10" || e.key === "F3") {
+    e.preventDefault();
+    return e.key === "F10" ? mettrePause(menuJeu.hidden, true) : mettrePause(!enPause);
+  }
+  if (enPause) {
+    if (e.key === "Escape") mettrePause(false);
+    return;
+  }
   if (e.key.startsWith("Arrow")) {
     fleches.add(e.key);
     e.preventDefault();
@@ -762,6 +772,12 @@ oisifBtn.type = "button";
 oisifBtn.title = "Villageois oisif (.)";
 oisifBtn.addEventListener("click", villageoisOisif);
 barre.append(oisifBtn);
+const menuBtn = document.createElement("button");
+menuBtn.type = "button";
+menuBtn.title = "Menu (F10)";
+menuBtn.textContent = "☰";
+menuBtn.addEventListener("click", () => enCours && mettrePause(true, true));
+barre.append(menuBtn);
 
 function majBarre(): void {
   for (const r of RESSOURCES) barreEls[r].textContent = `${ICONE[r]} ${Math.floor(moi.stock[r])}`;
@@ -783,8 +799,9 @@ const dessinerBrouillard = () => paver(BROUILLARD, (i) => (p.vu[i] === 2 ? -1 : 
 function finDePartie(): void {
   const fin = document.createElement("div");
   fin.className = "intro";
+  fin.style.cursor = "pointer";
   const gagne = p.vainqueur === MOI;
-  fin.innerHTML = `<div class="parchemin"><h1>${gagne ? "Victoire !" : "Défaite…"}</h1><p class="etape">${gagne ? "Le royaume adverse est tombé." : "Ton royaume est tombé."} Partie de ${Math.floor(p.temps / 60)} min.</p><p class="go">Clique pour rejouer</p></div>`;
+  fin.innerHTML = `<div class="parchemin"><h1>${gagne ? "Victoire !" : "Défaite…"}</h1><p class="etape">${gagne ? "Le royaume adverse est tombé." : "Ton royaume est tombé."} Partie de ${Math.floor(p.temps / 60)} min, niveau ${NIVEAUX[ia.niveau].nom.toLowerCase()}.</p><p class="go">Clique pour rejouer</p></div>`;
   fin.addEventListener("click", () => location.reload());
   document.body.append(fin);
 }
@@ -861,12 +878,127 @@ function dessiner(): void {
   }
 }
 
+// ---------- mini-carte ----------
+// La carte en losange, une case par pixel (2T × T), comme celle d'AoE II.
+
+const mini = document.getElementById("mini") as HTMLCanvasElement;
+mini.width = 2 * T;
+mini.height = T;
+const mctx = mini.getContext("2d")!;
+const pixels = document.createElement("canvas");
+pixels.width = pixels.height = T;
+const pctx = pixels.getContext("2d")!;
+const image = pctx.createImageData(T, T);
+const COULEUR_MINI: Record<string, [number, number, number]> = {
+  sol: [112, 168, 68],
+  inconnu: [38, 50, 32], // le losange de la carte, encore à explorer
+  arbre: [34, 102, 56],
+  or: [240, 190, 40],
+  pierre: [170, 174, 180],
+  baies: [205, 60, 80],
+  camp0: [70, 120, 240],
+  camp1: [225, 60, 50],
+  camp2: [150, 150, 150],
+};
+let miniChrono = 0;
+
+// Repeint les pixels de la carte (4 fois par seconde suffit).
+function majMini(): void {
+  const d = image.data;
+  const poser = (x: number, y: number, c: [number, number, number], f = 1) => {
+    const i = (Math.floor(y) * T + Math.floor(x)) * 4;
+    [d[i], d[i + 1], d[i + 2], d[i + 3]] = [c[0] * f, c[1] * f, c[2] * f, 255];
+  };
+  for (let i = 0; i < T * T; i++) {
+    poser(i % T, Math.floor(i / T), p.vu[i] ? COULEUR_MINI.sol : COULEUR_MINI.inconnu, p.vu[i] === 1 ? 0.6 : 1);
+  }
+  for (const n of p.noeuds.values()) if (explore(p, n.x, n.y)) poser(n.x, n.y, COULEUR_MINI[n.nature], visible(p, n.x, n.y) ? 1 : 0.6);
+  for (const b of p.batiments.values()) {
+    if (b.camp !== MOI && !explore(p, b.x, b.y)) continue;
+    for (let j = 0; j < taille(b); j++) for (let i = 0; i < taille(b); i++) poser(b.x + i, b.y + j, COULEUR_MINI[`camp${b.camp}`]);
+  }
+  for (const u of p.unites.values()) if (u.camp === MOI || visible(p, u.x, u.y)) poser(u.x, u.y, COULEUR_MINI[`camp${u.camp}`]);
+  pctx.putImageData(image, 0, 0);
+}
+
+function dessinerMini(): void {
+  mctx.setTransform(1, 0, 0, 1, 0, 0);
+  mctx.clearRect(0, 0, mini.width, mini.height);
+  mctx.imageSmoothingEnabled = false;
+  mctx.setTransform(1, 0.5, -1, 0.5, T, 0); // (x, y) → (x − y + T, (x + y) / 2) : le losange
+  mctx.drawImage(pixels, 0, 0);
+  // le cadre de ce qu'on voit à l'écran
+  mctx.setTransform(1, 0, 0, 1, 0, 0);
+  mctx.strokeStyle = "#fff";
+  mctx.lineWidth = 1;
+  mctx.beginPath();
+  for (const [sx, sy] of [[0, 0], [W, 0], [W, H], [0, H]]) {
+    const m = monde(sx / zoom, sy / zoom);
+    mctx.lineTo(m.x - m.y + T, (m.x + m.y) / 2);
+  }
+  mctx.closePath();
+  mctx.stroke();
+}
+
+// Le point de la carte sous la souris, sur la mini-carte.
+function surMini(e: MouseEvent) {
+  const r = mini.getBoundingClientRect();
+  const mx = ((e.clientX - r.left) * mini.width) / r.width;
+  const my = ((e.clientY - r.top) * mini.height) / r.height;
+  return { x: (mx - T + 2 * my) / 2, y: (2 * my - mx + T) / 2 };
+}
+mini.addEventListener("contextmenu", (e) => e.preventDefault());
+mini.addEventListener("mousedown", (e) => {
+  if (!enCours || enPause) return;
+  const m = surMini(e);
+  if (e.button === 0) {
+    centrerSur(m.x, m.y);
+    borner();
+  } else if (e.button === 2 && choix.length) {
+    ordonner(p, choix, Math.floor(m.x), Math.floor(m.y));
+    clique = { x: m.x, y: m.y, t: 0.6 };
+  }
+});
+mini.addEventListener("mousemove", (e) => {
+  if (!(e.buttons & 1) || !enCours || enPause) return;
+  const m = surMini(e);
+  centrerSur(m.x, m.y);
+  borner();
+});
+
+// ---------- pause et menu ----------
+
+const menuJeu = document.getElementById("menu")!;
+const bandeauPause = document.getElementById("pause")!;
+let enPause = false;
+
+function mettrePause(oui: boolean, avecMenu = false): void {
+  enPause = oui;
+  menuJeu.hidden = !(oui && avecMenu);
+  bandeauPause.hidden = !(oui && !avecMenu);
+  fleches.clear();
+  glisse = null;
+}
+
+menuJeu.addEventListener("click", (e) => {
+  const action = (e.target as HTMLElement).closest("button")?.dataset.menu;
+  if (action === "reprendre") mettrePause(false);
+  else if (action === "recommencer") {
+    // une nouvelle partie au même niveau, sans repasser par l'accueil
+    try {
+      sessionStorage.setItem("royaumes-relancer", ia.niveau);
+    } catch {}
+    location.reload();
+  } else if (action === "niveau") location.reload();
+  else if (action === "quitter") location.href = "../../";
+});
+
 let avant = 0;
 let enCours = false;
 function boucle(t: number): void {
   const dt = Math.min((t - avant) / 1000, 0.1);
   avant = t;
-  if (enCours) {
+  if (enCours && !enPause) {
     penser(p, ia);
     avancerPartie(p, dt);
     if (p.vainqueur !== null) {
@@ -879,6 +1011,11 @@ function boucle(t: number): void {
     majPanneau();
   }
   dessiner();
+  if ((miniChrono -= dt) <= 0) {
+    miniChrono = 0.25;
+    majMini();
+  }
+  dessinerMini();
   requestAnimationFrame(boucle);
 }
 
@@ -886,11 +1023,36 @@ window.addEventListener("resize", redimensionner);
 redimensionner();
 const hotel = [...p.batiments.values()].find((b) => b.type === "hotel" && b.camp === MOI)!;
 centrerSur(hotel.x + 2, hotel.y + 2);
-intro.addEventListener("click", () => {
+// Le niveau de l'IA, choisi sur l'écran d'accueil ; le dernier choix est retenu.
+const niveaux = document.getElementById("niveaux")!;
+let niveauRetenu: string | null = null;
+try {
+  niveauRetenu = localStorage.getItem("royaumes-niveau");
+} catch {}
+niveaux.innerHTML = (Object.keys(NIVEAUX) as Niveau[])
+  .map((n) => `<button type="button" data-niveau="${n}" class="${n === (niveauRetenu ?? "modere") ? "actif" : ""}">${NIVEAUX[n].nom}</button>`)
+  .join("");
+function demarrer(n: Niveau): void {
+  ia = creerIA(1, n);
   intro.hidden = true;
   enCours = true;
   choisir([], hotel);
+}
+niveaux.addEventListener("click", (e) => {
+  const n = (e.target as HTMLElement).closest("button")?.dataset.niveau as Niveau | undefined;
+  if (!n) return;
+  try {
+    localStorage.setItem("royaumes-niveau", n);
+  } catch {}
+  demarrer(n);
 });
+// « Recommencer » depuis le menu : on repart directement au même niveau
+let relance: string | null = null;
+try {
+  relance = sessionStorage.getItem("royaumes-relancer");
+  sessionStorage.removeItem("royaumes-relancer");
+} catch {}
+if (relance && relance in NIVEAUX) demarrer(relance as Niveau);
 requestAnimationFrame((t) => {
   avant = t;
   boucle(t);

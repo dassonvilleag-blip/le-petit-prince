@@ -1,5 +1,5 @@
 // L'Âge des Royaumes — l'adversaire. Il joue avec les mêmes ordres que le
-// joueur (former, construire, ordonner, attaquer), une fois par seconde de jeu :
+// joueur (former, construire, ordonner, attaquer), à intervalles réguliers :
 // villageois en continu, répartis sur les ressources, camps près des sources,
 // maisons à temps, armée, passage des âges, défense et vagues d'attaque.
 // shortcut: il ignore le brouillard et sait où est la base du joueur, comme l'IA standard d'AoE II.
@@ -25,16 +25,32 @@ import {
   type Unite,
 } from "./sim.ts";
 
+// Les niveaux d'AoE II. Aucun ne triche : ils diffèrent par la vitesse de
+// réflexion, l'économie visée, l'armée et le moment des attaques.
+export type Niveau = "facile" | "modere" | "difficile" | "tresDifficile";
+export const NIVEAUX: Record<Niveau, {
+  nom: string;
+  reflexion: number; // secondes de jeu entre deux décisions
+  villageois: number; // la population de villageois visée
+  seuilAge: number[]; // villageois avant de viser l'âge suivant
+  armee: number; // au-delà, il ne forme plus de soldats
+  premiereVague: number; // minutes de jeu avant d'attaquer
+  vague: number; // soldats de la première vague, puis 3 de plus à chaque fois
+}> = {
+  facile: { nom: "Facile", reflexion: 3, villageois: 15, seuilAge: [13, 99], armee: 8, premiereVague: 25, vague: 4 },
+  modere: { nom: "Modéré", reflexion: 1.5, villageois: 22, seuilAge: [16, 21], armee: 25, premiereVague: 16, vague: 5 },
+  difficile: { nom: "Difficile", reflexion: 1, villageois: 28, seuilAge: [16, 22], armee: 60, premiereVague: 12, vague: 6 },
+  tresDifficile: { nom: "Très difficile", reflexion: 0.5, villageois: 36, seuilAge: [18, 26], armee: 200, premiereVague: 10, vague: 8 },
+};
+
 export interface IA {
   camp: number;
+  niveau: Niveau;
   prochain: number; // instant de la prochaine réflexion
   vagues: number;
 }
 
-export const creerIA = (camp = 1): IA => ({ camp, prochain: 0, vagues: 0 });
-
-const VILLAGEOIS_VOULUS = 28;
-const SEUIL_AGE = [16, 22]; // villageois avant de viser l'âge suivant
+export const creerIA = (camp = 1, niveau: Niveau = "modere"): IA => ({ camp, niveau, prochain: 0, vagues: 0 });
 // la part des villageois sur chaque ressource, selon l'âge
 const PARTS: Record<Ressource, number>[] = [
   { nourriture: 0.55, bois: 0.45, or: 0, pierre: 0 },
@@ -74,7 +90,8 @@ function place(p: Partie, type: BatimentId, pres: Point, rmin: number, rmax: num
 
 export function penser(p: Partie, ia: IA): void {
   if (p.temps < ia.prochain || p.vainqueur !== null) return;
-  ia.prochain = p.temps + 1;
+  const N = NIVEAUX[ia.niveau];
+  ia.prochain = p.temps + N.reflexion;
   const { camp } = ia;
   const age = p.camps[camp].age;
   const miens = [...p.unites.values()].filter((u) => u.camp === camp);
@@ -100,8 +117,8 @@ export function penser(p: Partie, ia: IA): void {
   const possede = (t: BatimentId) => batiments.some((b) => b.type === t);
 
   // --- l'Hôtel de ville : l'âge suivant dès que possible, sinon des villageois
-  const veutAge = !!hotel && age + 1 < AGES.length && villageois.length >= SEUIL_AGE[age];
-  if (hotel && !hotel.file.length && !(veutAge && former(p, hotel.id, "age")) && villageois.length < VILLAGEOIS_VOULUS) former(p, hotel.id, "villageois");
+  const veutAge = !!hotel && age + 1 < AGES.length && villageois.length >= N.seuilAge[age];
+  if (hotel && !hotel.file.length && !(veutAge && former(p, hotel.id, "age")) && villageois.length < N.villageois) former(p, hotel.id, "villageois");
   const economiser = veutAge && batimentsPourAge(p, camp) >= 2 && !hotel?.file.includes("age"); // on garde la nourriture pour l'âge
 
   // --- des maisons avant d'être bloqué
@@ -158,7 +175,7 @@ export function penser(p: Partie, ia: IA): void {
   }
 
   // --- l'armée
-  if (!economiser && villageois.length >= 12)
+  if (!economiser && villageois.length >= Math.min(12, N.villageois - 2) && soldats.length < N.armee)
     for (const b of batiments) {
       const liste = RECRUES[b.type];
       if (!liste || !b.fini || b.file.length) continue;
@@ -175,7 +192,7 @@ export function penser(p: Partie, ia: IA): void {
 
   // --- les vagues d'attaque, de plus en plus grosses
   const prets = soldats.filter((s) => s.tache.type === "rien");
-  if (age >= 1 && prets.length >= Math.min(6 + 3 * ia.vagues, 25)) {
+  if (age >= 1 && p.temps >= N.premiereVague * 60 && prets.length >= Math.min(N.vague + 3 * ia.vagues, 25, N.armee)) {
     // ses bâtiments d'abord, puis ce qui reste de ses unités
     const cible =
       plusProche(p.batiments.values(), base, taille, (b) => ennemis(b.camp, camp) && p.enJeu.includes(b.camp)) ??
