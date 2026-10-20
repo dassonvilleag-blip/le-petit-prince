@@ -24,6 +24,14 @@ interactives inspirées de l'univers du Petit Prince.
   (heuristiques sans mémoire), moyen (compte les cartes, charge son
   partenaire), difficile (Monte-Carlo : simule des donnes compatibles avec ce
   qu'il a vu avant chaque carte). Règles dans `src/games/tarot/regles.ts`.
+- **L'Âge des Royaumes** (`/games/age-des-royaumes/`) — un Age of Empires en
+  isométrique, construit par étapes. Étape 1 : l'économie (villageois,
+  récolte, maisons, camps, moulin, fermes). Étape 2 : l'armée (caserne,
+  archerie, écurie, 7 unités avec armures et bonus) et les âges sombre →
+  féodal → châteaux. Étape 3 : une IA adverse (`ia.ts`, mêmes ordres que le
+  joueur), le brouillard de guerre et la victoire par conquête. Chiffres
+  d'AoE II dans `src/games/age-des-royaumes/data.ts`, moteur sans DOM dans
+  `sim.ts`. Viendront les technologies, les murs et tours, la mini-carte.
 - **Les Dés Menteurs** (`/games/les-des-menteurs/`) — Perudo en ligne, de 2 à
   6 joueurs dans un salon à code. Enchères, bluff, « Menteur ! » et « Pile
   poil ! » ; l'étoile ⭐ est joker, manches palifico incluses. Les dés vivent

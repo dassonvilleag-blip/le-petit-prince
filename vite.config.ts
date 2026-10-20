@@ -161,6 +161,7 @@ export default defineConfig({
         lesCaravanes: resolve(__dirname, "games/les-caravanes/index.html"),
         tarot: resolve(__dirname, "games/tarot/index.html"),
         paperasse: resolve(__dirname, "games/paperasse/index.html"),
+        ageDesRoyaumes: resolve(__dirname, "games/age-des-royaumes/index.html"),
       },
     },
   },

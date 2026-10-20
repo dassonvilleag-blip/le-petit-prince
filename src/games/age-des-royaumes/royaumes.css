@@ -1,0 +1,237 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --parchemin: #f1e4c4;
+  --parchemin-fonce: #d9c493;
+  --encre: #2b1d0e;
+  --bois: #5a3a1c;
+  --or: #e6b422;
+  --rouge: #c0392b;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: #1c2a16;
+  font-family: "Alegreya Sans", system-ui, sans-serif;
+  color: var(--encre);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#carte {
+  position: fixed;
+  inset: 0;
+  display: block;
+}
+
+.retour,
+.barre,
+.panneau {
+  position: fixed;
+  z-index: 10;
+  background: var(--parchemin);
+  border: 3px solid var(--bois);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+}
+
+.retour {
+  top: 10px;
+  left: 10px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: var(--encre);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.barre {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.barre button {
+  font: inherit;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  padding: 0 6px;
+  cursor: pointer;
+}
+
+.alerte {
+  color: var(--rouge);
+}
+
+.barre button.alerte {
+  border-color: var(--rouge);
+}
+
+.panneau {
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  min-width: 280px;
+  max-width: calc(100vw - 20px);
+  padding: 10px 14px 12px;
+  border-radius: 10px;
+}
+
+.panneau h2 {
+  font-family: "Cinzel", serif;
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+
+.panneau p {
+  margin-bottom: 6px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.actions button {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  width: 104px;
+  padding: 6px 4px;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.15;
+  background: var(--parchemin-fonce);
+  border: 2px solid var(--bois);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.actions button:hover:not(:disabled),
+.actions button.actif {
+  background: #fff3cf;
+  border-color: var(--or);
+}
+
+.actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.actions .emb {
+  font-size: 1.4rem;
+}
+
+.actions small {
+  font-size: 0.75rem;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.3em;
+  padding: 0 4px;
+  border: 1px solid var(--bois);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #fffaf0;
+  font: 700 0.75rem "Alegreya Sans", sans-serif;
+  text-align: center;
+}
+
+.parchemin .sous {
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.bulle {
+  position: fixed;
+  z-index: 20;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(43, 29, 14, 0.9);
+  color: var(--parchemin);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.bulle.visible {
+  opacity: 1;
+}
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(15, 20, 10, 0.6);
+  cursor: pointer;
+}
+
+.intro[hidden] {
+  display: none;
+}
+
+.parchemin {
+  max-width: 520px;
+  padding: 24px 28px;
+  background: var(--parchemin);
+  border: 4px solid var(--bois);
+  border-radius: 12px;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.35);
+}
+
+.parchemin h1 {
+  font-family: "Cinzel", serif;
+  font-weight: 800;
+  font-size: 2rem;
+  text-align: center;
+}
+
+.parchemin .etape {
+  text-align: center;
+  margin-bottom: 14px;
+  font-style: italic;
+}
+
+.parchemin ul {
+  margin: 0 0 12px 18px;
+  line-height: 1.6;
+}
+
+.parchemin .go {
+  margin-top: 14px;
+  text-align: center;
+  font-family: "Cinzel", serif;
+  font-weight: 800;
+  color: var(--bois);
+}
+
+@media (max-width: 700px) {
+  .barre {
+    top: 52px;
+    gap: 10px;
+    font-size: 0.9rem;
+  }
+}

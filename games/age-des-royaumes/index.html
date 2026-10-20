@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>L'Âge des Royaumes</title>
+    <meta name="description" content="Un Age of Empires dans le navigateur : villageois, récolte, bâtiments, armée, âges, contre une IA dans le brouillard de guerre." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏰</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Alegreya+Sans:wght@500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/games/age-des-royaumes/royaumes.css" />
+  </head>
+  <body>
+    <canvas id="carte"></canvas>
+
+    <a class="retour" href="../../">← le petit prince</a>
+    <header class="barre" id="barre"></header>
+    <section class="panneau" id="panneau" hidden></section>
+    <div class="bulle" id="bulle"></div>
+
+    <div class="intro" id="intro">
+      <div class="parchemin">
+        <h1>L'Âge des Royaumes</h1>
+        <p class="etape">Étape 3 — face à l'IA, dans le brouillard</p>
+        <p class="sous">Les commandes d'Age of Empires II DE :</p>
+        <ul>
+          <li><b>Clic gauche</b> : choisir · glisser : un groupe · <b>Maj</b> : ajouter/retirer</li>
+          <li><b>Clic droit</b> : attaquer, récolter, bâtir, cultiver, déposer, marcher · bâtiment choisi : point de ralliement</li>
+          <li><b data-code="KeyF">F</b> (économie) ou <b data-code="KeyG">G</b> (militaire) puis la touche du bâtiment : bâtir · <b data-code="KeyQ">Q</b>, <b data-code="KeyW">W</b>, <b data-code="KeyE">E</b> sur un bâtiment : former (<b>Maj</b> : 5)</li>
+          <li><b data-code="KeyH">H</b> : Hôtel de ville · <b>.</b> : villageois oisif · <b>Ctrl+1…9</b> / <b>1…9</b> : groupes · <b>Suppr</b> : supprimer · <b>double-clic</b> : ce type d'unité à l'écran</li>
+          <li><b>Flèches</b> ou bord de l'écran : déplacer la vue · <b>molette</b> : zoom · <b>Échap</b> : annuler</li>
+        </ul>
+        <p>Un royaume adverse 🟥 se développe de l'autre côté de la carte et finira par attaquer. Rase tous ses bâtiments et ses unités pour gagner. Méfie-toi aussi des loups 🐺.</p>
+        <p class="go">Clique pour commencer</p>
+      </div>
+    </div>
+
+    <script type="module" src="/src/games/age-des-royaumes/main.ts"></script>
+  </body>
+</html>
