@@ -18,7 +18,6 @@ import {
   explore,
   fixerRalliement,
   former,
-  noeudEn,
   nouvellePartie,
   ordonner,
   peutFormer,
@@ -140,15 +139,45 @@ function losange(x: number, y: number, w: number, h = w): void {
   ctx.closePath();
 }
 
+// Ce qui a été dessiné à la dernière image, dans l'ordre : on vise au pixel près.
+type Visable = Unite | Batiment | Noeud;
+const dessines: { objet: Visable; nom: string; x: number; y: number }[] = []; // x, y : coin haut-gauche à l'écran
+let objetDessine: Visable | null = null; // l'objet dont on dessine les sprites
+
 // Le sprite `nom` posé sur ce point du sol, décalé de (dx, dy) pixels ; false s'il manque.
 function sprite(nom: string, x: number, y: number, dx = 0, dy = 0): boolean {
   const s = SPRITES[nom];
   if (!s || !atlas.complete) return false;
   const c = iso(x, y);
-  ctx.drawImage(atlas, s[0], s[1], s[2], s[3], c.x + dx - s[4] / 2, c.y + dy - s[5] / 2, s[2] / 2, s[3] / 2); // l'atlas est rendu en 2x
+  const x0 = c.x + dx - s[4] / 2; // l'atlas est rendu en 2x
+  const y0 = c.y + dy - s[5] / 2;
+  ctx.drawImage(atlas, s[0], s[1], s[2], s[3], x0, y0, s[2] / 2, s[3] / 2);
+  if (objetDessine) dessines.push({ objet: objetDessine, nom, x: x0, y: y0 });
   return true;
 }
-const hautSprite = (nom: string) => (SPRITES[nom]?.[5] ?? 0) / 2; // du sol au sommet, en pixels
+
+// Une copie lisible de l'atlas, pour savoir si un pixel est plein ou transparent.
+const lecteur = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
+atlas.addEventListener("load", () => {
+  lecteur.canvas.width = atlas.width;
+  lecteur.canvas.height = atlas.height;
+  lecteur.drawImage(atlas, 0, 0);
+});
+
+// L'objet dessiné sous ce point écran, le plus en avant, parmi ceux qui passent `ok`.
+// Les ombres (à moitié transparentes) ne comptent pas.
+function objetSous(x: number, y: number, ok: (o: Visable) => boolean = () => true): Visable | undefined {
+  for (let k = dessines.length - 1; k >= 0; k--) {
+    const d = dessines[k];
+    const s = SPRITES[d.nom];
+    const px = Math.floor((x - d.x) * 2);
+    const py = Math.floor((y - d.y) * 2);
+    if (px < 0 || py < 0 || px >= s[2] || py >= s[3] || !ok(d.objet)) continue;
+    if (lecteur.getImageData(s[0] + px, s[1] + py, 1, 1).data[3] > 110) return d.objet;
+  }
+}
+const estUnite = (o: Visable): o is Unite => "tache" in o;
+const estBatiment = (o: Visable): o is Batiment => "file" in o;
 
 const spriteNoeud = (n: Noeud) =>
   n.nature === "arbre" ? `arbre${"AB"[n.id % 2]}` : n.nature === "baies" ? `baies${"AB"[n.id % 2]}` : `${n.nature}${"ABCDE"[n.id % 5]}`;
@@ -169,7 +198,6 @@ function barreProgres(cx: number, cy: number, f: number, couleur = "#7ee07a", w 
 const couleurPv = (f: number) => (f > 0.5 ? "#7ee07a" : f > 0.25 ? "#e6b422" : "#e0453a");
 
 const taille = (b: Batiment) => BATIMENTS[b.type].taille;
-const hauteur = (b: Batiment) => hautSprite(spriteBatiment(b));
 
 function dessinerBatiment(b: Batiment, choisi: boolean): void {
   const def = BATIMENTS[b.type];
@@ -334,16 +362,6 @@ function choisir(unites: number[], bat: Batiment | null = null, noeud: Noeud | n
   majPanneau(true);
 }
 
-// L'unité dessinée sous ce point écran (la plus en avant), parmi celles qui passent `ok`.
-function uniteSous(x: number, y: number, ok: (u: Unite) => boolean): Unite | undefined {
-  let mieux: Unite | undefined;
-  for (const u of p.unites.values()) {
-    const c = iso(u.x, u.y);
-    const haut = aCheval(u) ? 40 : 28;
-    if (ok(u) && Math.abs(x - c.x) < 12 && y > c.y - haut && y < c.y + 6 && (!mieux || u.x + u.y > mieux.x + mieux.y)) mieux = u;
-  }
-  return mieux;
-}
 const aMoi = (u: Unite) => u.camp === MOI;
 const villageoisChoisis = () => choix.filter((id) => p.unites.get(id)?.type === "villageois");
 
@@ -361,19 +379,10 @@ function dire(msg: string): void {
   bulleChrono = window.setTimeout(() => bulle.classList.remove("visible"), 1800);
 }
 
-// La case de ce qui est dessiné sous la souris. Arbres, mines et bâtiments
-// dépassent vers le haut : on descend sous le curseur et le plus en avant gagne.
+// La case visée : celle de l'arbre, de la mine ou du bâtiment dessiné sous la souris, sinon le sol.
 function caseVisee(x: number, y: number) {
-  let mieux: { x: number; y: number } | null = null;
-  for (let h = 0; h <= 100; h += 4) {
-    const m = monde(x, y + h);
-    const c = { x: Math.floor(m.x), y: Math.floor(m.y) };
-    const n = noeudEn(p, c.x, c.y);
-    const b = batimentEn(p, c.x, c.y);
-    const surNoeud = n && h <= hautSprite(spriteNoeud(n)) && Math.abs(x - iso(c.x + 0.5, c.y + 0.5).x) <= 16;
-    if (surNoeud || (b && h <= hauteur(b))) mieux = c;
-  }
-  if (mieux) return mieux;
+  const o = objetSous(x, y, (o) => !estUnite(o));
+  if (o) return { x: Math.floor(o.x), y: Math.floor(o.y) };
   const m = monde(x, y);
   return { x: Math.floor(m.x), y: Math.floor(m.y) };
 }
@@ -393,7 +402,8 @@ function clic(x: number, y: number, maj: boolean): void {
     modeRalliement = false;
     return majPanneau(true);
   }
-  const v = uniteSous(x, y, aMoi);
+  const o = objetSous(x, y, (o) => !estUnite(o) || aMoi(o));
+  const v = o && estUnite(o) ? o : undefined;
   if (v) {
     // double-clic : toutes les unités de ce type à l'écran
     const double = performance.now() - dernierClic.t < 350 && dernierClic.id === v.id;
@@ -402,10 +412,8 @@ function clic(x: number, y: number, maj: boolean): void {
     if (!maj) return choisir([v.id]);
     return choisir(choix.includes(v.id) ? choix.filter((id) => id !== v.id) : [...choix, v.id]);
   }
-  const c = caseVisee(x, y);
-  const b = batimentEn(p, c.x, c.y);
-  if (b && explore(p, b.x, b.y)) return choisir([], b);
-  choisir([], null, noeudEn(p, c.x, c.y) ?? null);
+  if (o && estBatiment(o)) return choisir([], o);
+  choisir([], null, o && !estUnite(o) ? o : null);
 }
 
 // a et b en pixels écran
@@ -430,7 +438,7 @@ function ordreDroit(x: number, y: number): void {
     modeRalliement = false;
     return majPanneau(true);
   }
-  const ennemi = choix.length ? uniteSous(x, y, (u) => ennemis(u.camp, MOI) && visible(p, u.x, u.y)) : undefined;
+  const ennemi = choix.length ? objetSous(x, y, (o) => estUnite(o) && ennemis(o.camp, MOI)) : undefined;
   if (ennemi) {
     attaquer(p, choix, ennemi.id);
     clique = { x: ennemi.x, y: ennemi.y, t: 0.6 };
@@ -797,21 +805,26 @@ function dessiner(): void {
   ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
   ctx.drawImage(sol, cam.x - (T * TW) / 2, cam.y);
 
-  const vus: [number, () => void][] = [];
+  const vus: [number, Visable, () => void][] = [];
   const aLEcran = (x: number, y: number) => {
     const c = iso(x, y);
-    return c.x > -150 && c.x < W / zoom + 150 && c.y > -60 && c.y < H / zoom + 200;
+    return c.x > -150 && c.x < W / zoom + 150 && c.y > -60 && c.y < H / zoom + 320; // un château dépasse de 300 px
   };
   // shortcut: un bâtiment ennemi exploré s'affiche tel qu'il est, pas tel qu'on l'a vu la dernière fois.
   for (const b of p.batiments.values()) {
     const t = BATIMENTS[b.type].taille;
-    if (aLEcran(b.x + t / 2, b.y + t / 2) && (b.camp === MOI || explore(p, b.x, b.y))) vus.push([b.type === "ferme" ? -1e6 : b.x + b.y + t, () => dessinerBatiment(b, b === choixBat)]);
+    if (aLEcran(b.x + t / 2, b.y + t / 2) && (b.camp === MOI || explore(p, b.x, b.y))) vus.push([b.type === "ferme" ? -1e6 : b.x + b.y + t, b, () => dessinerBatiment(b, b === choixBat)]);
   }
-  for (const n of p.noeuds.values()) if (aLEcran(n.x, n.y) && explore(p, n.x, n.y)) vus.push([n.x + n.y + 1, () => sprite(spriteNoeud(n), n.x + 0.5, n.y + 0.5)]);
+  for (const n of p.noeuds.values()) if (aLEcran(n.x, n.y) && explore(p, n.x, n.y)) vus.push([n.x + n.y + 1, n, () => sprite(spriteNoeud(n), n.x + 0.5, n.y + 0.5)]);
   const choisis = new Set(choix);
-  for (const u of p.unites.values()) if (aLEcran(u.x, u.y) && (u.camp === MOI || visible(p, u.x, u.y))) vus.push([u.x + u.y, () => dessinerUnite(u, choisis.has(u.id))]);
+  for (const u of p.unites.values()) if (aLEcran(u.x, u.y) && (u.camp === MOI || visible(p, u.x, u.y))) vus.push([u.x + u.y, u, () => dessinerUnite(u, choisis.has(u.id))]);
   vus.sort((a, b) => a[0] - b[0]);
-  for (const [, f] of vus) f();
+  dessines.length = 0;
+  for (const [, objet, f] of vus) {
+    objetDessine = objet;
+    f();
+  }
+  objetDessine = null;
   dessinerTirs();
   dessinerBrouillard(aLEcran);
 
