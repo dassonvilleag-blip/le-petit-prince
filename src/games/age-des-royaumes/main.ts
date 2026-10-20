@@ -62,7 +62,7 @@ const bulle = document.getElementById("bulle")!;
 const p = nouvellePartie();
 let ia = creerIA(1); // remplacée au lancement, selon le niveau choisi
 const atlas = new Image();
-atlas.src = "/sprites/royaumes.webp";
+atlas.src = `${import.meta.env.BASE_URL}sprites/royaumes.webp`; // le site vit sous /le-petit-prince/ en ligne
 const moi = p.camps[MOI];
 const T = p.taille;
 
