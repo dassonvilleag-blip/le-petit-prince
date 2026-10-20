@@ -101,27 +101,38 @@ function redimensionner(): void {
   if (c) centrerSur(c.x, c.y);
 }
 
-// ---------- le sol, dessiné une fois ----------
+// ---------- le sol ----------
 
-const sol = document.createElement("canvas");
-sol.width = T * TW;
-sol.height = T * TH;
-{
-  const s = sol.getContext("2d")!;
-  for (let y = 0; y < T; y++)
-    for (let x = 0; x < T; x++) {
-      const h = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-      const v = h - Math.floor(h);
-      const ox = (x - y) * (TW / 2) + (T * TW) / 2;
-      const oy = (x + y) * (TH / 2);
-      s.fillStyle = `hsl(${86 + v * 8}, 50%, ${44 + v * 4}%)`; // les verts doux de KayKit
-      s.beginPath();
-      s.moveTo(ox, oy - 0.5);
-      s.lineTo(ox + TW / 2 + 0.5, oy + TH / 2);
-      s.lineTo(ox, oy + TH + 0.5);
-      s.lineTo(ox - TW / 2 - 0.5, oy + TH / 2);
-      s.fill();
+// Une nuance fixe par case, parmi quelques verts doux comme ceux de KayKit.
+const COULEURS_SOL = Array.from({ length: 8 }, (_, k) => `hsl(${86 + k}, 50%, ${44 + k / 2}%)`);
+const nuance = Uint8Array.from({ length: T * T }, (_, i) => {
+  const h = Math.sin((i % T) * 12.9898 + Math.floor(i / T) * 78.233) * 43758.5453;
+  return Math.floor((h - Math.floor(h)) * COULEURS_SOL.length);
+});
+
+// Pave les cases à l'écran d'un losange chacune, un seul tracé par couleur ;
+// `couleur` rend l'indice dans `couleurs`, ou -1 pour laisser la case vide.
+function paver(couleurs: readonly string[], couleur: (i: number) => number): void {
+  const coins = [monde(0, 0), monde(W / zoom, 0), monde(0, H / zoom), monde(W / zoom, H / zoom)];
+  const xs = coins.map((c) => c.x);
+  const ys = coins.map((c) => c.y);
+  const [x0, x1] = [Math.max(0, Math.floor(Math.min(...xs)) - 1), Math.min(T - 1, Math.ceil(Math.max(...xs)) + 1)];
+  const [y0, y1] = [Math.max(0, Math.floor(Math.min(...ys)) - 1), Math.min(T - 1, Math.ceil(Math.max(...ys)) + 1)];
+  const seaux: number[][] = couleurs.map(() => []);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) seaux[couleur(y * T + x)]?.push(y * T + x);
+  seaux.forEach((cases, k) => {
+    ctx.fillStyle = couleurs[k];
+    ctx.beginPath();
+    for (const i of cases) {
+      const a = iso(i % T, Math.floor(i / T));
+      ctx.moveTo(a.x, a.y - 0.5);
+      ctx.lineTo(a.x + TW / 2 + 0.5, a.y + TH / 2);
+      ctx.lineTo(a.x, a.y + TH + 0.5);
+      ctx.lineTo(a.x - TW / 2 - 0.5, a.y + TH / 2);
+      ctx.closePath();
     }
+    ctx.fill();
+  });
 }
 
 // ---------- dessin ----------
@@ -766,26 +777,8 @@ function majBarre(): void {
 }
 
 // Sur le sol : noir là où on n'est jamais allé, voilé là où on ne voit plus.
-function dessinerBrouillard(aLEcran: (x: number, y: number) => boolean): void {
-  for (const [niveau, couleur] of [[0, "#0d130a"], [1, "rgba(0,0,0,.42)"]] as const) {
-    ctx.fillStyle = couleur;
-    ctx.beginPath();
-    for (let y = 0; y < T; y++)
-      for (let x = 0; x < T; x++) {
-        if (p.vu[y * T + x] !== niveau || !aLEcran(x + 0.5, y + 0.5)) continue;
-        const a = iso(x, y);
-        const b = iso(x + 1, y);
-        const c = iso(x + 1, y + 1);
-        const d = iso(x, y + 1);
-        ctx.moveTo(a.x, a.y - 0.5);
-        ctx.lineTo(b.x + 0.5, b.y);
-        ctx.lineTo(c.x, c.y + 0.5);
-        ctx.lineTo(d.x - 0.5, d.y);
-        ctx.closePath();
-      }
-    ctx.fill();
-  }
-}
+const BROUILLARD = ["#0d130a", "rgba(0,0,0,.42)"]; // jamais vu, exploré
+const dessinerBrouillard = () => paver(BROUILLARD, (i) => (p.vu[i] === 2 ? -1 : p.vu[i]));
 
 function finDePartie(): void {
   const fin = document.createElement("div");
@@ -803,13 +796,13 @@ function dessiner(): void {
   ctx.fillStyle = "#1c2a16";
   ctx.fillRect(0, 0, W, H);
   ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
-  ctx.drawImage(sol, cam.x - (T * TW) / 2, cam.y);
+  paver(COULEURS_SOL, (i) => nuance[i]);
   const aLEcran = (x: number, y: number) => {
     const c = iso(x, y);
     return c.x > -150 && c.x < W / zoom + 150 && c.y > -60 && c.y < H / zoom + 320; // un château dépasse de 300 px
   };
   // le brouillard sur le sol seulement : un toit qui dépasse au-dessus d'une case noire reste visible
-  dessinerBrouillard(aLEcran);
+  dessinerBrouillard();
 
   const vus: [number, Visable, () => void][] = [];
   // shortcut: un bâtiment ennemi exploré s'affiche tel qu'il est, pas tel qu'on l'a vu la dernière fois.

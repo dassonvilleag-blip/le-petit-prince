@@ -2,7 +2,7 @@
 // le jeu tourne à VITESSE comme la vitesse « normale » d'AoE II DE.
 
 export const VITESSE = 1.7;
-export const TAILLE_CARTE = 64;
+export const TAILLE_CARTE = 144; // la « petite » carte d'AoE II
 export const PORTEE = 10; // ce qu'un villageois porte avant de rentrer
 export const POP_MAX = 200;
 

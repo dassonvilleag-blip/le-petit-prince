@@ -179,7 +179,8 @@ export function nouvellePartie(graine = Date.now()): Partie {
   const p = partieVide(T);
   p.enJeu = [0, 1];
   const r = alea(graine);
-  const h = 13;
+  const h = Math.round(T * 0.12); // les bases près de deux coins opposés
+  const surface = (T / 64) ** 2; // la carte d'origine faisait 64 de côté
   const a = r() < 0.5 ? { x: h, y: h } : { x: h, y: T - 4 - h };
   const b = { x: T - 4 - a.x, y: T - 4 - a.y };
   poser(p, "hotel", a.x, a.y, true, 0);
@@ -206,7 +207,12 @@ export function nouvellePartie(graine = Date.now()): Partie {
   semer("or", 7, 16, 26);
   semer("pierre", 5, 16, 26);
   semer("baies", 6, 14, 22);
-  for (let i = 0; i < 12; i++) semer("arbre", 20 + Math.floor(r() * 50), 13, 60);
+  for (let i = 0; i < 3; i++) {
+    semer("or", 7, 28, T * 0.7);
+    semer("pierre", 5, 28, T * 0.7);
+    semer("baies", 6, 24, T * 0.6);
+  }
+  for (let i = 0; i < 12 * surface; i++) semer("arbre", 20 + Math.floor(r() * 50), 13, T * 0.95);
   for (const n of [...p.noeuds.values()]) if (libre(p, T - 1 - n.x, T - 1 - n.y)) ajouterNoeud(p, n.nature, T - 1 - n.x, T - 1 - n.y);
   for (const [camp, c] of [ca, cb].entries()) for (const v of casesLibresAutour(p, { x: c.x, y: c.y + 3 }, 3)) ajouterUnite(p, "villageois", v.x + 0.5, v.y + 0.5, camp);
   // une forêt ne doit pas couper la route entre les bases : on y ouvre une trouée (symétrique)
@@ -218,8 +224,8 @@ export function nouvellePartie(graine = Date.now()): Partie {
         for (const n of [noeudEn(p, x, y), noeudEn(p, T - 1 - x, T - 1 - y)]) if (n) retirerNoeud(p, n);
       }
   // des loups qui rôdent loin des villages, comme sur les cartes d'AoE II
-  for (let i = 0; i < 2; i++) {
-    const [c] = casesLibresAutour(p, auHasard(18, 28), 1);
+  for (let i = 0; i < 2 * surface; i++) {
+    const [c] = casesLibresAutour(p, auHasard(18, T * 0.6), 1);
     if (!c || d(c.x, c.y, cb) < 18) continue;
     ajouterUnite(p, "loup", c.x + 0.5, c.y + 0.5, SAUVAGE);
     ajouterUnite(p, "loup", T - 0.5 - c.x, T - 0.5 - c.y, SAUVAGE);
