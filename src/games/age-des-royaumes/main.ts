@@ -63,7 +63,7 @@ const bulle = document.getElementById("bulle")!;
 const p = nouvellePartie();
 const ia = creerIA(1);
 const atlas = new Image();
-atlas.src = "/sprites/royaumes.png";
+atlas.src = "/sprites/royaumes.webp";
 const moi = p.camps[MOI];
 const T = p.taille;
 

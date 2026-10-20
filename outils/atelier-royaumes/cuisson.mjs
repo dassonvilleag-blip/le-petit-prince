@@ -121,7 +121,9 @@ function angleDirection(d) {
 }
 
 // Un personnage animé : chaque animation, dans les 8 directions, en `n` images.
-export async function cuireUnite({ nom, perso, cacher = [], armes = [], hauteur = 0.92, anims }) {
+// Avec une `monture`, le personnage (sans jambes) est posé sur le dos de l'animal,
+// recalé à chaque image sur l'os `os` ; chaque animation donne alors aussi le clip de l'animal.
+export async function cuireUnite({ nom, perso, cacher = [], armes = [], hauteur = 0.92, anims, monture }) {
   const corps = await charger(perso);
   corps.traverse((o) => {
     if (cacher.includes(o.name)) o.visible = false;
@@ -139,23 +141,48 @@ export async function cuireUnite({ nom, perso, cacher = [], armes = [], hauteur 
   pivot.add(corps);
   const scene = sceneEclairee(pivot);
   const mixer = new THREE.AnimationMixer(corps);
+  let mixerBete, os;
+  if (monture) {
+    const bete = await charger(monture.url);
+    bete.traverse((o) => o.isMesh && (o.castShadow = true));
+    const bb = new THREE.Box3().setFromObject(bete);
+    bete.scale.setScalar(monture.hauteur / (bb.max.y - bb.min.y));
+    bete.rotation.y = monture.rot ?? 0;
+    pivot.add(bete);
+    mixerBete = new THREE.AnimationMixer(bete);
+    os = monture.os.map((n) => bete.getObjectByName(n)); // la selle : entre ces os
+  }
+  const clipDe = async (fichier, nomClip) => (await gltf(fichier)).animations.find((a) => a.name === nomClip);
   const sprites = [];
-  for (const [anim, [fichier, clip, n]] of Object.entries(anims)) {
-    const c = (await gltf(fichier)).animations.find((a) => a.name === clip);
+  for (const [anim, [fichier, clip, n, clipBete]] of Object.entries(anims)) {
+    const c = await clipDe(fichier, clip);
     mixer.stopAllAction();
     mixer.clipAction(c).play();
+    const cb = monture && (await clipDe(monture.url, clipBete));
+    if (cb) {
+      mixerBete.stopAllAction();
+      mixerBete.clipAction(cb).play();
+    }
     for (let d = 0; d < 8; d++) {
       pivot.rotation.y = angleDirection(d);
       for (let f = 0; f < n; f++) {
         mixer.setTime((c.duration * f) / n);
-        sprites.push({ nom: `${nom}-${anim}-${d}-${f}`, ...rendre(scene, 160, 170, 130) });
+        if (cb) {
+          mixerBete.setTime((cb.duration * f) / n);
+          pivot.updateMatrixWorld(true);
+          const v = new THREE.Vector3();
+          for (const o of os) v.add(o.getWorldPosition(new THREE.Vector3()).divideScalar(os.length));
+          pivot.worldToLocal(v);
+          corps.position.set(v.x, v.y + monture.selle, v.z);
+        }
+        sprites.push({ nom: `${nom}-${anim}-${d}-${f}`, ...rendre(scene, 200, 200, 150) });
       }
     }
   }
   return sprites;
 }
 
-// Range les sprites en étagères dans un atlas, rend { png, carte }.
+// Range les sprites en étagères dans un atlas, rend { canvas, carte }.
 export function atlas(sprites, largeur = 4096) {
   const tries = [...sprites].sort((a, b) => b.canvas.height - a.canvas.height);
   let x = 0, y = 0, etage = 0;
@@ -179,8 +206,12 @@ export function atlas(sprites, largeur = 4096) {
     g.drawImage(s.canvas, px, py);
     carte[s.nom] = [px, py, s.canvas.width, s.canvas.height, Math.round(s.ax), Math.round(s.ay)];
   }
-  return { png: c.toDataURL("image/png"), carte, taille: [c.width, c.height] };
+  return { canvas: c, carte, taille: [c.width, c.height] };
 }
 
-window.atelier = { cuire, cuireUnite, atlas };
+// Dépose un fichier dans le dossier de sortie du serveur (l'atlas est trop gros pour passer par CDP).
+const deposer = async (nom, contenu) => fetch(`/sortie/${nom}`, { method: "PUT", body: contenu });
+const png = (canvas) => new Promise((ok) => canvas.toBlob(ok, "image/webp", 0.92)); // WebP : bien plus léger que le PNG
+
+window.atelier = { cuire, cuireUnite, atlas, deposer, png };
 window.atelierPret = true;

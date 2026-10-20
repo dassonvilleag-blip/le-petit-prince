@@ -1,10 +1,10 @@
 // Lance le serveur et un Chrome headless, cuit la recette, écrit atlas + carte.
 import { spawn } from "node:child_process";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 const [RACINE, SORTIE] = process.argv.slice(2).map((a) => resolve(a));
 mkdirSync(SORTIE, { recursive: true });
-const serveur = spawn(process.execPath, [join(RACINE, "serveur.mjs"), RACINE], { stdio: "inherit" });
+const serveur = spawn(process.execPath, [join(RACINE, "serveur.mjs"), RACINE, SORTIE], { stdio: "inherit" });
 const chrome = spawn("C:/Program Files/Google/Chrome/Application/chrome.exe", [
   "--headless=new", "--remote-debugging-port=9334", `--user-data-dir=${join(SORTIE, "profil")}`,
   "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--no-first-run", "about:blank",
@@ -40,15 +40,15 @@ const r = await cdp("Runtime.evaluate", {
     const sprites = [];
     for (const def of recette) sprites.push(await atelier.cuire(def));
     for (const def of (await import("/unites.mjs")).default) { const t = performance.now(); sprites.push(...(await atelier.cuireUnite(def))); console.log(def.nom, Math.round(performance.now() - t), "ms"); }
-    return atelier.atlas(sprites);
+    const { canvas, carte, taille } = atelier.atlas(sprites);
+    await atelier.deposer("royaumes.webp", await atelier.png(canvas));
+    await atelier.deposer("royaumes.json", JSON.stringify(carte));
+    return taille;
   })()`,
 });
 if (r.result.exceptionDetails) console.log("ÉCHEC", r.result.exceptionDetails.exception?.description);
 else {
-  const { png, carte, taille } = r.result.result.value;
-  writeFileSync(join(SORTIE, "royaumes.png"), Buffer.from(png.split(",")[1], "base64"));
-  writeFileSync(join(SORTIE, "royaumes.json"), JSON.stringify(carte));
-  console.log("atlas", taille.join("×"), Object.keys(carte).length, "sprites");
+  console.log("atlas", r.result.result.value.join("×"), "déposé dans", SORTIE);
 }
 ws.close();
 chrome.kill();
