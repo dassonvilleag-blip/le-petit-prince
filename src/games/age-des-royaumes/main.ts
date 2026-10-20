@@ -765,7 +765,7 @@ function majBarre(): void {
   oisifBtn.classList.toggle("alerte", oisifs > 0);
 }
 
-// Noir là où on n'est jamais allé, voilé là où on ne voit plus.
+// Sur le sol : noir là où on n'est jamais allé, voilé là où on ne voit plus.
 function dessinerBrouillard(aLEcran: (x: number, y: number) => boolean): void {
   for (const [niveau, couleur] of [[0, "#0d130a"], [1, "rgba(0,0,0,.42)"]] as const) {
     ctx.fillStyle = couleur;
@@ -804,12 +804,14 @@ function dessiner(): void {
   ctx.fillRect(0, 0, W, H);
   ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
   ctx.drawImage(sol, cam.x - (T * TW) / 2, cam.y);
-
-  const vus: [number, Visable, () => void][] = [];
   const aLEcran = (x: number, y: number) => {
     const c = iso(x, y);
     return c.x > -150 && c.x < W / zoom + 150 && c.y > -60 && c.y < H / zoom + 320; // un château dépasse de 300 px
   };
+  // le brouillard sur le sol seulement : un toit qui dépasse au-dessus d'une case noire reste visible
+  dessinerBrouillard(aLEcran);
+
+  const vus: [number, Visable, () => void][] = [];
   // shortcut: un bâtiment ennemi exploré s'affiche tel qu'il est, pas tel qu'on l'a vu la dernière fois.
   for (const b of p.batiments.values()) {
     const t = BATIMENTS[b.type].taille;
@@ -822,11 +824,13 @@ function dessiner(): void {
   dessines.length = 0;
   for (const [, objet, f] of vus) {
     objetDessine = objet;
+    const t = "file" in objet ? taille(objet) / 2 : "nature" in objet ? 0.5 : 0;
+    ctx.filter = visible(p, objet.x + t, objet.y + t) ? "none" : "brightness(0.58)"; // exploré mais plus en vue
     f();
   }
+  ctx.filter = "none";
   objetDessine = null;
   dessinerTirs();
-  dessinerBrouillard(aLEcran);
 
   if (choixNoeud) {
     ctx.strokeStyle = "#fff";
