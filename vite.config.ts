@@ -156,6 +156,7 @@ export default defineConfig({
         lesDesMenteurs: resolve(__dirname, "games/les-des-menteurs/index.html"),
         laColonie: resolve(__dirname, "games/la-colonie/index.html"),
         roiDesPirates: resolve(__dirname, "games/roi-des-pirates/index.html"),
+        vivreCard: resolve(__dirname, "games/roi-des-pirates/vivre-card/index.html"),
         duKebabAuCac40: resolve(__dirname, "games/du-kebab-au-cac-40/index.html"),
         citePetitPrince: resolve(__dirname, "games/cite-petit-prince/index.html"),
         lesCaravanes: resolve(__dirname, "games/les-caravanes/index.html"),

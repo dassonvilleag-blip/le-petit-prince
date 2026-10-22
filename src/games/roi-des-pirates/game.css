@@ -318,3 +318,24 @@ body {
   .node-text { font-size: 16px; }
   .choice-btn { font-size: 15px; padding: 12px 14px; }
 }
+
+/* ── Choix du mode ── */
+.mode-choix { width: 100%; max-width: 760px; padding: 48px 20px; text-align: center; }
+.mode-choix[hidden], #scene[hidden] { display: none; }
+.mode-sur-titre { font-family: sans-serif; font-size: 12px; letter-spacing: 0.25em; color: var(--text-dim); }
+.mode-titre { font-weight: normal; font-size: clamp(1.8rem, 6vw, 2.6rem); margin: 8px 0 28px; }
+.mode-cartes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.mode-carte {
+  position: relative; display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center;
+  padding: 26px 20px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font: inherit; text-decoration: none; cursor: pointer; transition: transform 0.15s, border-color 0.15s;
+}
+.mode-carte:hover { transform: translateY(-3px); border-color: rgba(224, 178, 74, 0.5); }
+.mode-carte strong { font-size: 1.3rem; font-weight: normal; }
+.mode-carte span { color: var(--text-dim); font-size: 0.95rem; }
+.mode-icone { font-size: 2.2rem; }
+.mode-nouveau { border-color: rgba(255, 138, 58, 0.4); box-shadow: 0 0 30px rgba(255, 138, 58, 0.08); }
+.mode-badge {
+  position: absolute; top: 10px; right: 12px; font-family: sans-serif; font-size: 10px !important; letter-spacing: 0.15em;
+  text-transform: uppercase; color: #ff8a3a !important; border: 1px solid rgba(255, 138, 58, 0.5); border-radius: 20px; padding: 1px 8px;
+}
