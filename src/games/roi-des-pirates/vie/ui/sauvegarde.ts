@@ -15,6 +15,8 @@ export type SectionCodex =
 
 export interface Options {
   vitesse: number;
+  /** Durée visée d'une vie à ×1, en minutes (comme 1 sur 8 milliards : 30, 60 ou 90). */
+  duree: number;
   pauses: boolean;
   auto: boolean;
 }
@@ -63,7 +65,7 @@ function vide(): Meta {
     rumeurs: [],
     flags: [],
     poneglyphes: [],
-    options: { vitesse: 1, pauses: true, auto: false },
+    options: { vitesse: 1, duree: 60, pauses: true, auto: false },
     entendues: [],
   };
 }

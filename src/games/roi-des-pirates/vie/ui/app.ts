@@ -29,8 +29,10 @@ let meta: Meta = chargerMeta();
 let scene: Scene | null = null;
 let minuteur: number | undefined;
 
-const VITESSES = [1, 2, 4, 16];
-const DUREE_ANNEE = 2400;
+const VITESSES = [1, 2, 4, 8, 12, 16];
+const DUREES = [30, 60, 90];
+/** Une vie « dure » ce nombre d'années, pour régler le pas d'une année sur la durée choisie. */
+const ANNEES_REPERE = 80;
 
 function ecran(classe: string): HTMLElement {
   if (minuteur !== undefined) clearTimeout(minuteur);
@@ -152,6 +154,13 @@ export function accueil(): void {
       c.addEventListener("change", () => { opts.pauses = c.checked; sauverMeta(meta); });
       return c;
     })(), " Pauses réflexives (5, 15, 30, 50, 70 ans)"),
+    h("label", null, "Durée d'une vie ", (() => {
+      const choix = h("select", { class: "vc-duree" },
+        ...DUREES.map((m) => h("option", { text: m < 60 ? `environ ${m} min` : `environ ${m / 60} h`.replace("1.5 h", "1 h 30"), attrs: { value: String(m) } })));
+      choix.value = String(opts.duree);
+      choix.addEventListener("change", () => { opts.duree = Number(choix.value); sauverMeta(meta); });
+      return choix;
+    })()),
   ));
 }
 
@@ -315,6 +324,10 @@ interface Partie2 {
   vitesses: HTMLButtonElement[];
   auto: HTMLInputElement;
   derniereAnnee?: HTMLElement;
+  /** Les lignes de l'année en cours, distillées une à une au fil de l'année. */
+  file: Ligne[];
+  /** Temps entre deux lignes de l'année en cours, à ×1 (ms). */
+  pas: number;
 }
 
 function jouer(vie: Vie, partie: Partie): void {
@@ -363,7 +376,7 @@ function jouer(vie: Vie, partie: Partie): void {
 
   const s: Partie2 = {
     vie, partie, vitesse: meta.options.vitesse || 1, enPause: false, journal, fiche, jumeaux, grille, cap, modale,
-    etiquette, boutonPause, vitesses, auto, actions,
+    etiquette, boutonPause, vitesses, auto, actions, file: [], pas: 0,
   };
   boutonPause.addEventListener("click", () => { s.enPause = !s.enPause; majControles(s); if (!s.enPause) programmer(s, 50); });
   vitesses.forEach((b, i) => b.addEventListener("click", () => {
@@ -383,7 +396,7 @@ function jouer(vie: Vie, partie: Partie): void {
   for (const l of vie.etat.journal) afficherLigne(s, l, false);
   majTout(s);
   majControles(s);
-  journal.scrollTop = journal.scrollHeight;
+  journal.scrollTop = 0;
 
   if (vie.enAttente) montrerDecision(s);
   else programmer(s, 600);
@@ -411,36 +424,44 @@ function tour(s: Partie2): void {
   minuteur = undefined;
   if (s.enPause || s.modale.classList.contains("vc-ouverte")) return;
   const vie = s.vie;
-  if (!vie.etat.vivant) return;
+  // Une année à la fois, distillée sur toute sa durée (40 à 60 s à ×1 pour une vie d'une heure).
+  if (s.file.length) {
+    const l = s.file.shift()!;
+    afficherLigne(s, l, true);
+    if (l.type === "annee") s.etiquette.textContent = `${l.annee} · ${l.age} an${l.age > 1 ? "s" : ""} · ${vie.etat.nomIle}`;
+    if (!s.file.length) majTout(s);
+    programmer(s, s.pas / s.vitesse);
+    return;
+  }
+  if (!vie.etat.vivant) {
+    s.enPause = true;
+    void mourir(s);
+    return;
+  }
   if (vie.enAttente) {
     montrerDecision(s);
     return;
   }
   const lignes = enregistrer(s, ["a"]);
-  for (const l of lignes) afficherLigne(s, l, true);
-  majTout(s);
-  if (!vie.etat.vivant) {
-    void mourir(s);
-    return;
-  }
-  if (vie.enAttente) {
-    programmer(s, 500 / Math.sqrt(s.vitesse));
-    return;
-  }
-  const lecture = lignes.filter((l) => l.type !== "annee").length;
-  programmer(s, (DUREE_ANNEE * 0.45 + lecture * DUREE_ANNEE * 0.3) / s.vitesse);
+  const recit = lignes.filter((l) => l.type !== "annee").length;
+  const annee = (meta.options.duree * 60_000 / ANNEES_REPERE) * (0.85 + 0.05 * Math.min(6, recit)) * vie.etat.pas;
+  s.pas = annee / Math.max(1, lignes.length);
+  s.file = lignes;
+  tour(s);
 }
 
 function afficherLigne(s: Partie2, l: Ligne, anime: boolean): void {
   const v = s.vie.etat;
   if (l.type === "annee") {
     const age = l.age;
-    const bloc = h("div", { class: "vc-annee" },
+    // L'année la plus récente en haut ; dans une année, le récit se lit de haut en bas.
+    const bloc = h("section", { class: "vc-an" }, h("div", { class: "vc-annee" },
       h("span", { class: "vc-annee-num", text: String(l.annee) }),
       h("span", { class: "vc-annee-age", text: age === 0 ? "naissance" : `${age} an${age > 1 ? "s" : ""}` }),
-    );
-    s.journal.appendChild(bloc);
+    ));
+    s.journal.prepend(bloc);
     s.derniereAnnee = bloc;
+    if (anime && s.journal.scrollTop < 220) s.journal.scrollTo({ top: 0, behavior: "smooth" });
     return;
   }
   const classes = `vc-l vc-l-${l.type}${l.ton ? ` vc-ton-${l.ton}` : ""}${l.projection ? " vc-projection" : ""}${anime ? " vc-apparait" : ""}`;
@@ -470,11 +491,7 @@ function afficherLigne(s: Partie2, l: Ligne, anime: boolean): void {
     default:
       el = h("p", { class: classes, text: l.texte });
   }
-  s.journal.appendChild(el);
-  if (anime) {
-    const proche = s.journal.scrollHeight - s.journal.scrollTop - s.journal.clientHeight < 220;
-    if (proche) s.journal.scrollTo({ top: s.journal.scrollHeight, behavior: "smooth" });
-  }
+  (s.derniereAnnee ?? s.journal).appendChild(el);
   void v;
 }
 
@@ -661,9 +678,7 @@ function montrerDecision(s: Partie2): void {
   if (!d) return;
   const auto = s.auto.checked;
   if (d.type === "pause" && (!meta.options.pauses || auto)) {
-    const lignes = enregistrer(s, ["n", ""]);
-    for (const l of lignes) afficherLigne(s, l, true);
-    majTout(s);
+    s.file.push(...enregistrer(s, ["n", ""]));
     programmer(s, 300);
     return;
   }
@@ -678,13 +693,9 @@ function montrerDecision(s: Partie2): void {
   const fermer = (lignes: Ligne[]): void => {
     m.classList.remove("vc-ouverte");
     m.classList.add("vc-cache");
-    for (const l of lignes) afficherLigne(s, l, true);
-    majTout(s);
-    if (!s.vie.etat.vivant) {
-      void mourir(s);
-      return;
-    }
-    programmer(s, 700 / s.vitesse);
+    // La suite de l'année reprend son cours, au même rythme.
+    s.file.push(...lignes);
+    programmer(s, 300);
   };
 
   if (d.type === "pause") {
