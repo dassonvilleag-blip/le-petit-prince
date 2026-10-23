@@ -215,6 +215,7 @@ export interface Condition {
   /** Nombre = minimum ; paire = intervalle. */
   jauges?: Partial<Record<Jauge, Borne>>;
   prime?: Borne;
+  bourse?: Borne;
   sante?: Borne;
   flags?: string[];
   pasFlags?: string[];
@@ -264,6 +265,8 @@ export interface Effet {
   sante?: number;
   prime?: number;
   primeX?: number;
+  /** Gain (ou perte) d'économies, en berrys. */
+  bourse?: number;
   flags?: string[];
   retirerFlags?: string[];
   compteurs?: Record<string, number>;
@@ -275,7 +278,7 @@ export interface Effet {
   reve?: Reve;
   reveAccompli?: boolean;
   /** Voyage : vers une île précise, ou une île tirée dans une zone (ou ayant un tag). */
-  aller?: { ile?: string; zone?: Zone; tag?: string };
+  aller?: { ile?: string; zone?: Zone; tag?: string; memeZone?: boolean };
   fruit?: EffetFruit;
   mangerFruitEnPoche?: boolean;
   vendreFruitEnPoche?: boolean;

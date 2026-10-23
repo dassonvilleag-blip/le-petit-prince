@@ -29,7 +29,9 @@ export type TypeLigne =
   | "mort"
   | "pause"
   | "gain"
-  | "titre";
+  | "titre"
+  | "action"
+  | "routine";
 
 export interface Ligne {
   age: number;
@@ -111,6 +113,8 @@ export interface EtatVie {
   sante: number;
   prime: number;
   primeMax: number;
+  /** Économies, en berrys. */
+  bourse: number;
 
   camp: Camp;
   grade?: string;
@@ -153,6 +157,10 @@ export interface EtatVie {
   pausesFaites: number[];
   /** Pour les « jumeaux » : quelques faits marquants seulement. */
   faits: Ligne[];
+  /** Actions en automatique : id → tous les N ans. */
+  habitudes: Record<string, number>;
+  /** Dernière année où chaque action a été faite. */
+  faites: Record<string, number>;
 }
 
 export interface Contenu {

@@ -7,7 +7,7 @@ import type { Jauge } from "../types.ts";
 
 const CLE_META = "roi-des-pirates-vie-meta";
 const CLE_PARTIE = "roi-des-pirates-vie-partie";
-export const VERSION_CONTENU = 1;
+export const VERSION_CONTENU = 2;
 
 export type SectionCodex =
   | "iles" | "zones" | "peuples" | "metiers" | "camps" | "grades" | "fruits" | "morts"
@@ -35,7 +35,7 @@ export interface Meta {
   entendues: string[];
 }
 
-export type Action = ["a"] | ["c", number] | ["n", string] | ["f", Jauge | "repos"];
+export type Action = ["a"] | ["c", number] | ["n", string] | ["f", Jauge | "repos"] | ["x", string] | ["h", string, number];
 
 export interface Partie {
   version: number;

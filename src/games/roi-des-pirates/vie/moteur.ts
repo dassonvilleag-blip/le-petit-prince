@@ -3,14 +3,15 @@
 // et où l'on est, certains demandent un choix, et la mort peut venir.
 
 import type { ChoixVisible, Contenu, Decision, EtatVie, Ligne, MetaLecture, TypeLigne, Volonte } from "./etat.ts";
-import type { Camp, Choix, Effet, EffetFruit, EffetLien, Evenement, Fruit, Jauge, Rarete, Role, Sexe, Texte } from "./types.ts";
+import type { Camp, Choix, Effet, EffetFruit, EffetLien, Evenement, Fruit, Issue, Jauge, Rarete, Role, Sexe, Texte } from "./types.ts";
 import { JAUGES } from "./types.ts";
 import { creerRng, hacher, entre, pondere, gauss, type Rng } from "./rng.ts";
 import { naitre, type NaissanceImposee } from "./naissance.ts";
 import { verifier, trouverJumeau, ageEchelle, type Sujet } from "./conditions.ts";
-import { rendre, choisirVariante, nomDeLaVie, lienActif, type ContexteTexte } from "./texte.ts";
+import { rendre, choisirVariante, nomDeLaVie, lienActif, formaterPrime, type ContexteTexte } from "./texte.ts";
 import { ILES, ZONES, MONDES, RISQUE_CAMP, LIGNE_CONNAISSANCE, grade as gradeParId, gradeEntree, gradeSuivant, ileExiste, ile as ileParId } from "./monde.ts";
 import { nomIleAnonyme, prenom } from "./noms.ts";
+import { ACTIONS, ACTIONS_PAR_ID, REVENU_METIER, type ActionVie } from "./actions.ts";
 
 const MULT_RARETE: Record<Rarete, number> = {
   commun: 1,
@@ -25,6 +26,21 @@ const POIDS_RARETE_FRUIT: Record<number, number> = { 1: 50, 2: 25, 3: 10, 4: 3, 
 export const AGES_PAUSES = [5, 15, 30, 50, 70];
 /** Au-delà, les manchettes d'une même année sont résumées en une ligne. */
 const MANCHETTES_PAR_AN = 4;
+/** Entre deux choix posés au joueur, au moins ces années (sauf les choix qui changent une vie). */
+const ECART_QUESTIONS = 3;
+/** Ce qui reste d'un revenu une fois la vie payée. */
+const EPARGNE = 0.35;
+
+const FLAGS_LOURDS = new Set(["a-tue", "trahison", "promesse", "marie", "a-quitte-son-ile", "retraite", "prisonnier", "evade", "capitaine-de-son-equipage"]);
+
+/** Un effet qui pèse sur une vie : celui-là, on le laisse choisir au joueur. */
+function pese(e: Effet | undefined): boolean {
+  if (!e) return false;
+  if (e.camp || e.grade || e.metier || e.reve || e.fruit || e.mangerFruitEnPoche || e.vendreFruitEnPoche || e.mort || e.aller || e.haki || e.revelerD) return true;
+  const liens = e.lien ? (Array.isArray(e.lien) ? e.lien : [e.lien]) : [];
+  if (liens.some((l) => l.creer === "amour" || l.creer === "conjoint" || l.creer === "enfant" || l.creer === "capitaine" || l.devient || l.mort)) return true;
+  return (e.flags ?? []).some((f) => FLAGS_LOURDS.has(f));
+}
 
 interface Index {
   parId: Map<string, Evenement>;
@@ -85,6 +101,8 @@ export class Vie {
   private sortie: Ligne[] = [];
   private journauxManques: string[] = [];
   private annonces = new Set<string>();
+  /** Âge (échelle humaine) du dernier choix posé au joueur. */
+  private derniereQuestion = -99;
 
   constructor(o: OptionsVie) {
     this.contenu = o.contenu;
@@ -199,9 +217,14 @@ export class Vie {
   choixAuto(): number {
     const d = this.enAttente;
     if (!d || d.type === "pause" || !this.enCours) return -1;
-    const evt = this.enCours.evt;
+    // Un hasard à part : la sauvegarde ne rejoue que l'index choisi, pas ce tirage.
+    return this.prefere(this.enCours.evt, d.choix, creerRng(hacher(`${this.etat.graine}:${this.etat.annee}:${d.id}`)));
+  }
+
+  /** Ce que la vie choisirait d'elle-même, selon son cap. */
+  private prefere(evt: Evenement, visibles: ChoixVisible[], rng: Rng = this.rng): number {
     const focus = this.etat.focus;
-    const choisi = pondere(this.rng, d.choix, (c) => {
+    const choisi = pondere(rng, visibles, (c) => {
       const ch = evt.choix![c.index];
       let w = ch.auto ?? 1;
       if (ch.effets?.mort) w *= 0.08;
@@ -209,7 +232,19 @@ export class Vie {
       if (ch.effets?.reve && this.etat.reve) w *= 0.5;
       return w;
     });
-    return choisi?.index ?? d.choix[0]?.index ?? 0;
+    return choisi?.index ?? visibles[0]?.index ?? 0;
+  }
+
+  /** Ce choix mérite-t-il qu'on arrête la vie pour le poser ? */
+  private merite(evt: Evenement, visibles: ChoixVisible[]): boolean {
+    if (this.jumelle || visibles.length < 2) return false;
+    if (evt.bascule) return true;
+    const lourd = visibles.some(({ index }) => {
+      const ch = evt.choix![index];
+      return pese(ch.effets) || (ch.test !== undefined && (pese(ch.test.reussite.effets) || pese(ch.test.echec.effets)));
+    });
+    if (!lourd && (evt.tension ?? 1) < 4) return false;
+    return ageEchelle(this.etat) - this.derniereQuestion >= ECART_QUESTIONS;
   }
 
   private poursuivre(): void {
@@ -354,7 +389,12 @@ export class Vie {
         visibles.push({ index, label: rendre(ch.label, v, ctx), detail: ch.detail ? rendre(ch.detail, v, ctx) : undefined, risque: Boolean(ch.test) });
       }
     });
-    if (visibles.length) {
+    if (visibles.length && !this.merite(evt, visibles)) {
+      // La vie tranche toute seule : on raconte, on ne demande pas.
+      if (this.jumelle && tension >= 3) this.fait(evt.titre ? rendre(evt.titre, v, ctx) : rendre(choisirVariante(evt.texte, this.rng), v, ctx));
+      this.appliquerChoix(evt.choix![this.prefere(evt, visibles)], ctx);
+    } else if (visibles.length) {
+      this.derniereQuestion = ageEchelle(v);
       this.enCours = { evt, ctx };
       this.enAttente = {
         type: "evenement",
@@ -365,7 +405,6 @@ export class Vie {
         bascule: evt.bascule,
         age: v.age,
       };
-      if (this.jumelle && evt.tension !== undefined && evt.tension >= 3) this.fait(evt.titre ? rendre(evt.titre, v, ctx) : this.enAttente.texte);
     } else if (this.jumelle && tension >= 3) {
       this.fait(evt.titre ? rendre(evt.titre, v, ctx) : rendre(choisirVariante(evt.texte, this.rng), v, ctx));
     }
@@ -413,6 +452,10 @@ export class Vie {
       this.poserPrime(v.prime + e.prime * (e.prime > 0 ? (f?.primeX ?? 1) : 1));
     }
     if (e.primeX) this.poserPrime(v.prime * e.primeX);
+    if (e.bourse) {
+      v.bourse = Math.max(0, Math.round(v.bourse + e.bourse));
+      if (e.bourse > 0 && !this.jumelle) this.ligne("gain", `+ ${formaterPrime(e.bourse)}.`, "bon");
+    }
     for (const f of e.flags ?? []) this.poserFlag(f);
     for (const f of e.retirerFlags ?? []) v.flags = v.flags.filter((x) => x !== f);
     for (const [nom, n] of Object.entries(e.compteurs ?? {})) v.compteurs[nom] = (v.compteurs[nom] ?? 0) + n;
@@ -531,8 +574,9 @@ export class Vie {
     }
   }
 
-  private voyager(a: { ile?: string; zone?: import("./types.ts").Zone; tag?: string }): void {
+  private voyager(a: { ile?: string; zone?: import("./types.ts").Zone; tag?: string; memeZone?: boolean }): void {
     const v = this.etat;
+    if (a.memeZone) a = { ...a, zone: v.zone };
     let cible = a.ile && ileExiste(a.ile) ? ileParId(a.ile) : undefined;
     if (!cible) {
       const candidates = ILES.filter((i) =>
@@ -649,6 +693,10 @@ export class Vie {
     const age = ageEchelle(v);
 
     if (v.age > 0) this.grandir(age);
+    if (!this.jumelle && v.vivant) {
+      this.gagnerSaVie(age);
+      this.suivreSesHabitudes();
+    }
     v.compteurs[`annees:${v.camp}`] = (v.compteurs[`annees:${v.camp}`] ?? 0) + v.pas;
 
     v.grille.push({ age: v.age, annee: v.annee, camp: v.camp, zone: v.zone, tension: this.tensionTour, marque: this.marqueTour });
@@ -762,6 +810,113 @@ export class Vie {
         this.ligne("monde", `Le journal publie un nouvel avis de recherche : ${j.nom}, ${new Intl.NumberFormat("fr-FR").format(j.etat.prime)} berrys. Ce visage ne vous dit rien.`);
       }
     }
+  }
+
+  // ── Ce que la vie fait d'elle-même ──
+
+  private gagnerSaVie(age: number): void {
+    const v = this.etat;
+    if (age < 14) return;
+    const rang = v.grade ? gradeParId(v.grade)?.rang ?? 0 : 0;
+    let revenu: number;
+    switch (v.camp) {
+      case "pirate": revenu = 30_000 + entre(this.rng, 0, 120_000) + v.prime * 0.02; break;
+      case "marine": revenu = 60_000 * (rang + 1); break;
+      case "cipher-pol": revenu = 150_000 * (rang + 1); break;
+      case "pegre": revenu = 100_000 * (rang + 1); break;
+      case "chasseur": revenu = this.rng() < 0.4 ? entre(this.rng, 100_000, 600_000) * (1 + v.jauges.force / 50) : 10_000; break;
+      case "revolution": revenu = 20_000; break;
+      case "esclave": revenu = 0; break;
+      case "celeste": revenu = 50_000_000; break;
+      default: revenu = v.metier ? REVENU_METIER[v.metier] : age < 18 ? 4_000 : 12_000;
+    }
+    revenu *= 1 + Math.min(5, (v.compteurs.place ?? 0) * 0.25);
+    if (v.classe === "noble") revenu += 1_500_000;
+    if (v.classe === "marchand") revenu *= 1.5;
+    if (v.flags.includes("retraite")) revenu *= 0.4;
+    if (v.flags.includes("prisonnier")) revenu = 0;
+    v.bourse = Math.round(v.bourse + revenu * EPARGNE * v.pas);
+  }
+
+  private suivreSesHabitudes(): void {
+    const v = this.etat;
+    const routine: string[] = [];
+    for (const [id, tous] of Object.entries(v.habitudes)) {
+      if (!v.vivant) return;
+      const a = ACTIONS_PAR_ID.get(id);
+      const derniere = v.faites[id];
+      if (!a || !tous || (derniere !== undefined && v.annee - derniere < tous)) continue;
+      if (this.possible(a) === true && !this.executer(a, true)) routine.push(`${a.icone} ${a.nom.toLowerCase()}`);
+    }
+    // La routine tient en une ligne ; seul ce qui change une vie est raconté.
+    if (routine.length && v.vivant) this.ligne("routine", routine.join(" · "));
+  }
+
+  /** Les actions que cette vie peut envisager aujourd'hui (même trop chères). */
+  actions(): ActionVie[] {
+    if (!this.libre()) return [];
+    return ACTIONS.filter((a) => verifier(a.si, this.sujet));
+  }
+
+  private libre(): boolean {
+    const v = this.etat;
+    return v.vivant && ageEchelle(v) >= 8 && v.camp !== "esclave" && !v.flags.includes("prisonnier") && v.zone !== "impel-down";
+  }
+
+  /** true, ou la raison pour laquelle ce n'est pas possible maintenant. */
+  possible(a: ActionVie): true | string {
+    const v = this.etat;
+    if (!this.libre() || !verifier(a.si, this.sujet)) return "Pas maintenant.";
+    if (v.faites[a.id] === v.annee) return "Déjà fait cette année.";
+    if ((a.cout ?? 0) > v.bourse) return "Pas assez d'argent.";
+    return true;
+  }
+
+  /** Le joueur agit, entre deux années. */
+  agir(id: string): Ligne[] {
+    const a = ACTIONS_PAR_ID.get(id);
+    if (!a || this.enAttente || this.possible(a) !== true) return [];
+    this.sortie = [];
+    this.executer(a);
+    this.poursuivre();
+    return this.sortie;
+  }
+
+  /** Règle une habitude : tous les `tous` ans, 0 pour l'arrêter. */
+  regler(id: string, tous: number): void {
+    const a = ACTIONS_PAR_ID.get(id);
+    if (!a?.habitude) return;
+    if (tous > 0) this.etat.habitudes[id] = tous;
+    else delete this.etat.habitudes[id];
+  }
+
+  /** Fait l'action. En habitude (`discret`), ne la raconte que si elle compte ; renvoie true si racontée. */
+  private executer(a: ActionVie, discret = false): boolean {
+    const v = this.etat;
+    v.faites[a.id] = v.annee;
+    if (a.cout) v.bourse -= a.cout;
+    const ctx: ContexteTexte = {};
+    if (v.fruitEnPoche) ctx.fruitNom = this.idx.fruits.get(v.fruitEnPoche)?.surnom;
+    const issues = (a.issues ?? []).filter((i) => verifier(i.si, this.sujet));
+    const issue = pondere(this.rng, issues, (i) => i.poids ?? 1);
+    let fin: Issue | undefined;
+    let reussi = false;
+    if (a.test) {
+      reussi = this.reussit(a.test.jauge, a.test.difficulte);
+      fin = reussi ? a.test.reussite : a.test.echec;
+    }
+    const compte = (e?: Effet) => pese(e) || (e?.bourse ?? 0) > 0 || Boolean(e?.compteurs?.place);
+    const raconter = !discret || compte(issue?.effets) || compte(fin?.effets);
+    if (raconter) this.ligne("action", `${a.icone} ${a.nom}`);
+    if (issue) {
+      if (raconter) this.ligne("recit", rendre(choisirVariante(issue.texte, this.rng), v, ctx));
+      if (issue.effets) this.appliquer(issue.effets, ctx, true);
+    }
+    if (fin && v.vivant) {
+      if (fin.texte && raconter) this.ligne("recit", rendre(choisirVariante(fin.texte, this.rng), v, ctx), reussi ? "bon" : "mauvais");
+      if (fin.effets) this.appliquer(fin.effets, ctx, true);
+    }
+    return raconter;
   }
 
   // ── Divers ──

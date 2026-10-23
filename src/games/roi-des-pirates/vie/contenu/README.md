@@ -3,7 +3,10 @@
 Une vie tirée au hasard dans le monde de One Piece, vécue année par année jusqu'à la mort
 (inspiré de 1in8b.life). Le joueur est **un anonyme à côté de l'Histoire**, jamais Luffy.
 Le moteur (`../moteur.ts`) tire chaque année 1 à 3 événements **éligibles** (conditions)
-selon leur **poids**, les joue, et met le jeu en pause quand un événement a des **choix**.
+selon leur **poids** et les joue. Un événement à **choix** ne met le jeu en pause que s'il pèse
+(`bascule`, changement de camp/métier/rêve, fruit, mort, amour, voyage… ou `tension` ≥ 4), et pas plus
+d'une fois tous les 3 ans ; sinon la vie tranche toute seule selon son cap. Les actions que le joueur
+lance ou règle en habitude (travail, voyage, banquet…) sont dans `../actions.ts`.
 
 Les types font foi : `../types.ts`. Ce fichier explique comment écrire.
 
