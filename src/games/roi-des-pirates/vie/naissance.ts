@@ -221,6 +221,7 @@ export function naitre(rng: () => number, graine: number, impose: NaissanceImpos
     sante: Math.max(20, Math.min(100, sante)),
     prime: 0,
     primeMax: 0,
+    bourse: 0,
     camp,
     grade: camp === "celeste" ? "dragon-celeste" : camp === "esclave" ? "esclave" : undefined,
     reveAccompli: false,
@@ -244,6 +245,8 @@ export function naitre(rng: () => number, graine: number, impose: NaissanceImpos
     notes: {},
     pausesFaites: [],
     faits: [],
+    habitudes: {},
+    faites: {},
   };
 
   // Les parents. Un sur dix grandit sans eux (un sur quatre chez les plus pauvres).

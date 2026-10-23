@@ -11,6 +11,7 @@ import { ZONES, PEUPLES, CLASSES, CAMPS, ILES, GRADES, MONDES, grade as gradePar
 import { TRAITS, trait as traitParId } from "../naissance.ts";
 import { formaterPrime, nomDeLaVie, METIERS_NOMS, deLieu } from "../texte.ts";
 import { REVES, FOCUS } from "../libelles.ts";
+import { CLINS_ACTIONS, RYTHMES } from "../actions.ts";
 import { ageEchelle } from "../conditions.ts";
 import type { ResumeVie } from "../fin.ts";
 import { h, vider, attendre } from "./dom.ts";
@@ -75,7 +76,7 @@ export function accueil(): void {
   const derniere = meta.vies[meta.vies.length - 1];
 
   el.appendChild(h("header", { class: "vc-haut" },
-    h("a", { class: "vc-retour", text: "← Le Roi des Pirates", attrs: { href: "../" } }),
+    h("a", { class: "vc-retour", text: "← le petit prince", attrs: { href: "../../" } }),
   ));
 
   const enseigne = h("div", { class: "vc-enseigne" },
@@ -201,6 +202,8 @@ function appliquerAction(vie: Vie, a: Action): Ligne[] {
     case "c": return vie.choisir(a[1]);
     case "n": return vie.choisir(-1, a[1]);
     case "f": vie.etat.focus = a[1]; return [];
+    case "x": return vie.agir(a[1]);
+    case "h": vie.regler(a[1], a[2]); return [];
   }
 }
 
@@ -303,6 +306,9 @@ interface Partie2 {
   jumeaux: HTMLElement;
   grille: HTMLElement;
   cap: HTMLElement;
+  actions: HTMLElement;
+  /** Ce que montre le panneau des actions (pour ne le refaire que s'il change). */
+  signatureActions?: string;
   modale: HTMLElement;
   etiquette: HTMLElement;
   boutonPause: HTMLButtonElement;
@@ -331,11 +337,13 @@ function jouer(vie: Vie, partie: Partie): void {
 
   const fiche = h("div", { class: "vc-fiche" });
   const cap = h("div", { class: "vc-cap" });
+  const actions = h("div", { class: "vc-actions-vie" });
   const jumeaux = h("div", { class: "vc-jumeaux" });
   const grille = h("div", { class: "vc-grille" });
   colFiche.append(
     fiche,
     h("h3", { class: "vc-titre-bloc", text: "Le cap de l'année" }), cap,
+    h("h3", { class: "vc-titre-bloc", text: "Ce que vous faites de votre vie" }), actions,
     h("h3", { class: "vc-titre-bloc", text: "Nés à la même seconde" }), jumeaux,
     h("h3", { class: "vc-titre-bloc", text: "Une case par année" }), grille,
   );
@@ -355,7 +363,7 @@ function jouer(vie: Vie, partie: Partie): void {
 
   const s: Partie2 = {
     vie, partie, vitesse: meta.options.vitesse || 1, enPause: false, journal, fiche, jumeaux, grille, cap, modale,
-    etiquette, boutonPause, vitesses, auto,
+    etiquette, boutonPause, vitesses, auto, actions,
   };
   boutonPause.addEventListener("click", () => { s.enPause = !s.enPause; majControles(s); if (!s.enPause) programmer(s, 50); });
   vitesses.forEach((b, i) => b.addEventListener("click", () => {
@@ -447,6 +455,12 @@ function afficherLigne(s: Partie2, l: Ligne, anime: boolean): void {
     case "jumeau":
       el = h("p", { class: classes }, h("span", { class: "vc-l-icone", text: "📜" }), l.texte);
       break;
+    case "action":
+      el = h("h4", { class: classes, text: l.texte });
+      break;
+    case "routine":
+      el = h("p", { class: classes }, h("span", { class: "vc-l-icone", text: "🔁" }), l.texte);
+      break;
     case "clin":
       el = h("p", { class: classes }, h("span", { class: "vc-clin-badge", text: "👁 Clin d'œil" }), " ", l.texte);
       break;
@@ -478,6 +492,7 @@ function majTout(s: Partie2): void {
   s.etiquette.textContent = `${v.annee} · ${v.age} an${v.age > 1 ? "s" : ""} · ${v.nomIle}`;
   majFiche(s);
   majCap(s);
+  majActions(s);
   majJumeaux(s);
   majGrille(s.grille, v.grille, v.anneeNaissance);
 }
@@ -513,6 +528,7 @@ function majFiche(s: Partie2): void {
   s.fiche.appendChild(barre("Santé", "✚", v.sante, "sante"));
   const infos = h("div", { class: "vc-fiche-infos" });
   if (v.prime > 0 || v.primeMax > 0) infos.appendChild(h("p", { class: "vc-prime", text: `Prime : ${formaterPrime(v.prime)}` }));
+  if (ageEchelle(v) >= 14) infos.appendChild(h("p", { text: `💰 ${formaterPrime(v.bourse)} d'économies` }));
   if (v.fruit) infos.appendChild(h("p", { text: `🍎 ${vie.fruit(v.fruit)?.nom ?? "un fruit du démon"}` }));
   if (v.fruitEnPoche) infos.appendChild(h("p", { text: `🎒 un fruit du démon, dans votre sac` }));
   if (v.haki.length) infos.appendChild(h("p", { text: `◉ Haki : ${v.haki.map((x) => ({ observation: "observation", armement: "armement", rois: "des rois" })[x]).join(", ")}` }));
@@ -550,6 +566,55 @@ function majCap(s: Partie2): void {
     }, h("span", { class: "vc-cap-icone", text: FOCUS[f].icone }), h("span", { text: FOCUS[f].verbe }));
     s.cap.appendChild(b);
   }
+}
+
+function majActions(s: Partie2): void {
+  const vie = s.vie;
+  const v = vie.etat;
+  const liste = vie.actions();
+  const etats = liste.map((a) => vie.possible(a));
+  const signature = `${v.annee}|${liste.map((a, i) => `${a.id}:${etats[i]}:${v.habitudes[a.id] ?? 0}`).join(",")}|${s.vie.enAttente ? 1 : 0}`;
+  if (signature === s.signatureActions) return;
+  s.signatureActions = signature;
+  vider(s.actions);
+  if (!liste.length) {
+    s.actions.appendChild(h("p", { class: "vc-petit", text: v.vivant ? "Pour l'instant, la vie décide pour vous." : "" }));
+    return;
+  }
+  liste.forEach((a, i) => {
+    const ok = etats[i] === true;
+    const detail = vie.rendre(a.detail);
+    const bouton = h("button", {
+      class: "vc-action-faire",
+      title: ok ? detail : `${detail} — ${etats[i]}`,
+      onclick: () => {
+        if (!v.vivant || vie.enAttente || vie.possible(a) !== true) return;
+        if (a.bascule && !confirm(`${a.nom} : ce choix changera votre vie. On y va ?`)) return;
+        const lignes = enregistrer(s, ["x", a.id]);
+        for (const l of lignes) afficherLigne(s, l, true);
+        majTout(s);
+        if (!v.vivant) void mourir(s);
+        else if (vie.enAttente) montrerDecision(s);
+      },
+    },
+    h("span", { class: "vc-action-icone", text: a.icone }),
+    h("span", { class: "vc-action-nom" }, a.nom, h("small", { text: a.cout ? formaterPrime(a.cout) : detail })));
+    bouton.disabled = !ok;
+    const ligne = h("div", { class: `vc-action${ok ? "" : " vc-indispo"}` }, bouton);
+    if (a.habitude) {
+      const choix = h("select", { class: "vc-action-rythme", title: "En faire une habitude" },
+        h("option", { text: "à la main", attrs: { value: "0" } }),
+        ...RYTHMES.map((n) => h("option", { text: n === 1 ? "chaque année" : `tous les ${n} ans`, attrs: { value: String(n) } })));
+      choix.value = String(v.habitudes[a.id] ?? 0);
+      choix.classList.toggle("vc-actif", Boolean(v.habitudes[a.id]));
+      choix.addEventListener("change", () => {
+        enregistrer(s, ["h", a.id, Number(choix.value)]);
+        majActions(s);
+      });
+      ligne.appendChild(choix);
+    }
+    s.actions.appendChild(ligne);
+  });
 }
 
 function resteDeVie(e: { vivant: boolean; age: number; peuple: keyof typeof PEUPLES; sante: number }): number {
@@ -760,6 +825,7 @@ function carteDeVieFinale(vie: Vie): HTMLElement {
 function clinsDuContenu(): Map<string, { ref: string; arc?: string }> {
   const m = new Map<string, { ref: string; arc?: string }>();
   for (const e of CONTENU.evenements) if (e.clinOeil) m.set(e.clinOeil.id, { ref: e.clinOeil.ref, arc: e.clinOeil.arc });
+  for (const c of CLINS_ACTIONS) m.set(c.id, { ref: c.ref, arc: c.arc });
   return m;
 }
 

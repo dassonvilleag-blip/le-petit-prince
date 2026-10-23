@@ -87,6 +87,7 @@ export function verifier(c: Condition | undefined, s: Sujet, historique = false)
     }
   }
   if (c.prime !== undefined && !dansBorne(v.prime, c.prime)) return false;
+  if (c.bourse !== undefined && !dansBorne(v.bourse, c.bourse)) return false;
   if (c.sante !== undefined && !dansBorne(v.sante, c.sante)) return false;
   if (c.flags && !c.flags.every((f) => flags.includes(f))) return false;
   if (c.pasFlags && c.pasFlags.some((f) => v.flags.includes(f))) return false;
