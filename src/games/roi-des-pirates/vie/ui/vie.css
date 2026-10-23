@@ -98,6 +98,8 @@ h1 { font-weight: normal; letter-spacing: 0.04em; }
 .vc-lien:hover { color: var(--or); }
 .vc-derniere { margin-top: 18px; color: var(--pale); font-size: 0.9em; }
 .vc-options { margin-top: 24px; font-family: var(--sans); font-size: 13px; color: var(--pale); }
+.vc-options label { display: block; margin-top: 6px; }
+.vc-duree { background: var(--nuit); color: var(--papier); border: 1px solid var(--bord); border-radius: 6px; font-family: var(--sans); font-size: 12px; padding: 2px 4px; }
 
 /* ── Naissance ── */
 .vc-naissance { max-width: 720px; }
